@@ -1,0 +1,25 @@
+; Saved on 2026.03.02 - JCAMP_FxScalper v1.00
+; EURUSD Optimized Settings for $500 Account (FP Markets Raw)
+;
+; Description:
+; Phase 1 preset with conservative risk management
+; London session enabled by default (highest liquidity)
+; TP validation and SL snapping enabled for structural alignment
+;
+RiskPercent=1.0||1.0||0.1||2.0||N
+MaxDailyLoss=3.0||3.0||0.5||10.0||N
+MaxGlobalPositions=1||1||1||1||N
+TradeLondon=true
+TradeNewYork=false
+TradeAsian=false
+TradeTokyo=false
+SMA1_Period=21||21||5||50||N
+SMA2_Period=50||50||10||100||N
+SMA3_Period=200||200||50||300||N
+RSI_Period=14||14||7||21||N
+ATR_Period=14||14||7||21||N
+ATR_Multiplier=1.5||1.5||0.1||3.0||N
+MaxSpread=1.0||1.0||0.1||3.0||N
+LevelProximity=5||5||1||20||N
+EnableTPValidation=true
+EnableSLSnapping=true

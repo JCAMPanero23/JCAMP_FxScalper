@@ -1,0 +1,29 @@
+# MT5 compiled files
+*.ex5
+*.ex4
+
+# MT5 logs
+*.log
+MQL5/Logs/
+
+# MT5 cache
+*.dat
+
+# Temporary files
+*.tmp
+~$*
+
+# Python cache (Phase 2)
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
