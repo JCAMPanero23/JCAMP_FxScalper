@@ -283,24 +283,49 @@ namespace cAlgo.Robots
         #region Trend Detection
 
         /// <summary>
-        /// Detects trend mode using M15 price vs EMA 200
+        /// Detects trend mode using M15 price vs MA 200
+        /// Uses custom SMA calculation to ensure consistency between M1 and M15 charts
+        /// (EMA depends on all historical data, SMA only uses last N bars)
         /// </summary>
         private string DetectTrendMode()
         {
             int lastIdx = m15Bars.Count - 1;
 
             double currentPrice = m15Bars.ClosePrices[lastIdx];
-            double emaValue = ema200_m15.Result[lastIdx];
 
-            string mode = currentPrice > emaValue ? "BUY" : "SELL";
+            // Use custom SMA calculation (only last 200 bars) for consistency
+            // This avoids EMA's dependency on different historical data lengths
+            double smaValue = CalculateSMA(EMAPeriod);
+
+            string mode = currentPrice > smaValue ? "BUY" : "SELL";
 
             // Debug: Show bar count and time to diagnose M1 vs M15 discrepancies
             Print("[TrendDetection] Chart: {0} | BarCount: {1} | LastBarTime: {2}",
                 isM15Chart ? "M15" : "M1", m15Bars.Count, m15Bars.OpenTimes[lastIdx]);
-            Print("[TrendDetection] M15 Price: {0:F5} | EMA200: {1:F5} | Mode: {2}",
-                currentPrice, emaValue, mode);
+            Print("[TrendDetection] M15 Price: {0:F5} | SMA{1}: {2:F5} | Mode: {3}",
+                currentPrice, EMAPeriod, smaValue, mode);
 
             return mode;
+        }
+
+        /// <summary>
+        /// Calculates Simple Moving Average over last N bars
+        /// Consistent regardless of total historical data loaded
+        /// </summary>
+        private double CalculateSMA(int periods)
+        {
+            int count = Math.Min(periods, m15Bars.Count);
+
+            if (count <= 0)
+                return 0;
+
+            double sum = 0;
+            for (int i = 0; i < count; i++)
+            {
+                sum += m15Bars.ClosePrices.Last(i);
+            }
+
+            return sum / count;
         }
 
         #endregion
