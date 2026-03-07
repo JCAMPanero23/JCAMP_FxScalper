@@ -466,7 +466,7 @@ namespace cAlgo.Robots
             {
                 double swingHigh = m15Bars.HighPrices[swingIndex];
                 double highestHigh = m15Bars.HighPrices.Maximum(lookback);
-                double avgHigh = m15Bars.HighPrices.Average(lookback);
+                double avgHigh = CalculateDataSeriesAverage(m15Bars.HighPrices, lookback);
 
                 if (highestHigh == avgHigh)
                     return 0.5; // Avoid division by zero
@@ -479,7 +479,7 @@ namespace cAlgo.Robots
             {
                 double swingLow = m15Bars.LowPrices[swingIndex];
                 double lowestLow = m15Bars.LowPrices.Minimum(lookback);
-                double avgLow = m15Bars.LowPrices.Average(lookback);
+                double avgLow = CalculateDataSeriesAverage(m15Bars.LowPrices, lookback);
 
                 if (avgLow == lowestLow)
                     return 0.5;
@@ -488,6 +488,26 @@ namespace cAlgo.Robots
                 double score = (avgLow - swingLow) / (avgLow - lowestLow);
                 return Math.Max(0, Math.Min(score, 1.0)); // Clamp 0-1
             }
+        }
+
+        /// <summary>
+        /// Calculates average of a DataSeries over specified number of periods
+        /// (cTrader DataSeries.Average requires a selector, not period count)
+        /// </summary>
+        private double CalculateDataSeriesAverage(DataSeries series, int periods)
+        {
+            int count = Math.Min(periods, series.Count);
+
+            if (count <= 0)
+                return 0;
+
+            double sum = 0;
+            for (int i = 0; i < count; i++)
+            {
+                sum += series.Last(i);
+            }
+
+            return sum / count;
         }
 
         /// <summary>
