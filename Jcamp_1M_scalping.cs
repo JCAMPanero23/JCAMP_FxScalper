@@ -142,19 +142,18 @@ namespace cAlgo.Robots
             Print("=== JCAMP 1M SCALPING BOT STARTED ===");
             Print("========================================");
 
+            // Always use MarketData.GetBars for M15 data to ensure consistency
+            // between M1 and M15 chart runs (same data source = same results)
+            m15Bars = MarketData.GetBars(TimeFrame.Minute15);
+            ema200_m15 = Indicators.ExponentialMovingAverage(m15Bars.ClosePrices, EMAPeriod);
+
             if (isM15Chart)
             {
-                // Running on M15: use current chart's bars
-                m15Bars = Bars;
-                ema200_m15 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, EMAPeriod);
-                Print("Chart: M15 (Direct) | Analysis: M15");
+                Print("Chart: M15 | Analysis: M15 (via MarketData.GetBars)");
             }
             else
             {
-                // Running on M1: get M15 bars via multi-timeframe access
-                m15Bars = MarketData.GetBars(TimeFrame.Minute15);
-                ema200_m15 = Indicators.ExponentialMovingAverage(m15Bars.ClosePrices, EMAPeriod);
-                Print("Chart: M1 | Analysis: M15");
+                Print("Chart: M1 | Analysis: M15 (via MarketData.GetBars)");
             }
 
             // Initialize state
@@ -295,6 +294,9 @@ namespace cAlgo.Robots
 
             string mode = currentPrice > emaValue ? "BUY" : "SELL";
 
+            // Debug: Show bar count and time to diagnose M1 vs M15 discrepancies
+            Print("[TrendDetection] Chart: {0} | BarCount: {1} | LastBarTime: {2}",
+                isM15Chart ? "M15" : "M1", m15Bars.Count, m15Bars.OpenTimes[lastIdx]);
             Print("[TrendDetection] M15 Price: {0:F5} | EMA200: {1:F5} | Mode: {2}",
                 currentPrice, emaValue, mode);
 
