@@ -298,6 +298,13 @@ namespace cAlgo.Robots
             var allSwings = new System.Collections.Generic.List<int>();
             int barsToScan = Math.Min(SwingLookbackBars, m15Bars.Count - 5);
 
+            // Guard against insufficient bars for fractal detection
+            if (barsToScan < 5)
+            {
+                Print("[SwingDetection] Not enough bars to scan: {0}", barsToScan);
+                return -1;
+            }
+
             for (int i = 2; i < barsToScan - 2; i++)
             {
                 int idx = m15Bars.Count - 1 - i;
@@ -504,7 +511,7 @@ namespace cAlgo.Robots
                     return 0.5;
 
                 double score = strength / avgRange;
-                return Math.Min(score, 1.0); // Cap at 1.0
+                return Math.Max(0, Math.Min(score, 1.0)); // Clamp 0-1
             }
             else // BUY mode
             {
@@ -521,7 +528,7 @@ namespace cAlgo.Robots
                     return 0.5;
 
                 double score = strength / avgRange;
-                return Math.Min(score, 1.0); // Cap at 1.0
+                return Math.Max(0, Math.Min(score, 1.0)); // Clamp 0-1
             }
         }
 
@@ -560,6 +567,11 @@ namespace cAlgo.Robots
         private double CalculateAverageRange(int bars)
         {
             int count = Math.Min(bars, m15Bars.Count);
+
+            // Guard against division by zero
+            if (count <= 0)
+                return 0;
+
             double totalRange = 0;
 
             for (int i = 0; i < count; i++)
