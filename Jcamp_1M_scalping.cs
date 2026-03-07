@@ -67,6 +67,7 @@ namespace cAlgo.Robots
 
         private Bars m15Bars;
         private ExponentialMovingAverage ema200_m15;
+        private bool isM15Chart;
 
         // State tracking
         private string currentMode = "";
@@ -84,28 +85,40 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
-            // Validate chart timeframe
-            if (TimeFrame != TimeFrame.Minute)
+            // Validate chart timeframe - accept M1 or M15
+            if (TimeFrame != TimeFrame.Minute && TimeFrame != TimeFrame.Minute15)
             {
-                Print("ERROR: This cBot must run on M1 timeframe!");
+                Print("ERROR: This cBot must run on M1 or M15 timeframe!");
                 Print("Current timeframe: {0}", TimeFrame);
                 Stop();
                 return;
             }
 
-            // Get M15 bars (multi-timeframe access)
-            m15Bars = MarketData.GetBars(TimeFrame.Minute15);
-
-            // Initialize EMA 200 on M15 timeframe
-            ema200_m15 = Indicators.ExponentialMovingAverage(m15Bars.ClosePrices, EMAPeriod);
-
-            // Initialize state
-            lastM15BarTime = m15Bars.OpenTimes.LastValue;
+            // Check if we're running on M15 chart
+            isM15Chart = (TimeFrame == TimeFrame.Minute15);
 
             Print("========================================");
             Print("=== JCAMP 1M SCALPING BOT STARTED ===");
             Print("========================================");
-            Print("Chart: M1 | Analysis: M15");
+
+            if (isM15Chart)
+            {
+                // Running on M15: use current chart's bars
+                m15Bars = Bars;
+                ema200_m15 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, EMAPeriod);
+                Print("Chart: M15 (Direct) | Analysis: M15");
+            }
+            else
+            {
+                // Running on M1: get M15 bars via multi-timeframe access
+                m15Bars = MarketData.GetBars(TimeFrame.Minute15);
+                ema200_m15 = Indicators.ExponentialMovingAverage(m15Bars.ClosePrices, EMAPeriod);
+                Print("Chart: M1 | Analysis: M15");
+            }
+
+            // Initialize state
+            lastM15BarTime = m15Bars.OpenTimes.LastValue;
+
             Print("EMA Period: {0} | Swing Lookback: {1} bars", EMAPeriod, SwingLookbackBars);
             Print("Lot Size: {0} | SL: {1} pips | TP: {2} pips", LotSize, StopLossPips, TakeProfitPips);
             Print("Max Positions: {0} | Magic: {1}", MaxPositions, MagicNumber);
@@ -119,12 +132,6 @@ namespace cAlgo.Robots
 
         protected override void OnBar()
         {
-            // Only process when a NEW M15 bar appears
-            if (m15Bars.OpenTimes.LastValue == lastM15BarTime)
-                return;
-
-            lastM15BarTime = m15Bars.OpenTimes.LastValue;
-
             // Check if enough M15 bars for EMA calculation
             if (m15Bars.Count < EMAPeriod + 5)
             {
@@ -132,6 +139,16 @@ namespace cAlgo.Robots
                     EMAPeriod + 5, m15Bars.Count);
                 return;
             }
+
+            // Only process when a NEW M15 bar appears
+            bool isNewM15Bar = (m15Bars.OpenTimes.LastValue != lastM15BarTime);
+
+            if (!isNewM15Bar)
+                return;
+
+            lastM15BarTime = m15Bars.OpenTimes.LastValue;
+
+            Print("=== NEW M15 BAR: {0} ===", lastM15BarTime);
 
             // 1. Detect current trend mode
             string newMode = DetectTrendMode();

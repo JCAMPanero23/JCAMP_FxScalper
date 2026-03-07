@@ -116,19 +116,26 @@ namespace cAlgo
 
         public override void Calculate(int index)
         {
+            // Check if enough M15 bars for EMA calculation
+            if (m15Bars.Count < EMAPeriod + 5)
+            {
+                if (index % 100 == 0) // Print occasionally to avoid spam
+                {
+                    Print("Waiting for {0} M15 bars for EMA calculation (current: {1})",
+                        EMAPeriod + 5, m15Bars.Count);
+                }
+                return;
+            }
+
             // Only process when a NEW M15 bar appears
-            if (m15Bars.OpenTimes.LastValue == lastM15BarTime)
+            bool isNewM15Bar = (m15Bars.OpenTimes.LastValue != lastM15BarTime);
+
+            if (!isNewM15Bar)
                 return;
 
             lastM15BarTime = m15Bars.OpenTimes.LastValue;
 
-            // Check if enough M15 bars for EMA calculation
-            if (m15Bars.Count < EMAPeriod + 5)
-            {
-                Print("Waiting for {0} M15 bars for EMA calculation (current: {1})",
-                    EMAPeriod + 5, m15Bars.Count);
-                return;
-            }
+            Print("=== NEW M15 BAR: {0} ===", lastM15BarTime);
 
             // 1. Detect current trend mode
             string newMode = DetectTrendMode();
@@ -150,7 +157,7 @@ namespace cAlgo
                 return;
             }
 
-            // 4. Draw rectangle on M1 chart
+            // 4. Draw rectangle on chart
             DrawRectangle(swingIndex, currentMode);
 
             // 5. Cleanup old rectangles
@@ -278,6 +285,7 @@ namespace cAlgo
             // Draw rectangle using native API
             var rectangle = Chart.DrawRectangle(rectName, startTime, topPrice, endTime, bottomPrice, rectColor);
             rectangle.IsFilled = true; // Fill rectangle with transparent color
+            rectangle.IsInteractive = true; // Make it interactive
 
             // Track for cleanup
             drawnRectangles.Add(new RectangleInfo
@@ -286,8 +294,13 @@ namespace cAlgo
                 CreatedAt = Server.Time
             });
 
-            Print("[RectangleDraw] {0} Mode | Time: {1} | Top: {2:F5} | Bottom: {3:F5} | Width: {4} mins",
-                mode, startTime, topPrice, bottomPrice, RectangleWidthMinutes);
+            double heightPips = (topPrice - bottomPrice) / Symbol.PipSize;
+
+            Print("[RectangleDraw] ✅ {0} Mode Rectangle #{1}", mode, rectangleCounter);
+            Print("   Start Time: {0} | End Time: {1}", startTime, endTime);
+            Print("   Top: {2:F5} | Bottom: {3:F5} | Height: {4:F1} pips",
+                topPrice, bottomPrice, heightPips);
+            Print("   Color: {0} | Transparency: {1}", mode == "BUY" ? BuyModeColorName : SellModeColorName, RectangleTransparency);
         }
 
         #endregion
