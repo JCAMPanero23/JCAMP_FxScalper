@@ -166,6 +166,18 @@ namespace cAlgo.Robots
             Print("Trading Enabled: {0}", EnableTrading);
             Print("Visualization: Rectangles={0} | Mode Label={1}", ShowRectangles, ShowModeLabel);
             Print("========================================");
+
+            // Detect initial mode and show label immediately
+            if (m15Bars.Count >= EMAPeriod + 5)
+            {
+                currentMode = DetectTrendMode();
+                Print("Initial Mode: {0}", currentMode);
+
+                if (ShowModeLabel)
+                {
+                    UpdateModeDisplay(currentMode);
+                }
+            }
         }
 
         #endregion
@@ -182,7 +194,13 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Only process when a NEW M15 bar appears
+            // Always update mode display on M1 bars (keeps label visible on M1 chart)
+            if (!isM15Chart && ShowModeLabel && !string.IsNullOrEmpty(currentMode))
+            {
+                UpdateModeDisplay(currentMode);
+            }
+
+            // Only process swing detection when a NEW M15 bar appears
             bool isNewM15Bar = (m15Bars.OpenTimes.LastValue != lastM15BarTime);
 
             if (!isNewM15Bar)
@@ -713,15 +731,20 @@ namespace cAlgo.Robots
 
         /// <summary>
         /// Draws rectangle on chart at swing point
+        /// Rectangle spans from swing bar time to current time + RectangleWidthMinutes
+        /// This ensures the rectangle extends forward from NOW, not from swing detection
         /// </summary>
         private void DrawSwingRectangle(int swingIndex, string mode)
         {
             rectangleCounter++;
             string rectName = string.Format("SwingRect_{0}_{1}", mode, rectangleCounter);
 
-            // Extract swing candle data
+            // Start time: The swing bar's open time (where the fractal formed)
             DateTime startTime = m15Bars.OpenTimes[swingIndex];
-            DateTime endTime = startTime.AddMinutes(RectangleWidthMinutes);
+
+            // End time: Current time + RectangleWidthMinutes (forward-looking from NOW)
+            // This accounts for detection delay (swing detected after M15 bar closes)
+            DateTime endTime = Server.Time.AddMinutes(RectangleWidthMinutes);
 
             // Parse color and add transparency
             Color baseColor = mode == "BUY" ? ParseColor(BuyColorName) : ParseColor(SellColorName);
