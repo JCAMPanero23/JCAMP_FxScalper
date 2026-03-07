@@ -23,8 +23,11 @@ namespace cAlgo.Robots
         [Parameter("EMA Period", DefaultValue = 200, MinValue = 50, MaxValue = 500, Group = "Trend Detection")]
         public int EMAPeriod { get; set; }
 
-        [Parameter("Swing Lookback Bars (M15)", DefaultValue = 30, MinValue = 10, MaxValue = 200, Group = "Trend Detection")]
+        [Parameter("Swing Lookback Bars (M15)", DefaultValue = 100, MinValue = 10, MaxValue = 200, Group = "Trend Detection")]
         public int SwingLookbackBars { get; set; }
+
+        [Parameter("Minimum Swing Score", DefaultValue = 0.60, MinValue = 0.0, MaxValue = 1.0, Group = "Trend Detection")]
+        public double MinimumSwingScore { get; set; }
 
         #endregion
 
@@ -55,7 +58,7 @@ namespace cAlgo.Robots
         [Parameter("=== ENTRY FILTERS ===", DefaultValue = "")]
         public string EntryHeader { get; set; }
 
-        [Parameter("Enable Trading", DefaultValue = true, Group = "Entry Filters")]
+        [Parameter("Enable Trading", DefaultValue = false, Group = "Entry Filters")]
         public bool EnableTrading { get; set; }
 
         [Parameter("Trade on New Swing Only", DefaultValue = true, Group = "Entry Filters")]
@@ -71,7 +74,7 @@ namespace cAlgo.Robots
         [Parameter("Show Rectangles", DefaultValue = true, Group = "Visualization")]
         public bool ShowRectangles { get; set; }
 
-        [Parameter("Rectangle Width (Minutes)", DefaultValue = 50, MinValue = 10, MaxValue = 200, Group = "Visualization")]
+        [Parameter("Rectangle Width (Minutes)", DefaultValue = 60, MinValue = 10, MaxValue = 200, Group = "Visualization")]
         public int RectangleWidthMinutes { get; set; }
 
         [Parameter("Show Mode Label", DefaultValue = true, Group = "Visualization")]
@@ -199,13 +202,13 @@ namespace cAlgo.Robots
                 Print(">>> MODE CHANGED: {0} MODE <<<", currentMode);
             }
 
-            // 3. Find recent swing point based on mode
-            int swingIndex = FindRecentSwingPoint(currentMode);
+            // 3. Find significant swing point based on mode (with scoring)
+            int swingIndex = FindSignificantSwing(currentMode);
 
             if (swingIndex == -1)
             {
-                Print("[{0}] No valid swing point found in last {1} M15 bars",
-                    currentMode, SwingLookbackBars);
+                Print("[{0}] No significant swing found (score >= {1:F2}) in last {2} M15 bars",
+                    currentMode, MinimumSwingScore, SwingLookbackBars);
                 hasActiveSwing = false;
                 return;
             }
@@ -285,58 +288,287 @@ namespace cAlgo.Robots
         #region Swing Point Detection
 
         /// <summary>
-        /// Finds recent swing point using Williams Fractals with candle validation
-        /// SELL Mode: Swing HIGH from BULLISH candle (Close > Open)
-        /// BUY Mode: Swing LOW from BEARISH candle (Close < Open)
+        /// Finds significant swing using Williams Fractals with multi-criteria scoring
+        /// Phase 1A: Validity, Extremity, Fractal Strength, Candle Quality
+        /// Returns the highest scoring swing that meets minimum threshold
         /// </summary>
-        private int FindRecentSwingPoint(string mode)
+        private int FindSignificantSwing(string mode)
         {
+            // Step 1: Find ALL Williams Fractals in lookback period
+            var allSwings = new System.Collections.Generic.List<int>();
             int barsToScan = Math.Min(SwingLookbackBars, m15Bars.Count - 5);
 
-            // Scan from most recent backwards (need 2 bars before and after for fractal)
             for (int i = 2; i < barsToScan - 2; i++)
             {
                 int idx = m15Bars.Count - 1 - i;
 
-                if (mode == "SELL")
+                if (IsWilliamsFractal(idx, mode))
                 {
-                    // Williams Fractal Up: High[i] > High[i±1] and High[i] > High[i±2]
-                    bool isSwingHigh = m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx - 1] &&
-                                       m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx - 2] &&
-                                       m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx + 1] &&
-                                       m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx + 2];
-
-                    // Must be BULLISH candle
-                    bool isBullishCandle = m15Bars.ClosePrices[idx] > m15Bars.OpenPrices[idx];
-
-                    if (isSwingHigh && isBullishCandle)
-                    {
-                        Print("[SwingDetection] SELL Mode - Swing HIGH at bar {0} | High: {1:F5} | Time: {2}",
-                            idx, m15Bars.HighPrices[idx], m15Bars.OpenTimes[idx]);
-                        return idx;
-                    }
-                }
-                else if (mode == "BUY")
-                {
-                    // Williams Fractal Down: Low[i] < Low[i±1] and Low[i] < Low[i±2]
-                    bool isSwingLow = m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx - 1] &&
-                                      m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx - 2] &&
-                                      m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx + 1] &&
-                                      m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx + 2];
-
-                    // Must be BEARISH candle
-                    bool isBearishCandle = m15Bars.LowPrices[idx] < m15Bars.OpenPrices[idx];
-
-                    if (isSwingLow && isBearishCandle)
-                    {
-                        Print("[SwingDetection] BUY Mode - Swing LOW at bar {0} | Low: {1:F5} | Time: {2}",
-                            idx, m15Bars.LowPrices[idx], m15Bars.OpenTimes[idx]);
-                        return idx;
-                    }
+                    allSwings.Add(idx);
                 }
             }
 
-            return -1; // No swing found
+            if (allSwings.Count == 0)
+            {
+                Print("[SwingDetection] No Williams Fractals found in {0} bars", barsToScan);
+                return -1;
+            }
+
+            Print("[SwingDetection] Found {0} Williams Fractals, scoring...", allSwings.Count);
+
+            // Step 2: Score each swing
+            var scoredSwings = new System.Collections.Generic.List<System.Tuple<int, double>>();
+
+            foreach (var idx in allSwings)
+            {
+                double score = CalculateSwingScore(idx, mode);
+
+                if (score >= MinimumSwingScore)
+                {
+                    scoredSwings.Add(new System.Tuple<int, double>(idx, score));
+                    Print("[SwingScore] Bar {0} | Score: {1:F2} ✓", idx, score);
+                }
+                else
+                {
+                    Print("[SwingScore] Bar {0} | Score: {1:F2} ✗ (below {2:F2})",
+                        idx, score, MinimumSwingScore);
+                }
+            }
+
+            if (scoredSwings.Count == 0)
+            {
+                Print("[SwingDetection] No swings scored >= {0:F2}", MinimumSwingScore);
+                return -1;
+            }
+
+            // Step 3: Return highest scoring swing
+            var bestSwing = scoredSwings.OrderByDescending(s => s.Item2).First();
+
+            Print("[SignificantSwing] ✅ Selected Bar {0} | Score: {1:F2} | Price: {2:F5} | Time: {3}",
+                bestSwing.Item1,
+                bestSwing.Item2,
+                mode == "SELL" ? m15Bars.HighPrices[bestSwing.Item1] : m15Bars.LowPrices[bestSwing.Item1],
+                m15Bars.OpenTimes[bestSwing.Item1]);
+
+            return bestSwing.Item1;
+        }
+
+        /// <summary>
+        /// Checks if bar at index is a valid Williams Fractal
+        /// SELL Mode: Swing HIGH from BULLISH candle
+        /// BUY Mode: Swing LOW from BEARISH candle
+        /// </summary>
+        private bool IsWilliamsFractal(int idx, string mode)
+        {
+            if (mode == "SELL")
+            {
+                // Williams Fractal Up: High[i] > High[i±1] and High[i] > High[i±2]
+                bool isSwingHigh = m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx - 1] &&
+                                   m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx - 2] &&
+                                   m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx + 1] &&
+                                   m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx + 2];
+
+                // Must be BULLISH candle
+                bool isBullishCandle = m15Bars.ClosePrices[idx] > m15Bars.OpenPrices[idx];
+
+                return isSwingHigh && isBullishCandle;
+            }
+            else // BUY mode
+            {
+                // Williams Fractal Down: Low[i] < Low[i±1] and Low[i] < Low[i±2]
+                bool isSwingLow = m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx - 1] &&
+                                  m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx - 2] &&
+                                  m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx + 1] &&
+                                  m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx + 2];
+
+                // Must be BEARISH candle
+                bool isBearishCandle = m15Bars.ClosePrices[idx] < m15Bars.OpenPrices[idx];
+
+                return isSwingLow && isBearishCandle;
+            }
+        }
+
+        #endregion
+
+        #region Swing Scoring System (Phase 1A)
+
+        /// <summary>
+        /// Calculates total score for a swing point
+        /// Phase 1A: Validity (25%) + Extremity (35%) + Fractal Strength (25%) + Candle (15%)
+        /// </summary>
+        private double CalculateSwingScore(int swingIndex, string mode)
+        {
+            // Validity score - CRITICAL (must be > 0)
+            double validityScore = CalculateValidityScore(swingIndex);
+
+            if (validityScore == 0)
+            {
+                // Rectangle would be expired - skip this swing
+                return 0;
+            }
+
+            // Calculate other scoring components
+            double extremityScore = CalculateExtremityScore(swingIndex, mode);
+            double fractalStrength = CalculateFractalStrength(swingIndex, mode);
+            double candleStrength = CalculateCandleStrength(swingIndex);
+
+            // Phase 1A weights (redistributed from original plan since session/FVG not yet implemented)
+            double totalScore =
+                (validityScore * 0.25) +    // 20% → 25% (critical for forward-looking rectangles)
+                (extremityScore * 0.35) +   // 25% → 35% (most extreme swings preferred)
+                (fractalStrength * 0.25) +  // 15% → 25% (fractal quality matters)
+                (candleStrength * 0.15);    // 5% → 15% (candle body strength)
+
+            return totalScore;
+        }
+
+        /// <summary>
+        /// Validity Score: Ensures rectangle is forward-looking (not expired)
+        /// Returns 0 if rectangle would be in the past, otherwise 0-1 based on time remaining
+        /// </summary>
+        private double CalculateValidityScore(int swingIndex)
+        {
+            DateTime swingTime = m15Bars.OpenTimes[swingIndex];
+            DateTime rectangleEnd = swingTime.AddMinutes(RectangleWidthMinutes);
+            DateTime currentTime = m15Bars.OpenTimes.LastValue;
+
+            TimeSpan remaining = rectangleEnd - currentTime;
+
+            if (remaining.TotalMinutes <= 0)
+            {
+                // Rectangle is expired - invalid
+                return 0;
+            }
+
+            // Score based on how much time remains (normalized to rectangle width)
+            // Full rectangle width remaining = 1.0, just started = lower score
+            double score = Math.Min(remaining.TotalMinutes / RectangleWidthMinutes, 1.0);
+
+            return score;
+        }
+
+        /// <summary>
+        /// Extremity Score: How extreme the swing is compared to market structure
+        /// Higher/lower swings score better
+        /// </summary>
+        private double CalculateExtremityScore(int swingIndex, string mode)
+        {
+            int lookback = Math.Min(SwingLookbackBars, m15Bars.Count);
+
+            if (mode == "SELL")
+            {
+                double swingHigh = m15Bars.HighPrices[swingIndex];
+                double highestHigh = m15Bars.HighPrices.Maximum(lookback);
+                double avgHigh = m15Bars.HighPrices.Average(lookback);
+
+                if (highestHigh == avgHigh)
+                    return 0.5; // Avoid division by zero
+
+                // Higher swings score better
+                double score = (swingHigh - avgHigh) / (highestHigh - avgHigh);
+                return Math.Max(0, Math.Min(score, 1.0)); // Clamp 0-1
+            }
+            else // BUY mode
+            {
+                double swingLow = m15Bars.LowPrices[swingIndex];
+                double lowestLow = m15Bars.LowPrices.Minimum(lookback);
+                double avgLow = m15Bars.LowPrices.Average(lookback);
+
+                if (avgLow == lowestLow)
+                    return 0.5;
+
+                // Lower swings score better
+                double score = (avgLow - swingLow) / (avgLow - lowestLow);
+                return Math.Max(0, Math.Min(score, 1.0)); // Clamp 0-1
+            }
+        }
+
+        /// <summary>
+        /// Fractal Strength Score: Quality of Williams Fractal
+        /// Measures how far the swing extends beyond neighboring bars
+        /// </summary>
+        private double CalculateFractalStrength(int swingIndex, string mode)
+        {
+            if (mode == "SELL")
+            {
+                double swingHigh = m15Bars.HighPrices[swingIndex];
+                double maxNeighbor = Math.Max(
+                    Math.Max(m15Bars.HighPrices[swingIndex - 1], m15Bars.HighPrices[swingIndex - 2]),
+                    Math.Max(m15Bars.HighPrices[swingIndex + 1], m15Bars.HighPrices[swingIndex + 2])
+                );
+
+                double strength = swingHigh - maxNeighbor;
+                double avgRange = CalculateAverageRange(20); // Last 20 bars
+
+                if (avgRange == 0)
+                    return 0.5;
+
+                double score = strength / avgRange;
+                return Math.Min(score, 1.0); // Cap at 1.0
+            }
+            else // BUY mode
+            {
+                double swingLow = m15Bars.LowPrices[swingIndex];
+                double minNeighbor = Math.Min(
+                    Math.Min(m15Bars.LowPrices[swingIndex - 1], m15Bars.LowPrices[swingIndex - 2]),
+                    Math.Min(m15Bars.LowPrices[swingIndex + 1], m15Bars.LowPrices[swingIndex + 2])
+                );
+
+                double strength = minNeighbor - swingLow;
+                double avgRange = CalculateAverageRange(20);
+
+                if (avgRange == 0)
+                    return 0.5;
+
+                double score = strength / avgRange;
+                return Math.Min(score, 1.0); // Cap at 1.0
+            }
+        }
+
+        /// <summary>
+        /// Candle Strength Score: Quality of the swing candle
+        /// Strong body candles (low wick ratio) score higher
+        /// </summary>
+        private double CalculateCandleStrength(int swingIndex)
+        {
+            double open = m15Bars.OpenPrices[swingIndex];
+            double close = m15Bars.ClosePrices[swingIndex];
+            double high = m15Bars.HighPrices[swingIndex];
+            double low = m15Bars.LowPrices[swingIndex];
+
+            double bodySize = Math.Abs(close - open);
+            double totalSize = high - low;
+
+            if (totalSize == 0)
+                return 0.3; // Doji or error
+
+            double bodyRatio = bodySize / totalSize;
+
+            // Strong candle body = higher score
+            if (bodyRatio >= 0.70)
+                return 1.0; // Strong candle (body > 70%)
+            else if (bodyRatio >= 0.50)
+                return 0.6; // Medium candle (body 50-70%)
+            else
+                return 0.3; // Weak candle (doji, pin bar)
+        }
+
+        /// <summary>
+        /// Calculates average range (High - Low) over specified bars
+        /// Used for normalizing fractal strength
+        /// </summary>
+        private double CalculateAverageRange(int bars)
+        {
+            int count = Math.Min(bars, m15Bars.Count);
+            double totalRange = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                int idx = m15Bars.Count - 1 - i;
+                totalRange += m15Bars.HighPrices[idx] - m15Bars.LowPrices[idx];
+            }
+
+            return totalRange / count;
         }
 
         #endregion
