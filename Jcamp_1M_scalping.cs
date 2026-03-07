@@ -63,6 +63,34 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Visualization
+
+        [Parameter("=== VISUALIZATION ===", DefaultValue = "")]
+        public string VisualHeader { get; set; }
+
+        [Parameter("Show Rectangles", DefaultValue = true, Group = "Visualization")]
+        public bool ShowRectangles { get; set; }
+
+        [Parameter("Rectangle Width (Minutes)", DefaultValue = 50, MinValue = 10, MaxValue = 200, Group = "Visualization")]
+        public int RectangleWidthMinutes { get; set; }
+
+        [Parameter("Show Mode Label", DefaultValue = true, Group = "Visualization")]
+        public bool ShowModeLabel { get; set; }
+
+        [Parameter("BUY Color", DefaultValue = "Green", Group = "Visualization")]
+        public string BuyColorName { get; set; }
+
+        [Parameter("SELL Color", DefaultValue = "Red", Group = "Visualization")]
+        public string SellColorName { get; set; }
+
+        [Parameter("Rectangle Transparency", DefaultValue = 80, MinValue = 0, MaxValue = 255, Group = "Visualization")]
+        public int RectangleTransparency { get; set; }
+
+        [Parameter("Max Rectangles", DefaultValue = 10, MinValue = 1, MaxValue = 50, Group = "Visualization")]
+        public int MaxRectangles { get; set; }
+
+        #endregion
+
         #region Private Fields
 
         private Bars m15Bars;
@@ -78,6 +106,16 @@ namespace cAlgo.Robots
         private double swingTopPrice = 0;
         private double swingBottomPrice = 0;
         private bool hasActiveSwing = false;
+
+        // Visualization tracking
+        private int rectangleCounter = 0;
+        private class RectangleInfo
+        {
+            public string Name { get; set; }
+            public DateTime CreatedAt { get; set; }
+        }
+        private System.Collections.Generic.List<RectangleInfo> drawnRectangles = new System.Collections.Generic.List<RectangleInfo>();
+        private ChartStaticText modeLabel;
 
         #endregion
 
@@ -123,6 +161,7 @@ namespace cAlgo.Robots
             Print("Lot Size: {0} | SL: {1} pips | TP: {2} pips", LotSize, StopLossPips, TakeProfitPips);
             Print("Max Positions: {0} | Magic: {1}", MaxPositions, MagicNumber);
             Print("Trading Enabled: {0}", EnableTrading);
+            Print("Visualization: Rectangles={0} | Mode Label={1}", ShowRectangles, ShowModeLabel);
             Print("========================================");
         }
 
@@ -305,7 +344,7 @@ namespace cAlgo.Robots
         #region Swing Zone Management
 
         /// <summary>
-        /// Updates the swing rectangle zone prices
+        /// Updates the swing rectangle zone prices and draws rectangle
         /// SELL Mode: Rectangle from Close to High
         /// BUY Mode: Rectangle from Close to Low
         /// </summary>
@@ -324,8 +363,22 @@ namespace cAlgo.Robots
                 swingBottomPrice = m15Bars.LowPrices[swingIndex];
             }
 
-            Print("[SwingZone] {0} Mode | Top: {1:F5} | Bottom: {2:F5} | Height: {3:F5}",
-                mode, swingTopPrice, swingBottomPrice, swingTopPrice - swingBottomPrice);
+            double heightPips = (swingTopPrice - swingBottomPrice) / Symbol.PipSize;
+
+            Print("[SwingZone] {0} Mode | Top: {1:F5} | Bottom: {2:F5} | Height: {3:F1} pips",
+                mode, swingTopPrice, swingBottomPrice, heightPips);
+
+            // Draw rectangle on chart
+            if (ShowRectangles)
+            {
+                DrawSwingRectangle(swingIndex, mode);
+            }
+
+            // Update mode label
+            if (ShowModeLabel)
+            {
+                UpdateModeDisplay(mode);
+            }
         }
 
         #endregion
@@ -387,6 +440,119 @@ namespace cAlgo.Robots
             else
             {
                 Print("❌ BUY FAILED | Error: {0}", result.Error);
+            }
+        }
+
+        #endregion
+
+        #region Visualization Methods
+
+        /// <summary>
+        /// Draws rectangle on chart at swing point
+        /// </summary>
+        private void DrawSwingRectangle(int swingIndex, string mode)
+        {
+            rectangleCounter++;
+            string rectName = string.Format("SwingRect_{0}_{1}", mode, rectangleCounter);
+
+            // Extract swing candle data
+            DateTime startTime = m15Bars.OpenTimes[swingIndex];
+            DateTime endTime = startTime.AddMinutes(RectangleWidthMinutes);
+
+            // Parse color and add transparency
+            Color baseColor = mode == "BUY" ? ParseColor(BuyColorName) : ParseColor(SellColorName);
+            Color rectColor = Color.FromArgb(RectangleTransparency, baseColor);
+
+            // Draw rectangle using native API
+            var rectangle = Chart.DrawRectangle(rectName, startTime, swingTopPrice, endTime, swingBottomPrice, rectColor);
+            rectangle.IsFilled = true;
+            rectangle.IsInteractive = true;
+
+            // Track for cleanup
+            drawnRectangles.Add(new RectangleInfo
+            {
+                Name = rectName,
+                CreatedAt = Server.Time
+            });
+
+            double heightPips = (swingTopPrice - swingBottomPrice) / Symbol.PipSize;
+
+            Print("[RectangleDraw] ✅ {0} Mode Rectangle #{1}", mode, rectangleCounter);
+            Print("   Start: {0} | End: {1} | Height: {2:F1} pips", startTime, endTime, heightPips);
+
+            // Cleanup old rectangles
+            CleanupOldRectangles();
+        }
+
+        /// <summary>
+        /// Updates mode display label on chart
+        /// </summary>
+        private void UpdateModeDisplay(string mode)
+        {
+            // Remove old label if exists
+            if (modeLabel != null)
+            {
+                Chart.RemoveObject(modeLabel.Name);
+            }
+
+            if (string.IsNullOrEmpty(mode))
+                return;
+
+            // Create mode text display
+            string modeText = string.Format("{0} MODE", mode);
+            Color labelColor = mode == "BUY" ? ParseColor(BuyColorName) : ParseColor(SellColorName);
+
+            // Draw static text on top-right corner
+            modeLabel = Chart.DrawStaticText("ModeLabel", modeText,
+                VerticalAlignment.Top, HorizontalAlignment.Right, labelColor);
+
+            Print("[ModeDisplay] Updated to: {0}", modeText);
+        }
+
+        /// <summary>
+        /// Removes oldest rectangles to keep chart clean
+        /// </summary>
+        private void CleanupOldRectangles()
+        {
+            if (drawnRectangles.Count <= MaxRectangles)
+                return;
+
+            // Sort by creation time (oldest first)
+            var sortedRects = drawnRectangles.OrderBy(r => r.CreatedAt).ToList();
+
+            // Remove oldest rectangles
+            int toRemove = drawnRectangles.Count - MaxRectangles;
+
+            for (int i = 0; i < toRemove; i++)
+            {
+                var rect = sortedRects[i];
+                Chart.RemoveObject(rect.Name);
+                drawnRectangles.Remove(rect);
+            }
+
+            Print("[Cleanup] Removed {0} old rectangles | Remaining: {1}",
+                toRemove, drawnRectangles.Count);
+        }
+
+        /// <summary>
+        /// Parses color name string to Color object
+        /// </summary>
+        private Color ParseColor(string colorName)
+        {
+            switch (colorName.ToLower())
+            {
+                case "green": return Color.Green;
+                case "red": return Color.Red;
+                case "blue": return Color.Blue;
+                case "yellow": return Color.Yellow;
+                case "orange": return Color.Orange;
+                case "purple": return Color.Purple;
+                case "cyan": return Color.Cyan;
+                case "white": return Color.White;
+                case "black": return Color.Black;
+                case "lime": return Color.Lime;
+                case "dodgerblue": return Color.DodgerBlue;
+                default: return Color.Gray;
             }
         }
 
