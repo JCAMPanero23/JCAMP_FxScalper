@@ -31,6 +31,22 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Session Management
+
+        [Parameter("=== SESSION MANAGEMENT ===", DefaultValue = "")]
+        public string SessionHeader { get; set; }
+
+        [Parameter("Enable Session Filter", DefaultValue = true, Group = "Session Management")]
+        public bool EnableSessionFilter { get; set; }
+
+        [Parameter("Show Session Boxes", DefaultValue = false, Group = "Session Management")]
+        public bool ShowSessionBoxes { get; set; }
+
+        [Parameter("Session Weight", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Session Management")]
+        public double SessionWeight { get; set; }
+
+        #endregion
+
         #region Parameters - Trade Management
 
         [Parameter("=== TRADE MANAGEMENT ===", DefaultValue = "")]
@@ -50,6 +66,22 @@ namespace cAlgo.Robots
 
         [Parameter("Magic Number", DefaultValue = 100001, Group = "Trade Management")]
         public int MagicNumber { get; set; }
+
+        #endregion
+
+        #region Parameters - TP Management
+
+        [Parameter("=== TP MANAGEMENT ===", DefaultValue = "")]
+        public string TPHeader { get; set; }
+
+        [Parameter("Use H1 Levels for TP", DefaultValue = true, Group = "TP Management")]
+        public bool UseH1LevelsForTP { get; set; }
+
+        [Parameter("Use M15 Levels for TP", DefaultValue = true, Group = "TP Management")]
+        public bool UseM15LevelsForTP { get; set; }
+
+        [Parameter("H1 Level Proximity Pips", DefaultValue = 50, MinValue = 10, MaxValue = 200, Group = "TP Management")]
+        public int H1LevelProximityPips { get; set; }
 
         #endregion
 
@@ -82,6 +114,59 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Session Enums and Classes
+
+        /// <summary>
+        /// Trading sessions based on UTC time
+        /// Phase 2 Implementation
+        /// </summary>
+        public enum TradingSession
+        {
+            None,
+            Asian,      // 00:00-09:00 UTC (Tokyo)
+            London,     // 08:00-17:00 UTC
+            NewYork,    // 13:00-22:00 UTC
+            Overlap     // 13:00-17:00 UTC (London + NY)
+        }
+
+        /// <summary>
+        /// Tracks high/low levels for a trading session
+        /// Phase 2 Implementation
+        /// </summary>
+        private class SessionLevels
+        {
+            public TradingSession Session { get; set; }
+            public DateTime StartTime { get; set; }
+            public DateTime EndTime { get; set; }
+            public double High { get; set; }
+            public double Low { get; set; }
+        }
+
+        /// <summary>
+        /// Represents which sessions are currently active
+        /// Allows independent tracking (sessions can overlap)
+        /// Phase 2 Implementation
+        /// </summary>
+        private class SessionState
+        {
+            public bool IsAsian { get; set; }
+            public bool IsLondon { get; set; }
+            public bool IsNewYork { get; set; }
+            public bool IsOverlap => IsLondon && IsNewYork;
+
+            public override string ToString()
+            {
+                var active = new System.Collections.Generic.List<string>();
+                if (IsAsian) active.Add("Asian");
+                if (IsLondon) active.Add("London");
+                if (IsNewYork) active.Add("NY");
+                if (IsOverlap) active.Add("(Overlap)");
+                return active.Count > 0 ? string.Join("+", active) : "Off-Session";
+            }
+        }
+
+        #endregion
+
         #region Parameters - Visualization
 
         [Parameter("=== VISUALIZATION ===", DefaultValue = "")]
@@ -110,9 +195,32 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Score Weights
+
+        [Parameter("=== SCORE WEIGHTS ===", DefaultValue = "")]
+        public string WeightsHeader { get; set; }
+
+        [Parameter("Weight: Validity", DefaultValue = 0.25, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        public double WeightValidity { get; set; }
+
+        [Parameter("Weight: Extremity", DefaultValue = 0.30, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        public double WeightExtremity { get; set; }
+
+        [Parameter("Weight: Fractal", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        public double WeightFractal { get; set; }
+
+        [Parameter("Weight: Session", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        public double WeightSession { get; set; }
+
+        [Parameter("Weight: Candle", DefaultValue = 0.05, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        public double WeightCandle { get; set; }
+
+        #endregion
+
         #region Private Fields
 
         private Bars m15Bars;
+        private Bars h1Bars;
         private bool isM15Chart;
 
         // State tracking
@@ -131,6 +239,17 @@ namespace cAlgo.Robots
         // Phase 1B: Entry tracking
         private bool hasBreakoutOccurred = false;
         private double breakoutPrice = 0;
+
+        // Phase 1C: Market structure levels
+        private System.Collections.Generic.List<double> h1Supports = new System.Collections.Generic.List<double>();
+        private System.Collections.Generic.List<double> h1Resistances = new System.Collections.Generic.List<double>();
+        private System.Collections.Generic.List<double> m15Supports = new System.Collections.Generic.List<double>();
+        private System.Collections.Generic.List<double> m15Resistances = new System.Collections.Generic.List<double>();
+
+        // Phase 2: Session tracking
+        private System.Collections.Generic.List<SessionLevels> recentSessions = new System.Collections.Generic.List<SessionLevels>();
+        private SessionLevels currentSession = null;
+        private TradingSession lastDetectedSession = TradingSession.None;
 
         // Visualization tracking
         private int rectangleCounter = 0;
@@ -190,6 +309,16 @@ namespace cAlgo.Robots
                 EnableTrading, TradeOnNewSwingOnly);
             Print("Rectangle Width: {0} min (trading window)", RectangleWidthMinutes);
             Print("Visualization: Rectangles={0} | Mode Label={1}", ShowRectangles, ShowModeLabel);
+
+            // Phase 1C: Initialize H1 bars for TP management
+            h1Bars = MarketData.GetBars(TimeFrame.Hour);
+            Print("Phase 1C TP Management: H1 Levels={0} | M15 Levels={1} | Proximity={2} pips",
+                UseH1LevelsForTP, UseM15LevelsForTP, H1LevelProximityPips);
+
+            // Update market structure levels
+            UpdateH1Levels();
+            UpdateM15Levels();
+
             Print("========================================");
 
             // Detect initial mode and show label immediately
@@ -235,6 +364,13 @@ namespace cAlgo.Robots
                 lastM15BarTime = m15Bars.OpenTimes.LastValue;
 
                 Print("=== NEW M15 BAR: {0} ===", lastM15BarTime);
+
+                // Phase 1C: Update market structure levels on new M15 bar
+                UpdateH1Levels();
+                UpdateM15Levels();
+
+                // Phase 2: Update session tracking
+                UpdateSessionTracking();
 
                 // 1. Detect current trend mode
                 string newMode = DetectTrendMode();
@@ -524,14 +660,16 @@ namespace cAlgo.Robots
             // Calculate other scoring components
             double extremityScore = CalculateExtremityScore(swingIndex, mode);
             double fractalStrength = CalculateFractalStrength(swingIndex, mode);
+            double sessionAlignment = CalculateSessionAlignment(swingIndex, mode); // Phase 2
             double candleStrength = CalculateCandleStrength(swingIndex);
 
-            // Phase 1A weights (redistributed from original plan since session/FVG not yet implemented)
+            // Phase 2: Use configurable weights (must total 1.0)
             double totalScore =
-                (validityScore * 0.25) +    // 20% → 25% (critical for forward-looking rectangles)
-                (extremityScore * 0.35) +   // 25% → 35% (most extreme swings preferred)
-                (fractalStrength * 0.25) +  // 15% → 25% (fractal quality matters)
-                (candleStrength * 0.15);    // 5% → 15% (candle body strength)
+                (validityScore * WeightValidity) +
+                (extremityScore * WeightExtremity) +
+                (fractalStrength * WeightFractal) +
+                (sessionAlignment * WeightSession) +
+                (candleStrength * WeightCandle);
 
             return totalScore;
         }
@@ -718,6 +856,432 @@ namespace cAlgo.Robots
             }
 
             return totalRange / count;
+        }
+
+        /// <summary>
+        /// Session Alignment Score: Checks if swing aligns with session high/low
+        /// Swings at session extremes are more significant
+        /// Phase 2 Implementation
+        /// </summary>
+        private double CalculateSessionAlignment(int swingIndex, string mode)
+        {
+            if (!EnableSessionFilter)
+                return 0.5; // Neutral score if session filter disabled
+
+            DateTime swingTime = m15Bars.OpenTimes[swingIndex];
+            var session = GetSessionForTime(swingTime);
+
+            if (session == null)
+                return 0.5; // No session data, neutral score
+
+            double swingPrice = mode == "SELL" ?
+                m15Bars.HighPrices[swingIndex] :
+                m15Bars.LowPrices[swingIndex];
+
+            double distanceToSessionLevel = mode == "SELL" ?
+                Math.Abs(swingPrice - session.High) :
+                Math.Abs(swingPrice - session.Low);
+
+            double threshold = 10 * Symbol.PipSize; // Within 10 pips
+
+            if (distanceToSessionLevel <= threshold)
+            {
+                Print("[SessionAlign] Swing at {0} session {1} | Distance: {2:F1} pips | STRONG",
+                    session.Session,
+                    mode == "SELL" ? "HIGH" : "LOW",
+                    distanceToSessionLevel / Symbol.PipSize);
+                return 1.0; // At session level - strong signal
+            }
+            else
+            {
+                return 0.5; // Not at session level - neutral
+            }
+        }
+
+        #endregion
+
+        #region Phase 1C: Market Structure Levels
+
+        /// <summary>
+        /// Updates H1 support and resistance levels using Williams Fractals
+        /// Scans last 200 H1 bars for fractal patterns
+        /// Phase 1C Implementation
+        /// </summary>
+        private void UpdateH1Levels()
+        {
+            h1Supports.Clear();
+            h1Resistances.Clear();
+
+            int barsToScan = Math.Min(200, h1Bars.Count - 5);
+
+            for (int i = 2; i < barsToScan - 2; i++)
+            {
+                int idx = h1Bars.Count - 1 - i;
+
+                // Check bounds
+                if (idx < 2 || idx >= h1Bars.Count - 2)
+                    continue;
+
+                // Williams Fractal Up (Resistance)
+                if (h1Bars.HighPrices[idx] > h1Bars.HighPrices[idx - 1] &&
+                    h1Bars.HighPrices[idx] > h1Bars.HighPrices[idx - 2] &&
+                    h1Bars.HighPrices[idx] > h1Bars.HighPrices[idx + 1] &&
+                    h1Bars.HighPrices[idx] > h1Bars.HighPrices[idx + 2])
+                {
+                    h1Resistances.Add(h1Bars.HighPrices[idx]);
+                }
+
+                // Williams Fractal Down (Support)
+                if (h1Bars.LowPrices[idx] < h1Bars.LowPrices[idx - 1] &&
+                    h1Bars.LowPrices[idx] < h1Bars.LowPrices[idx - 2] &&
+                    h1Bars.LowPrices[idx] < h1Bars.LowPrices[idx + 1] &&
+                    h1Bars.LowPrices[idx] < h1Bars.LowPrices[idx + 2])
+                {
+                    h1Supports.Add(h1Bars.LowPrices[idx]);
+                }
+            }
+
+            Print("[H1 Levels] Detected {0} supports and {1} resistances",
+                h1Supports.Count, h1Resistances.Count);
+        }
+
+        /// <summary>
+        /// Updates M15 support and resistance levels using Williams Fractals
+        /// Scans last 100 M15 bars for fractal patterns
+        /// Phase 1C Implementation
+        /// </summary>
+        private void UpdateM15Levels()
+        {
+            m15Supports.Clear();
+            m15Resistances.Clear();
+
+            int barsToScan = Math.Min(100, m15Bars.Count - 5);
+
+            for (int i = 2; i < barsToScan - 2; i++)
+            {
+                int idx = m15Bars.Count - 1 - i;
+
+                // Check bounds
+                if (idx < 2 || idx >= m15Bars.Count - 2)
+                    continue;
+
+                // Williams Fractal Up (Resistance)
+                if (m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx - 1] &&
+                    m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx - 2] &&
+                    m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx + 1] &&
+                    m15Bars.HighPrices[idx] > m15Bars.HighPrices[idx + 2])
+                {
+                    m15Resistances.Add(m15Bars.HighPrices[idx]);
+                }
+
+                // Williams Fractal Down (Support)
+                if (m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx - 1] &&
+                    m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx - 2] &&
+                    m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx + 1] &&
+                    m15Bars.LowPrices[idx] < m15Bars.LowPrices[idx + 2])
+                {
+                    m15Supports.Add(m15Bars.LowPrices[idx]);
+                }
+            }
+
+            Print("[M15 Levels] Detected {0} supports and {1} resistances",
+                m15Supports.Count, m15Resistances.Count);
+        }
+
+        /// <summary>
+        /// Adjusts TP based on market structure levels
+        /// Priority: H1 levels > M15 levels > Default 3R
+        /// Always maintains minimum RR ratio
+        /// Phase 1C Implementation
+        /// </summary>
+        private double AdjustTPForMarketStructure(double entryPrice, double initialTP, double slPrice, string mode)
+        {
+            double minTPDistance = Math.Abs(initialTP - entryPrice); // Minimum 3R distance
+            double riskDistance = Math.Abs(entryPrice - slPrice);
+
+            if (mode == "SELL")
+            {
+                // STEP 1: Check for H1 support level (highest priority)
+                if (UseH1LevelsForTP && h1Supports.Count > 0)
+                {
+                    double bestH1Support = FindBestH1Support(entryPrice, initialTP);
+
+                    if (bestH1Support > 0)
+                    {
+                        double h1TPDistance = entryPrice - bestH1Support;
+                        double h1RR = h1TPDistance / riskDistance;
+
+                        // Only use H1 level if it gives at least minimum RR
+                        if (h1TPDistance >= minTPDistance)
+                        {
+                            Print("[TP-H1] Using H1 support at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
+                                bestH1Support, h1TPDistance / Symbol.PipSize, h1RR);
+                            return bestH1Support;
+                        }
+                        else
+                        {
+                            Print("[TP-H1] H1 support found but too close (RR: 1:{0:F1}, need ≥ 1:{1:F1})",
+                                h1RR, MinimumRRRatio);
+                        }
+                    }
+                }
+
+                // STEP 2: Fall back to M15 support level
+                if (UseM15LevelsForTP && m15Supports.Count > 0)
+                {
+                    double m15Support = FindM15Support(entryPrice, initialTP);
+
+                    if (m15Support > 0)
+                    {
+                        double m15TPDistance = entryPrice - m15Support;
+                        double m15RR = m15TPDistance / riskDistance;
+
+                        if (m15TPDistance >= minTPDistance)
+                        {
+                            Print("[TP-M15] Using M15 support at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
+                                m15Support, m15TPDistance / Symbol.PipSize, m15RR);
+                            return m15Support;
+                        }
+                    }
+                }
+
+                // STEP 3: Use default 3R TP
+                Print("[TP-Default] Using default {0:F1}R TP at {1:F5}", MinimumRRRatio, initialTP);
+                return initialTP;
+            }
+            else // BUY
+            {
+                // STEP 1: Check for H1 resistance level (highest priority)
+                if (UseH1LevelsForTP && h1Resistances.Count > 0)
+                {
+                    double bestH1Resistance = FindBestH1Resistance(entryPrice, initialTP);
+
+                    if (bestH1Resistance > 0)
+                    {
+                        double h1TPDistance = bestH1Resistance - entryPrice;
+                        double h1RR = h1TPDistance / riskDistance;
+
+                        if (h1TPDistance >= minTPDistance)
+                        {
+                            Print("[TP-H1] Using H1 resistance at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
+                                bestH1Resistance, h1TPDistance / Symbol.PipSize, h1RR);
+                            return bestH1Resistance;
+                        }
+                        else
+                        {
+                            Print("[TP-H1] H1 resistance found but too close (RR: 1:{0:F1}, need ≥ 1:{1:F1})",
+                                h1RR, MinimumRRRatio);
+                        }
+                    }
+                }
+
+                // STEP 2: Fall back to M15 resistance level
+                if (UseM15LevelsForTP && m15Resistances.Count > 0)
+                {
+                    double m15Resistance = FindM15Resistance(entryPrice, initialTP);
+
+                    if (m15Resistance > 0)
+                    {
+                        double m15TPDistance = m15Resistance - entryPrice;
+                        double m15RR = m15TPDistance / riskDistance;
+
+                        if (m15TPDistance >= minTPDistance)
+                        {
+                            Print("[TP-M15] Using M15 resistance at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
+                                m15Resistance, m15TPDistance / Symbol.PipSize, m15RR);
+                            return m15Resistance;
+                        }
+                    }
+                }
+
+                // STEP 3: Use default 3R TP
+                Print("[TP-Default] Using default {0:F1}R TP at {1:F5}", MinimumRRRatio, initialTP);
+                return initialTP;
+            }
+        }
+
+        /// <summary>
+        /// Finds best H1 support level for SELL trades
+        /// Returns level below entry, within proximity, and at/beyond minimum TP
+        /// </summary>
+        private double FindBestH1Support(double entryPrice, double minTP)
+        {
+            double maxDistance = H1LevelProximityPips * Symbol.PipSize;
+
+            // Find H1 support below entry, within proximity, and below minTP (further is better)
+            var validSupports = h1Supports
+                .Where(s => s < entryPrice && s <= minTP && (entryPrice - s) <= maxDistance)
+                .OrderByDescending(s => s); // Closest to entry (but still profitable)
+
+            return validSupports.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Finds best H1 resistance level for BUY trades
+        /// Returns level above entry, within proximity, and at/beyond minimum TP
+        /// </summary>
+        private double FindBestH1Resistance(double entryPrice, double minTP)
+        {
+            double maxDistance = H1LevelProximityPips * Symbol.PipSize;
+
+            var validResistances = h1Resistances
+                .Where(r => r > entryPrice && r >= minTP && (r - entryPrice) <= maxDistance)
+                .OrderBy(r => r); // Closest to entry
+
+            return validResistances.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Finds best M15 support level for SELL trades
+        /// Returns first valid support below entry and at/beyond minimum TP
+        /// </summary>
+        private double FindM15Support(double entryPrice, double minTP)
+        {
+            // Find M15 support below entry and at/beyond minimum TP
+            var validSupports = m15Supports
+                .Where(s => s < entryPrice && s <= minTP)
+                .OrderByDescending(s => s); // Closest to entry
+
+            return validSupports.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Finds best M15 resistance level for BUY trades
+        /// Returns first valid resistance above entry and at/beyond minimum TP
+        /// </summary>
+        private double FindM15Resistance(double entryPrice, double minTP)
+        {
+            var validResistances = m15Resistances
+                .Where(r => r > entryPrice && r >= minTP)
+                .OrderBy(r => r); // Closest to entry
+
+            return validResistances.FirstOrDefault();
+        }
+
+        #endregion
+
+        #region Phase 2: Session Management
+
+        /// <summary>
+        /// Gets session state for a given time
+        /// Returns which sessions are active (can be multiple overlapping)
+        /// Phase 2 Implementation
+        /// </summary>
+        private SessionState GetSessionState(DateTime time)
+        {
+            int hourUTC = time.Hour;
+
+            return new SessionState
+            {
+                IsAsian = hourUTC >= 0 && hourUTC < 9,     // 00:00-09:00 UTC
+                IsLondon = hourUTC >= 8 && hourUTC < 17,   // 08:00-17:00 UTC
+                IsNewYork = hourUTC >= 13 && hourUTC < 22  // 13:00-22:00 UTC
+            };
+        }
+
+        /// <summary>
+        /// Gets the PRIMARY session for a given time
+        /// Overlap takes priority, then London, NY, Asian
+        /// Phase 2 Implementation
+        /// </summary>
+        private TradingSession GetPrimarySession(DateTime time)
+        {
+            var state = GetSessionState(time);
+
+            // Overlap is highest priority (most liquidity)
+            if (state.IsOverlap)
+                return TradingSession.Overlap;
+
+            // Individual sessions
+            if (state.IsLondon)
+                return TradingSession.London;
+
+            if (state.IsNewYork)
+                return TradingSession.NewYork;
+
+            if (state.IsAsian)
+                return TradingSession.Asian;
+
+            return TradingSession.None;
+        }
+
+        /// <summary>
+        /// Updates session tracking on each M15 bar
+        /// Detects session boundaries and tracks high/low
+        /// Phase 2 Implementation
+        /// </summary>
+        private void UpdateSessionTracking()
+        {
+            DateTime currentTime = m15Bars.OpenTimes.LastValue;
+            TradingSession currentPrimarySession = GetPrimarySession(currentTime);
+
+            // Detect session boundary (new session started)
+            if (currentPrimarySession != lastDetectedSession && currentPrimarySession != TradingSession.None)
+            {
+                // Save previous session if it existed
+                if (currentSession != null)
+                {
+                    currentSession.EndTime = currentTime;
+                    recentSessions.Add(currentSession);
+
+                    Print("[Session] {0} session ended | High: {1:F5} | Low: {2:F5} | Duration: {3}",
+                        currentSession.Session,
+                        currentSession.High,
+                        currentSession.Low,
+                        currentSession.EndTime - currentSession.StartTime);
+
+                    // Keep only last 20 sessions
+                    if (recentSessions.Count > 20)
+                        recentSessions.RemoveAt(0);
+                }
+
+                // Start new session
+                currentSession = new SessionLevels
+                {
+                    Session = currentPrimarySession,
+                    StartTime = currentTime,
+                    High = m15Bars.HighPrices.LastValue,
+                    Low = m15Bars.LowPrices.LastValue
+                };
+
+                Print("[Session] NEW {0} session started at {1}", currentPrimarySession, currentTime);
+
+                lastDetectedSession = currentPrimarySession;
+            }
+
+            // Update current session high/low
+            if (currentSession != null)
+            {
+                double currentHigh = m15Bars.HighPrices.LastValue;
+                double currentLow = m15Bars.LowPrices.LastValue;
+
+                if (currentHigh > currentSession.High)
+                    currentSession.High = currentHigh;
+
+                if (currentLow < currentSession.Low)
+                    currentSession.Low = currentLow;
+            }
+        }
+
+        /// <summary>
+        /// Finds the session that a swing occurred in
+        /// Returns null if swing is too old or no session found
+        /// Phase 2 Implementation
+        /// </summary>
+        private SessionLevels GetSessionForTime(DateTime swingTime)
+        {
+            // Check current session first
+            if (currentSession != null && swingTime >= currentSession.StartTime)
+                return currentSession;
+
+            // Check recent sessions
+            foreach (var session in recentSessions)
+            {
+                if (swingTime >= session.StartTime && swingTime <= session.EndTime)
+                    return session;
+            }
+
+            return null;
         }
 
         #endregion
@@ -1045,8 +1609,9 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // TP = Minimum RR from entry (default 3R)
-            double takeProfit = entryPrice - (riskPips * MinimumRRRatio * Symbol.PipSize);
+            // TP = Minimum RR from entry (default 3R) - Phase 1C: Adjusted for market structure
+            double initialTP = entryPrice - (riskPips * MinimumRRRatio * Symbol.PipSize);
+            double takeProfit = AdjustTPForMarketStructure(entryPrice, initialTP, stopLoss, "SELL");
 
             // Calculate actual RR
             double rewardPips = (entryPrice - takeProfit) / Symbol.PipSize;
@@ -1109,8 +1674,9 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // TP = Minimum RR from entry (default 3R)
-            double takeProfit = entryPrice + (riskPips * MinimumRRRatio * Symbol.PipSize);
+            // TP = Minimum RR from entry (default 3R) - Phase 1C: Adjusted for market structure
+            double initialTP = entryPrice + (riskPips * MinimumRRRatio * Symbol.PipSize);
+            double takeProfit = AdjustTPForMarketStructure(entryPrice, initialTP, stopLoss, "BUY");
 
             // Calculate actual RR
             double rewardPips = (takeProfit - entryPrice) / Symbol.PipSize;
