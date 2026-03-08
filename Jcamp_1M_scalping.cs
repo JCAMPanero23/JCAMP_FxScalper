@@ -8,7 +8,7 @@ namespace cAlgo.Robots
 {
     /// <summary>
     /// Jcamp 1M Scalping Strategy
-    /// Based on M15 EMA 200 trend detection and swing rectangle entry zones
+    /// Based on M15 SMA 200 trend detection and swing rectangle entry zones
     /// SELL Mode: Enter SELL when price enters swing HIGH rectangle (Close to High)
     /// BUY Mode: Enter BUY when price enters swing LOW rectangle (Close to Low)
     /// </summary>
@@ -20,8 +20,8 @@ namespace cAlgo.Robots
         [Parameter("=== TREND DETECTION ===", DefaultValue = "")]
         public string TrendHeader { get; set; }
 
-        [Parameter("EMA Period", DefaultValue = 200, MinValue = 50, MaxValue = 500, Group = "Trend Detection")]
-        public int EMAPeriod { get; set; }
+        [Parameter("SMA Period", DefaultValue = 200, MinValue = 50, MaxValue = 500, Group = "Trend Detection")]
+        public int SMAPeriod { get; set; }
 
         [Parameter("Swing Lookback Bars (M15)", DefaultValue = 100, MinValue = 10, MaxValue = 200, Group = "Trend Detection")]
         public int SwingLookbackBars { get; set; }
@@ -36,14 +36,14 @@ namespace cAlgo.Robots
         [Parameter("=== TRADE MANAGEMENT ===", DefaultValue = "")]
         public string TradeHeader { get; set; }
 
-        [Parameter("Lot Size", DefaultValue = 0.01, MinValue = 0.01, MaxValue = 100, Group = "Trade Management")]
-        public double LotSize { get; set; }
+        [Parameter("Risk Per Trade %", DefaultValue = 1.0, MinValue = 0.1, MaxValue = 5.0, Step = 0.1, Group = "Trade Management")]
+        public double RiskPercent { get; set; }
 
-        [Parameter("Stop Loss (Pips)", DefaultValue = 20, MinValue = 5, MaxValue = 200, Group = "Trade Management")]
-        public int StopLossPips { get; set; }
+        [Parameter("SL Buffer Pips", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 10.0, Step = 0.5, Group = "Trade Management")]
+        public double SLBufferPips { get; set; }
 
-        [Parameter("Take Profit (Pips)", DefaultValue = 40, MinValue = 10, MaxValue = 500, Group = "Trade Management")]
-        public int TakeProfitPips { get; set; }
+        [Parameter("Minimum RR Ratio", DefaultValue = 3.0, MinValue = 2.0, MaxValue = 10.0, Step = 0.5, Group = "Trade Management")]
+        public double MinimumRRRatio { get; set; }
 
         [Parameter("Max Positions", DefaultValue = 1, MinValue = 1, MaxValue = 10, Group = "Trade Management")]
         public int MaxPositions { get; set; }
@@ -61,8 +61,24 @@ namespace cAlgo.Robots
         [Parameter("Enable Trading", DefaultValue = false, Group = "Entry Filters")]
         public bool EnableTrading { get; set; }
 
+        [Parameter("Entry Mode", DefaultValue = EntryMode.Breakout, Group = "Entry Filters")]
+        public EntryMode EntryModeSelection { get; set; }
+
         [Parameter("Trade on New Swing Only", DefaultValue = true, Group = "Entry Filters")]
         public bool TradeOnNewSwingOnly { get; set; }
+
+        [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 1.0, MaxValue = 50.0, Step = 1.0, Group = "Entry Filters")]
+        public double MaxDistanceToArm { get; set; }
+
+        #endregion
+
+        #region Entry Mode Enum
+
+        public enum EntryMode
+        {
+            Breakout,       // DEFAULT: Enter when body closes beyond rectangle
+            RetestConfirm   // ALTERNATIVE: Wait for retest after breakout
+        }
 
         #endregion
 
@@ -97,7 +113,6 @@ namespace cAlgo.Robots
         #region Private Fields
 
         private Bars m15Bars;
-        private ExponentialMovingAverage ema200_m15;
         private bool isM15Chart;
 
         // State tracking
@@ -109,6 +124,13 @@ namespace cAlgo.Robots
         private double swingTopPrice = 0;
         private double swingBottomPrice = 0;
         private bool hasActiveSwing = false;
+        private bool hasValidRectangle = false;  // Rectangle exists (may or may not be armed)
+        private DateTime rectangleCreatedTime = DateTime.MinValue;  // Track when rectangle was created
+        private DateTime rectangleExpiryTime = DateTime.MinValue;   // Track when rectangle expires
+
+        // Phase 1B: Entry tracking
+        private bool hasBreakoutOccurred = false;
+        private double breakoutPrice = 0;
 
         // Visualization tracking
         private int rectangleCounter = 0;
@@ -145,7 +167,6 @@ namespace cAlgo.Robots
             // Always use MarketData.GetBars for M15 data to ensure consistency
             // between M1 and M15 chart runs (same data source = same results)
             m15Bars = MarketData.GetBars(TimeFrame.Minute15);
-            ema200_m15 = Indicators.ExponentialMovingAverage(m15Bars.ClosePrices, EMAPeriod);
 
             if (isM15Chart)
             {
@@ -159,15 +180,20 @@ namespace cAlgo.Robots
             // Initialize state
             lastM15BarTime = m15Bars.OpenTimes.LastValue;
 
-            Print("EMA Period: {0} | Swing Lookback: {1} bars", EMAPeriod, SwingLookbackBars);
-            Print("Lot Size: {0} | SL: {1} pips | TP: {2} pips", LotSize, StopLossPips, TakeProfitPips);
-            Print("Max Positions: {0} | Magic: {1}", MaxPositions, MagicNumber);
-            Print("Trading Enabled: {0}", EnableTrading);
+            Print("SMA Period: {0} | Swing Lookback: {1} bars | Min Swing Score: {2:F2}",
+                SMAPeriod, SwingLookbackBars, MinimumSwingScore);
+            Print("Risk Management: {0:F1}% per trade | SL Buffer: {1:F1} pips | Min RR: 1:{2:F1}",
+                RiskPercent, SLBufferPips, MinimumRRRatio);
+            Print("Entry Mode: {0} | Max Distance to Arm: {1:F1} pips | Max Positions: {2} | Magic: {3}",
+                EntryModeSelection, MaxDistanceToArm, MaxPositions, MagicNumber);
+            Print("Trading Enabled: {0} | Trade on New Swing Only: {1}",
+                EnableTrading, TradeOnNewSwingOnly);
+            Print("Rectangle Width: {0} min (trading window)", RectangleWidthMinutes);
             Print("Visualization: Rectangles={0} | Mode Label={1}", ShowRectangles, ShowModeLabel);
             Print("========================================");
 
             // Detect initial mode and show label immediately
-            if (m15Bars.Count >= EMAPeriod + 5)
+            if (m15Bars.Count >= SMAPeriod + 5)
             {
                 currentMode = DetectTrendMode();
                 Print("Initial Mode: {0}", currentMode);
@@ -185,11 +211,11 @@ namespace cAlgo.Robots
 
         protected override void OnBar()
         {
-            // Check if enough M15 bars for EMA calculation
-            if (m15Bars.Count < EMAPeriod + 5)
+            // Check if enough M15 bars for SMA calculation
+            if (m15Bars.Count < SMAPeriod + 5)
             {
-                Print("Waiting for {0} M15 bars for EMA calculation (current: {1})",
-                    EMAPeriod + 5, m15Bars.Count);
+                Print("Waiting for {0} M15 bars for SMA calculation (current: {1})",
+                    SMAPeriod + 5, m15Bars.Count);
                 return;
             }
 
@@ -199,83 +225,120 @@ namespace cAlgo.Robots
                 UpdateModeDisplay(currentMode);
             }
 
-            // Only process swing detection when a NEW M15 bar appears
+            // ============================================================
+            // SWING DETECTION: Only process when a NEW M15 bar appears
+            // ============================================================
             bool isNewM15Bar = (m15Bars.OpenTimes.LastValue != lastM15BarTime);
 
-            if (!isNewM15Bar)
-                return;
-
-            lastM15BarTime = m15Bars.OpenTimes.LastValue;
-
-            Print("=== NEW M15 BAR: {0} ===", lastM15BarTime);
-
-            // 1. Detect current trend mode
-            string newMode = DetectTrendMode();
-
-            // 2. Update mode if changed
-            if (newMode != currentMode && !string.IsNullOrEmpty(newMode))
+            if (isNewM15Bar)
             {
-                currentMode = newMode;
-                Print(">>> MODE CHANGED: {0} MODE <<<", currentMode);
+                lastM15BarTime = m15Bars.OpenTimes.LastValue;
+
+                Print("=== NEW M15 BAR: {0} ===", lastM15BarTime);
+
+                // 1. Detect current trend mode
+                string newMode = DetectTrendMode();
+
+                // 2. Update mode if changed
+                if (newMode != currentMode && !string.IsNullOrEmpty(newMode))
+                {
+                    currentMode = newMode;
+                    Print(">>> MODE CHANGED: {0} MODE <<<", currentMode);
+                }
+
+                // 3. Find significant swing point based on mode (with scoring)
+                int swingIndex = FindSignificantSwing(currentMode);
+
+                if (swingIndex == -1)
+                {
+                    Print("[{0}] No NEW significant swing found (score >= {1:F2}) in last {2} M15 bars",
+                        currentMode, MinimumSwingScore, SwingLookbackBars);
+                    // DON'T deactivate existing rectangle! It remains active until expired/invalidated/traded
+                }
+                else
+                {
+                    // 4. Update swing rectangle zone (only if we found a new swing)
+                    DateTime swingTime = m15Bars.OpenTimes[swingIndex];
+
+                    // Check if this is a new swing
+                    bool isNewSwing = (swingTime != lastSwingTime);
+
+                    if (isNewSwing)
+                    {
+                        lastSwingTime = swingTime;
+                        hasBreakoutOccurred = false;  // Reset breakout tracking for new swing
+
+                        // UpdateSwingZone will set hasActiveSwing based on proximity check
+                        UpdateSwingZone(swingIndex, currentMode);
+                    }
+                }
             }
 
-            // 3. Find significant swing point based on mode (with scoring)
-            int swingIndex = FindSignificantSwing(currentMode);
+            // ============================================================
+            // ENTRY DETECTION: Process on EVERY M1 bar (not just M15 bars!)
+            // ============================================================
 
-            if (swingIndex == -1)
+            // Check if we need to re-arm an unarmed rectangle (Issue 1 Fix: price returned)
+            if (EnableTrading && hasValidRectangle && !hasActiveSwing)
             {
-                Print("[{0}] No significant swing found (score >= {1:F2}) in last {2} M15 bars",
-                    currentMode, MinimumSwingScore, SwingLookbackBars);
-                hasActiveSwing = false;
+                TryRearmRectangle();
+            }
+
+            // Phase 1B: Entry detection on M1 bar close
+            // Process breakout entry logic if trading is enabled
+            if (EnableTrading && hasActiveSwing)
+            {
+                ProcessEntryLogic();
+            }
+        }
+
+        /// <summary>
+        /// Attempts to re-arm a rectangle when price returns to it
+        /// Issue 1 Fix: If rectangle was created when price already moved away,
+        /// we wait for price to return before arming it for trading
+        /// </summary>
+        private void TryRearmRectangle()
+        {
+            // Check if rectangle has expired
+            DateTime currentTime = Bars.OpenTimes.LastValue;
+            if (currentTime > rectangleExpiryTime)
+            {
+                Print("[RearmCheck] Rectangle expired - cannot rearm");
+                hasValidRectangle = false;
                 return;
             }
 
-            // 4. Update swing rectangle zone
-            DateTime swingTime = m15Bars.OpenTimes[swingIndex];
+            // Check if price has returned close enough to rectangle
+            double currentPrice = Symbol.Bid;
+            double distanceToRectangle;
 
-            // Check if this is a new swing
-            bool isNewSwing = (swingTime != lastSwingTime);
-
-            if (isNewSwing)
+            if (currentMode == "SELL")
             {
-                UpdateSwingZone(swingIndex, currentMode);
-                lastSwingTime = swingTime;
+                // For SELL: Check distance from current price to rectangle bottom
+                distanceToRectangle = (currentPrice - swingBottomPrice) / Symbol.PipSize;
+            }
+            else
+            {
+                // For BUY: Check distance from current price to rectangle top
+                distanceToRectangle = (swingTopPrice - currentPrice) / Symbol.PipSize;
+            }
+
+            // Rearm if price is now within acceptable range (above rectangle for SELL, below for BUY)
+            if (distanceToRectangle >= 0 && distanceToRectangle <= MaxDistanceToArm * 2)
+            {
+                Print("[RearmRectangle] ✅ Price returned! Distance: {0:F1} pips - REARMED for trading", distanceToRectangle);
                 hasActiveSwing = true;
             }
         }
 
         #endregion
 
-        #region OnTick - Entry Logic
+        #region OnTick - Entry Logic (Phase 1B: Breakout Detection)
 
         protected override void OnTick()
         {
-            if (!EnableTrading || !hasActiveSwing)
-                return;
-
-            // Check if we already have max positions
-            var positions = Positions.FindAll(MagicNumber.ToString(), SymbolName);
-            if (positions.Length >= MaxPositions)
-                return;
-
-            // Get current price
-            double currentPrice = Symbol.Bid;
-
-            // Check if price is inside the swing rectangle zone
-            bool isPriceInZone = currentPrice >= swingBottomPrice && currentPrice <= swingTopPrice;
-
-            if (!isPriceInZone)
-                return;
-
-            // Execute trade based on mode
-            if (currentMode == "SELL" && positions.Length == 0)
-            {
-                ExecuteSellTrade();
-            }
-            else if (currentMode == "BUY" && positions.Length == 0)
-            {
-                ExecuteBuyTrade();
-            }
+            // Phase 1B: Entry logic moved to OnBar for M1 candle close detection
+            // OnTick is kept for future real-time monitoring if needed
         }
 
         #endregion
@@ -283,9 +346,9 @@ namespace cAlgo.Robots
         #region Trend Detection
 
         /// <summary>
-        /// Detects trend mode using M15 price vs MA 200
+        /// Detects trend mode using M15 price vs SMA 200
         /// Uses custom SMA calculation to ensure consistency between M1 and M15 charts
-        /// (EMA depends on all historical data, SMA only uses last N bars)
+        /// SMA only uses last N bars, ensuring same results regardless of chart timeframe
         /// </summary>
         private string DetectTrendMode()
         {
@@ -293,9 +356,8 @@ namespace cAlgo.Robots
 
             double currentPrice = m15Bars.ClosePrices[lastIdx];
 
-            // Use custom SMA calculation (only last 200 bars) for consistency
-            // This avoids EMA's dependency on different historical data lengths
-            double smaValue = CalculateSMA(EMAPeriod);
+            // Use custom SMA calculation (only last N bars) for consistency
+            double smaValue = CalculateSMA(SMAPeriod);
 
             string mode = currentPrice > smaValue ? "BUY" : "SELL";
 
@@ -303,7 +365,7 @@ namespace cAlgo.Robots
             Print("[TrendDetection] Chart: {0} | BarCount: {1} | LastBarTime: {2}",
                 isM15Chart ? "M15" : "M1", m15Bars.Count, m15Bars.OpenTimes[lastIdx]);
             Print("[TrendDetection] M15 Price: {0:F5} | SMA{1}: {2:F5} | Mode: {3}",
-                currentPrice, EMAPeriod, smaValue, mode);
+                currentPrice, SMAPeriod, smaValue, mode);
 
             return mode;
         }
@@ -684,8 +746,49 @@ namespace cAlgo.Robots
 
             double heightPips = (swingTopPrice - swingBottomPrice) / Symbol.PipSize;
 
+            // Set rectangle timing (for entry expiry logic - Issue 3 Fix)
+            rectangleCreatedTime = m15Bars.OpenTimes.LastValue;
+            rectangleExpiryTime = rectangleCreatedTime.AddMinutes(RectangleWidthMinutes);
+
             Print("[SwingZone] {0} Mode | Top: {1:F5} | Bottom: {2:F5} | Height: {3:F1} pips",
                 mode, swingTopPrice, swingBottomPrice, heightPips);
+            Print("[SwingZone] Created: {0} | Expires: {1} ({2} min window)",
+                rectangleCreatedTime, rectangleExpiryTime, RectangleWidthMinutes);
+
+            // Issue 1 Fix: Check if current price is close enough to rectangle to "arm" it
+            double currentPrice = Symbol.Bid;
+            double distanceToRectangle;
+
+            if (mode == "SELL")
+            {
+                // For SELL: Check distance from current price to rectangle bottom
+                // Price should be above or near the rectangle (not already broken through)
+                distanceToRectangle = (currentPrice - swingBottomPrice) / Symbol.PipSize;
+            }
+            else
+            {
+                // For BUY: Check distance from current price to rectangle top
+                // Price should be below or near the rectangle (not already broken through)
+                distanceToRectangle = (swingTopPrice - currentPrice) / Symbol.PipSize;
+            }
+
+            // Mark that we have a valid rectangle (even if not armed yet)
+            hasValidRectangle = true;
+
+            // Check if price has already moved too far from rectangle
+            if (distanceToRectangle < -MaxDistanceToArm)
+            {
+                Print("[SwingZone] ⚠️ Price already {0:F1} pips beyond rectangle - NOT ARMED (max: {1:F1} pips)",
+                    Math.Abs(distanceToRectangle), MaxDistanceToArm);
+                Print("[SwingZone] Rectangle drawn for visualization only - waiting for price to return");
+                hasActiveSwing = false;  // Don't arm the rectangle for trading yet
+            }
+            else
+            {
+                Print("[SwingZone] ✅ Price {0:F1} pips from rectangle edge - ARMED for trading",
+                    distanceToRectangle);
+                hasActiveSwing = true;  // Arm the rectangle for trading
+            }
 
             // Draw rectangle on chart
             if (ShowRectangles)
@@ -702,30 +805,280 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Phase 1B: Entry Detection Logic
+
+        /// <summary>
+        /// Processes entry logic based on selected entry mode
+        /// Called on every M1 bar close (via OnBar)
+        /// </summary>
+        private void ProcessEntryLogic()
+        {
+            // Check if we already have max positions
+            var positions = Positions.FindAll(MagicNumber.ToString(), SymbolName);
+            if (positions.Length >= MaxPositions)
+                return;
+
+            // FIX Issue 3: Check if rectangle has expired (time-based cutoff)
+            DateTime currentTime = Bars.OpenTimes.LastValue;
+            if (currentTime > rectangleExpiryTime)
+            {
+                Print("[RectangleExpired] Rectangle expired at {0} | Current time: {1} | Disabling swing",
+                    rectangleExpiryTime, currentTime);
+                hasActiveSwing = false;
+                hasValidRectangle = false;
+                return;
+            }
+
+            // Get CLOSED M1 candle (last completed bar)
+            int lastIdx = Bars.Count - 2;
+            if (lastIdx < 0)
+                return;
+
+            double candleOpen = Bars.OpenPrices[lastIdx];
+            double candleClose = Bars.ClosePrices[lastIdx];
+            double candleHigh = Bars.HighPrices[lastIdx];
+            double candleLow = Bars.LowPrices[lastIdx];
+
+            // Process based on entry mode
+            if (EntryModeSelection == EntryMode.Breakout)
+            {
+                ProcessBreakoutEntry(candleOpen, candleClose, candleHigh, candleLow);
+            }
+            else
+            {
+                ProcessRetestEntry(candleOpen, candleClose, candleHigh, candleLow);
+            }
+        }
+
+        /// <summary>
+        /// Breakout Entry Mode (DEFAULT)
+        /// SELL: Candle CLOSES below rectangle bottom (bearish breakout)
+        /// BUY: Candle CLOSES above rectangle top (bullish breakout)
+        /// Invalidates if body closes opposite direction
+        /// </summary>
+        private void ProcessBreakoutEntry(double open, double close, double high, double low)
+        {
+            if (currentMode == "SELL")
+            {
+                // Invalidate if body closes ABOVE rectangle (wrong direction breakout)
+                if (close > swingTopPrice && open > swingTopPrice)
+                {
+                    Print("[RectangleInvalid] SELL rectangle invalidated - body closed above");
+                    hasActiveSwing = false;
+                    hasValidRectangle = false;
+                    return;
+                }
+
+                // TRIGGER: CLOSE below rectangle bottom = breakout
+                // Open can be anywhere (inside rectangle is normal for a breakout candle)
+                bool closesBelowRectangle = (close < swingBottomPrice);
+
+                // Candle must have interacted with the rectangle (high touched or entered it)
+                bool hadRectangleInteraction = (high >= swingBottomPrice);
+
+                // Must be a bearish candle (close < open) for SELL
+                bool isBearishCandle = (close < open);
+
+                if (closesBelowRectangle && hadRectangleInteraction && isBearishCandle)
+                {
+                    Print("[BreakoutEntry] SELL trigger | Close: {0:F5} < Bottom: {1:F5} | Bearish: YES",
+                        close, swingBottomPrice);
+                    ExecuteSellTrade();
+                }
+                else if (closesBelowRectangle)
+                {
+                    // Debug: Why didn't we trigger?
+                    Print("[BreakoutDebug] SELL almost triggered | Close below: YES | Interaction: {0} | Bearish: {1}",
+                        hadRectangleInteraction ? "YES" : "NO", isBearishCandle ? "YES" : "NO");
+                }
+            }
+            else if (currentMode == "BUY")
+            {
+                // Invalidate if body closes BELOW rectangle (wrong direction breakout)
+                if (close < swingBottomPrice && open < swingBottomPrice)
+                {
+                    Print("[RectangleInvalid] BUY rectangle invalidated - body closed below");
+                    hasActiveSwing = false;
+                    hasValidRectangle = false;
+                    return;
+                }
+
+                // TRIGGER: CLOSE above rectangle top = breakout
+                // Open can be anywhere (inside rectangle is normal for a breakout candle)
+                bool closesAboveRectangle = (close > swingTopPrice);
+
+                // Candle must have interacted with the rectangle (low touched or entered it)
+                bool hadRectangleInteraction = (low <= swingTopPrice);
+
+                // Must be a bullish candle (close > open) for BUY
+                bool isBullishCandle = (close > open);
+
+                if (closesAboveRectangle && hadRectangleInteraction && isBullishCandle)
+                {
+                    Print("[BreakoutEntry] BUY trigger | Close: {0:F5} > Top: {1:F5} | Bullish: YES",
+                        close, swingTopPrice);
+                    ExecuteBuyTrade();
+                }
+                else if (closesAboveRectangle)
+                {
+                    // Debug: Why didn't we trigger?
+                    Print("[BreakoutDebug] BUY almost triggered | Close above: YES | Interaction: {0} | Bullish: {1}",
+                        hadRectangleInteraction ? "YES" : "NO", isBullishCandle ? "YES" : "NO");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Retest Entry Mode (ALTERNATIVE)
+        /// Phase 1: Detect breakout
+        /// Phase 2: Wait for retest and rejection candle
+        /// </summary>
+        private void ProcessRetestEntry(double open, double close, double high, double low)
+        {
+            if (currentMode == "SELL")
+            {
+                // Phase 1: Detect initial breakout
+                if (!hasBreakoutOccurred && close < swingBottomPrice && open < swingBottomPrice)
+                {
+                    hasBreakoutOccurred = true;
+                    breakoutPrice = swingBottomPrice;
+                    Print("[Retest] SELL breakout detected, waiting for retest of {0:F5}", breakoutPrice);
+                    return;
+                }
+
+                // Phase 2: Wait for retest (price comes back to rectangle bottom)
+                if (hasBreakoutOccurred)
+                {
+                    // Check if candle retested the level (wick touched)
+                    bool retested = (high >= breakoutPrice - (2 * Symbol.PipSize));
+
+                    // Check for rejection (bearish candle closing below retest level)
+                    bool isRejection = (close < open) && (close < breakoutPrice);
+
+                    if (retested && isRejection)
+                    {
+                        Print("[RetestEntry] SELL retest confirmed | Rejection candle detected");
+                        ExecuteSellTrade();
+                        hasBreakoutOccurred = false;
+                    }
+                }
+            }
+            else if (currentMode == "BUY")
+            {
+                // Phase 1: Detect initial breakout
+                if (!hasBreakoutOccurred && close > swingTopPrice && open > swingTopPrice)
+                {
+                    hasBreakoutOccurred = true;
+                    breakoutPrice = swingTopPrice;
+                    Print("[Retest] BUY breakout detected, waiting for retest of {0:F5}", breakoutPrice);
+                    return;
+                }
+
+                // Phase 2: Wait for retest
+                if (hasBreakoutOccurred)
+                {
+                    bool retested = (low <= breakoutPrice + (2 * Symbol.PipSize));
+                    bool isRejection = (close > open) && (close > breakoutPrice);
+
+                    if (retested && isRejection)
+                    {
+                        Print("[RetestEntry] BUY retest confirmed | Rejection candle detected");
+                        ExecuteBuyTrade();
+                        hasBreakoutOccurred = false;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calculates position size based on risk percentage and SL distance
+        /// Phase 1B: Dynamic risk-based position sizing
+        /// </summary>
+        private double CalculatePositionSize(double slDistancePips)
+        {
+            double riskAmount = Account.Balance * (RiskPercent / 100.0);
+            double pipValuePerLot = Symbol.PipValue * Symbol.LotSize;
+            double lotSize = riskAmount / (slDistancePips * pipValuePerLot);
+
+            Print("[PositionSizing] Risk: {0:F2}% (${1:F2}) | SL: {2:F1} pips | Lot Size: {3:F4}",
+                RiskPercent, riskAmount, slDistancePips, lotSize);
+
+            // Normalize to broker limits
+            double volumeInUnits = Symbol.QuantityToVolumeInUnits(lotSize);
+            volumeInUnits = Symbol.NormalizeVolumeInUnits(volumeInUnits, RoundingMode.Down);
+
+            // Ensure minimum volume
+            if (volumeInUnits < Symbol.VolumeInUnitsMin)
+            {
+                Print("[PositionSizing] Volume too small ({0:F2}), minimum is {1:F2}",
+                    volumeInUnits, Symbol.VolumeInUnitsMin);
+                return 0;
+            }
+
+            return volumeInUnits;
+        }
+
+        #endregion
+
         #region Trade Execution
 
         /// <summary>
-        /// Executes a SELL trade at swing HIGH zone
+        /// Executes a SELL trade - Phase 1B Implementation
+        /// SL = Rectangle top + buffer
+        /// TP = 3R minimum from entry
         /// </summary>
         private void ExecuteSellTrade()
         {
-            double volume = Symbol.QuantityToVolumeInUnits(LotSize);
-            double entryPrice = Symbol.Ask;
-            double stopLoss = entryPrice + (StopLossPips * Symbol.PipSize);
-            double takeProfit = entryPrice - (TakeProfitPips * Symbol.PipSize);
+            double entryPrice = Symbol.Bid;
+
+            // SL = rectangle top + buffer (above the zone)
+            double stopLoss = swingTopPrice + (SLBufferPips * Symbol.PipSize);
+
+            // Calculate risk in pips
+            double riskPips = (stopLoss - entryPrice) / Symbol.PipSize;
+
+            // Calculate position size based on risk
+            double volume = CalculatePositionSize(riskPips);
+            if (volume <= 0)
+            {
+                Print("[SELL] Position size too small for risk parameters - skipping");
+                return;
+            }
+
+            // TP = Minimum RR from entry (default 3R)
+            double takeProfit = entryPrice - (riskPips * MinimumRRRatio * Symbol.PipSize);
+
+            // Calculate actual RR
+            double rewardPips = (entryPrice - takeProfit) / Symbol.PipSize;
+            double actualRR = rewardPips / riskPips;
+
+            Print("[SELL] Entry Setup:");
+            Print("   Entry: {0:F5} | SL: {1:F5} (+{2:F1} pips buffer)", entryPrice, stopLoss, SLBufferPips);
+            Print("   TP: {0:F5} | Risk: {1:F1} pips | Reward: {2:F1} pips | RR: 1:{3:F1}",
+                takeProfit, riskPips, rewardPips, actualRR);
+            Print("   Volume: {0:F2} units | Rectangle: {1:F5} - {2:F5}",
+                volume, swingBottomPrice, swingTopPrice);
+
+            // Convert absolute prices to pips from entry for ExecuteMarketOrder
+            double slPips = Math.Abs(stopLoss - entryPrice) / Symbol.PipSize;
+            double tpPips = Math.Abs(takeProfit - entryPrice) / Symbol.PipSize;
 
             var result = ExecuteMarketOrder(TradeType.Sell, SymbolName, volume, MagicNumber.ToString(),
-                stopLoss, takeProfit);
+                slPips, tpPips);
 
             if (result.IsSuccessful)
             {
-                Print("✅ SELL EXECUTED | Entry: {0:F5} | SL: {1:F5} | TP: {2:F5} | Volume: {3}",
-                    entryPrice, stopLoss, takeProfit, volume);
-                Print("   Swing Zone: {0:F5} - {1:F5}", swingBottomPrice, swingTopPrice);
+                Print("✅ SELL EXECUTED SUCCESSFULLY");
+                Print("   Position ID: {0} | Risk Amount: ${1:F2}",
+                    result.Position.Id, Account.Balance * (RiskPercent / 100.0));
 
                 // Disable active swing if trading on new swing only
                 if (TradeOnNewSwingOnly)
+                {
                     hasActiveSwing = false;
+                    hasValidRectangle = false;
+                    hasBreakoutOccurred = false;
+                }
             }
             else
             {
@@ -734,27 +1087,62 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Executes a BUY trade at swing LOW zone
+        /// Executes a BUY trade - Phase 1B Implementation
+        /// SL = Rectangle bottom - buffer
+        /// TP = 3R minimum from entry
         /// </summary>
         private void ExecuteBuyTrade()
         {
-            double volume = Symbol.QuantityToVolumeInUnits(LotSize);
             double entryPrice = Symbol.Ask;
-            double stopLoss = entryPrice - (StopLossPips * Symbol.PipSize);
-            double takeProfit = entryPrice + (TakeProfitPips * Symbol.PipSize);
+
+            // SL = rectangle bottom - buffer (below the zone)
+            double stopLoss = swingBottomPrice - (SLBufferPips * Symbol.PipSize);
+
+            // Calculate risk in pips
+            double riskPips = (entryPrice - stopLoss) / Symbol.PipSize;
+
+            // Calculate position size based on risk
+            double volume = CalculatePositionSize(riskPips);
+            if (volume <= 0)
+            {
+                Print("[BUY] Position size too small for risk parameters - skipping");
+                return;
+            }
+
+            // TP = Minimum RR from entry (default 3R)
+            double takeProfit = entryPrice + (riskPips * MinimumRRRatio * Symbol.PipSize);
+
+            // Calculate actual RR
+            double rewardPips = (takeProfit - entryPrice) / Symbol.PipSize;
+            double actualRR = rewardPips / riskPips;
+
+            Print("[BUY] Entry Setup:");
+            Print("   Entry: {0:F5} | SL: {1:F5} (-{2:F1} pips buffer)", entryPrice, stopLoss, SLBufferPips);
+            Print("   TP: {0:F5} | Risk: {1:F1} pips | Reward: {2:F1} pips | RR: 1:{3:F1}",
+                takeProfit, riskPips, rewardPips, actualRR);
+            Print("   Volume: {0:F2} units | Rectangle: {1:F5} - {2:F5}",
+                volume, swingBottomPrice, swingTopPrice);
+
+            // Convert absolute prices to pips from entry for ExecuteMarketOrder
+            double slPips = Math.Abs(stopLoss - entryPrice) / Symbol.PipSize;
+            double tpPips = Math.Abs(takeProfit - entryPrice) / Symbol.PipSize;
 
             var result = ExecuteMarketOrder(TradeType.Buy, SymbolName, volume, MagicNumber.ToString(),
-                stopLoss, takeProfit);
+                slPips, tpPips);
 
             if (result.IsSuccessful)
             {
-                Print("✅ BUY EXECUTED | Entry: {0:F5} | SL: {1:F5} | TP: {2:F5} | Volume: {3}",
-                    entryPrice, stopLoss, takeProfit, volume);
-                Print("   Swing Zone: {0:F5} - {1:F5}", swingBottomPrice, swingTopPrice);
+                Print("✅ BUY EXECUTED SUCCESSFULLY");
+                Print("   Position ID: {0} | Risk Amount: ${1:F2}",
+                    result.Position.Id, Account.Balance * (RiskPercent / 100.0));
 
                 // Disable active swing if trading on new swing only
                 if (TradeOnNewSwingOnly)
+                {
                     hasActiveSwing = false;
+                    hasValidRectangle = false;
+                    hasBreakoutOccurred = false;
+                }
             }
             else
             {
