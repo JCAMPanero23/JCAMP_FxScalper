@@ -475,26 +475,36 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Validity Score: Ensures rectangle is forward-looking (not expired)
-        /// Returns 0 if rectangle would be in the past, otherwise 0-1 based on time remaining
+        /// Validity Score: Measures how RECENT the swing is
+        /// Since rectangles extend from swing time to current+60, any swing is "valid"
+        /// But more recent swings should score higher (more relevant)
         /// </summary>
         private double CalculateValidityScore(int swingIndex)
         {
-            DateTime swingTime = m15Bars.OpenTimes[swingIndex];
-            DateTime rectangleEnd = swingTime.AddMinutes(RectangleWidthMinutes);
-            DateTime currentTime = m15Bars.OpenTimes.LastValue;
+            int lastIdx = m15Bars.Count - 1;
+            int barsAgo = lastIdx - swingIndex;
 
-            TimeSpan remaining = rectangleEnd - currentTime;
+            // How far back is this swing compared to our lookback period?
+            // barsAgo = 2 (just formed) → score = 1.0
+            // barsAgo = SwingLookbackBars → score = 0.0
+            // Linear interpolation between
 
-            if (remaining.TotalMinutes <= 0)
+            if (barsAgo < 2)
             {
-                // Rectangle is expired - invalid
+                // Too recent - fractal not confirmed yet
                 return 0;
             }
 
-            // Score based on how much time remains (normalized to rectangle width)
-            // Full rectangle width remaining = 1.0, just started = lower score
-            double score = Math.Min(remaining.TotalMinutes / RectangleWidthMinutes, 1.0);
+            if (barsAgo >= SwingLookbackBars)
+            {
+                // Beyond lookback period
+                return 0;
+            }
+
+            // Score: 1.0 for recent swings, decreasing linearly to 0.2 at edge of lookback
+            // We use 0.2 minimum instead of 0 so older swings can still qualify if other scores are high
+            double recencyRatio = 1.0 - ((double)(barsAgo - 2) / (SwingLookbackBars - 2));
+            double score = 0.2 + (recencyRatio * 0.8);  // Range: 0.2 to 1.0
 
             return score;
         }
@@ -769,9 +779,14 @@ namespace cAlgo.Robots
             // Start time: The swing bar's open time (where the fractal formed)
             DateTime startTime = m15Bars.OpenTimes[swingIndex];
 
-            // End time: Current time + RectangleWidthMinutes (forward-looking from NOW)
-            // This accounts for detection delay (swing detected after M15 bar closes)
-            DateTime endTime = Server.Time.AddMinutes(RectangleWidthMinutes);
+            // End time: Use M15 bar time + width (more reliable than Server.Time in backtesting)
+            DateTime currentM15Time = m15Bars.OpenTimes.LastValue;
+            DateTime endTime = currentM15Time.AddMinutes(RectangleWidthMinutes);
+
+            // Debug: Show all time references
+            Print("[RectangleDebug] SwingIndex: {0} | SwingBarTime: {1}", swingIndex, startTime);
+            Print("[RectangleDebug] Server.Time: {0} | M15 LastBar: {1} | EndTime: {2}",
+                Server.Time, currentM15Time, endTime);
 
             // Parse color and add transparency
             Color baseColor = mode == "BUY" ? ParseColor(BuyColorName) : ParseColor(SellColorName);
