@@ -165,6 +165,32 @@ namespace cAlgo.Robots
             }
         }
 
+        /// <summary>
+        /// Fair Value Gap (FVG) class for tracking price inefficiencies
+        /// Phase 3 Implementation
+        /// </summary>
+        private class FairValueGap
+        {
+            public DateTime Time { get; set; }
+            public double TopPrice { get; set; }
+            public double BottomPrice { get; set; }
+            public bool IsBullish { get; set; }
+            public bool IsFilled { get; set; }
+        }
+
+        #endregion
+
+        #region Parameters - FVG Detection
+
+        [Parameter("=== FVG DETECTION ===", DefaultValue = "")]
+        public string FVGHeader { get; set; }
+
+        [Parameter("Enable FVG Filter", DefaultValue = true, Group = "FVG Detection")]
+        public bool EnableFVGFilter { get; set; }
+
+        [Parameter("FVG Lookback Bars", DefaultValue = 50, MinValue = 20, MaxValue = 100, Group = "FVG Detection")]
+        public int FVGLookbackBars { get; set; }
+
         #endregion
 
         #region Parameters - Visualization
@@ -200,17 +226,20 @@ namespace cAlgo.Robots
         [Parameter("=== SCORE WEIGHTS ===", DefaultValue = "")]
         public string WeightsHeader { get; set; }
 
-        [Parameter("Weight: Validity", DefaultValue = 0.25, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        [Parameter("Weight: Validity", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightValidity { get; set; }
 
-        [Parameter("Weight: Extremity", DefaultValue = 0.30, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        [Parameter("Weight: Extremity", DefaultValue = 0.25, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightExtremity { get; set; }
 
-        [Parameter("Weight: Fractal", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        [Parameter("Weight: Fractal", DefaultValue = 0.15, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightFractal { get; set; }
 
         [Parameter("Weight: Session", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightSession { get; set; }
+
+        [Parameter("Weight: FVG", DefaultValue = 0.15, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        public double WeightFVG { get; set; }
 
         [Parameter("Weight: Candle", DefaultValue = 0.05, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightCandle { get; set; }
@@ -250,6 +279,9 @@ namespace cAlgo.Robots
         private System.Collections.Generic.List<SessionLevels> recentSessions = new System.Collections.Generic.List<SessionLevels>();
         private SessionLevels currentSession = null;
         private TradingSession lastDetectedSession = TradingSession.None;
+
+        // Phase 3: FVG tracking
+        private System.Collections.Generic.List<FairValueGap> activeFVGs = new System.Collections.Generic.List<FairValueGap>();
 
         // Visualization tracking
         private int rectangleCounter = 0;
@@ -319,6 +351,20 @@ namespace cAlgo.Robots
             UpdateH1Levels();
             UpdateM15Levels();
 
+            // Phase 2: Session Management
+            Print("Phase 2 Session Management: Enabled={0} | Session Weight={1:F2}",
+                EnableSessionFilter, WeightSession);
+
+            // Phase 3: FVG Detection
+            Print("Phase 3 FVG Detection: Enabled={0} | Lookback={1} bars | FVG Weight={2:F2}",
+                EnableFVGFilter, FVGLookbackBars, WeightFVG);
+
+            // Print weight summary
+            Print("Score Weights: Validity={0:F2} | Extremity={1:F2} | Fractal={2:F2} | Session={3:F2} | FVG={4:F2} | Candle={5:F2}",
+                WeightValidity, WeightExtremity, WeightFractal, WeightSession, WeightFVG, WeightCandle);
+            double weightTotal = WeightValidity + WeightExtremity + WeightFractal + WeightSession + WeightFVG + WeightCandle;
+            Print("Weight Total: {0:F2} {1}", weightTotal, weightTotal == 1.0 ? "✓" : "⚠ WARNING: Should be 1.0!");
+
             Print("========================================");
 
             // Detect initial mode and show label immediately
@@ -371,6 +417,9 @@ namespace cAlgo.Robots
 
                 // Phase 2: Update session tracking
                 UpdateSessionTracking();
+
+                // Phase 3: Detect Fair Value Gaps
+                DetectFVGs();
 
                 // 1. Detect current trend mode
                 string newMode = DetectTrendMode();
@@ -644,7 +693,8 @@ namespace cAlgo.Robots
 
         /// <summary>
         /// Calculates total score for a swing point
-        /// Phase 1A: Validity (25%) + Extremity (35%) + Fractal Strength (25%) + Candle (15%)
+        /// Phase 3: Now includes 6 components with FVG alignment
+        /// Validity (20%) + Extremity (25%) + Fractal (15%) + Session (20%) + FVG (15%) + Candle (5%)
         /// </summary>
         private double CalculateSwingScore(int swingIndex, string mode)
         {
@@ -657,18 +707,20 @@ namespace cAlgo.Robots
                 return 0;
             }
 
-            // Calculate other scoring components
+            // Calculate all scoring components
             double extremityScore = CalculateExtremityScore(swingIndex, mode);
             double fractalStrength = CalculateFractalStrength(swingIndex, mode);
             double sessionAlignment = CalculateSessionAlignment(swingIndex, mode); // Phase 2
+            double fvgAlignment = CalculateFVGAlignment(swingIndex, mode); // Phase 3
             double candleStrength = CalculateCandleStrength(swingIndex);
 
-            // Phase 2: Use configurable weights (must total 1.0)
+            // Phase 3: Use configurable weights (must total 1.0)
             double totalScore =
                 (validityScore * WeightValidity) +
                 (extremityScore * WeightExtremity) +
                 (fractalStrength * WeightFractal) +
                 (sessionAlignment * WeightSession) +
+                (fvgAlignment * WeightFVG) +
                 (candleStrength * WeightCandle);
 
             return totalScore;
@@ -896,6 +948,162 @@ namespace cAlgo.Robots
             {
                 return 0.5; // Not at session level - neutral
             }
+        }
+
+        #endregion
+
+        #region Phase 3: FVG Detection
+
+        /// <summary>
+        /// Detects Fair Value Gaps (FVGs) on M15 timeframe
+        /// FVG Structure:
+        /// Candle A (idx-1) = BEFORE the impulse
+        /// Candle B (idx)   = IMPULSE candle (the big move)
+        /// Candle C (idx+1) = AFTER the impulse
+        ///
+        /// Bullish FVG: Gap between A.High and C.Low (price gapped up)
+        /// Bearish FVG: Gap between A.Low and C.High (price gapped down)
+        /// Phase 3 Implementation
+        /// </summary>
+        private void DetectFVGs()
+        {
+            activeFVGs.Clear(); // Reset each scan
+
+            int lookback = Math.Min(FVGLookbackBars, m15Bars.Count - 3);
+
+            // Start at 1 to ensure we have candle before and after
+            for (int i = 1; i < lookback - 1; i++)
+            {
+                int idx = m15Bars.Count - 1 - i; // Impulse candle index
+
+                // Bounds check
+                if (idx - 1 < 0 || idx + 1 >= m15Bars.Count)
+                    continue;
+
+                // Get candle data
+                double candleA_High = m15Bars.HighPrices[idx - 1]; // Before impulse
+                double candleA_Low = m15Bars.LowPrices[idx - 1];
+                double candleC_High = m15Bars.HighPrices[idx + 1]; // After impulse
+                double candleC_Low = m15Bars.LowPrices[idx + 1];
+
+                // BULLISH FVG: Candle A's HIGH is BELOW Candle C's LOW
+                // This means price gapped UP, leaving an unfilled zone
+                if (candleA_High < candleC_Low)
+                {
+                    var fvg = new FairValueGap
+                    {
+                        Time = m15Bars.OpenTimes[idx],
+                        BottomPrice = candleA_High,   // Bottom of gap
+                        TopPrice = candleC_Low,       // Top of gap
+                        IsBullish = true,
+                        IsFilled = false
+                    };
+
+                    // Check if gap has been filled by subsequent price action
+                    fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
+
+                    if (!fvg.IsFilled)
+                    {
+                        activeFVGs.Add(fvg);
+                        Print("[FVG] Bullish gap detected at {0} | Zone: {1:F5} - {2:F5}",
+                            fvg.Time, fvg.BottomPrice, fvg.TopPrice);
+                    }
+                }
+
+                // BEARISH FVG: Candle A's LOW is ABOVE Candle C's HIGH
+                // This means price gapped DOWN, leaving an unfilled zone
+                if (candleA_Low > candleC_High)
+                {
+                    var fvg = new FairValueGap
+                    {
+                        Time = m15Bars.OpenTimes[idx],
+                        TopPrice = candleA_Low,       // Top of gap
+                        BottomPrice = candleC_High,   // Bottom of gap
+                        IsBullish = false,
+                        IsFilled = false
+                    };
+
+                    fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
+
+                    if (!fvg.IsFilled)
+                    {
+                        activeFVGs.Add(fvg);
+                        Print("[FVG] Bearish gap detected at {0} | Zone: {1:F5} - {2:F5}",
+                            fvg.Time, fvg.TopPrice, fvg.BottomPrice);
+                    }
+                }
+            }
+
+            Print("[FVG] Scan complete | Active FVGs: {0}", activeFVGs.Count);
+        }
+
+        /// <summary>
+        /// Checks if an FVG has been filled by price action after creation
+        /// FVG is filled when price returns to cover the gap
+        /// Phase 3 Implementation
+        /// </summary>
+        private bool IsFVGFilled(FairValueGap fvg, int startIdx)
+        {
+            // Scan from startIdx to current bar
+            for (int i = startIdx; i < m15Bars.Count; i++)
+            {
+                if (fvg.IsBullish)
+                {
+                    // Bullish FVG filled when price drops INTO the gap
+                    if (m15Bars.LowPrices[i] <= fvg.TopPrice)
+                        return true;
+                }
+                else
+                {
+                    // Bearish FVG filled when price rises INTO the gap
+                    if (m15Bars.HighPrices[i] >= fvg.BottomPrice)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Calculates how well the swing aligns with Fair Value Gaps
+        /// Returns higher score if swing is within or near FVG zones
+        /// Phase 3 Implementation
+        /// </summary>
+        private double CalculateFVGAlignment(int swingIndex, string mode)
+        {
+            if (!EnableFVGFilter || activeFVGs.Count == 0)
+                return 0.5; // Neutral score if FVG filter disabled or no FVGs
+
+            double swingPrice = mode == "SELL" ?
+                m15Bars.HighPrices[swingIndex] :
+                m15Bars.LowPrices[swingIndex];
+
+            foreach (var fvg in activeFVGs)
+            {
+                // Check if swing price within FVG zone
+                if (swingPrice >= fvg.BottomPrice && swingPrice <= fvg.TopPrice)
+                {
+                    Print("[FVGAlign] Swing at {0} FVG | Price: {1:F5} in zone {2:F5}-{3:F5} | STRONG",
+                        fvg.IsBullish ? "Bullish" : "Bearish",
+                        swingPrice, fvg.BottomPrice, fvg.TopPrice);
+                    return 1.0; // Strong alignment - swing within FVG
+                }
+
+                // Check if near FVG (within 5 pips)
+                double distanceToFVG = Math.Min(
+                    Math.Abs(swingPrice - fvg.TopPrice),
+                    Math.Abs(swingPrice - fvg.BottomPrice)
+                );
+
+                if (distanceToFVG <= 5 * Symbol.PipSize)
+                {
+                    Print("[FVGAlign] Swing near FVG | Distance: {0:F1} pips | MODERATE",
+                        distanceToFVG / Symbol.PipSize);
+                    return 0.7; // Near FVG
+                }
+            }
+
+            return 0.3; // No FVG alignment - lower score
         }
 
         #endregion
