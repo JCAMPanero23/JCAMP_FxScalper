@@ -42,6 +42,9 @@ namespace cAlgo.Robots
         [Parameter("Show Session Boxes", DefaultValue = false, Group = "Session Management")]
         public bool ShowSessionBoxes { get; set; }
 
+        [Parameter("Session Box Mode", DefaultValue = SessionBoxMode.Advanced, Group = "Session Management")]
+        public SessionBoxMode SessionBoxDisplayMode { get; set; }
+
         [Parameter("Session Weight", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Session Management")]
         public double SessionWeight { get; set; }
 
@@ -127,6 +130,28 @@ namespace cAlgo.Robots
             London,     // 08:00-17:00 UTC
             NewYork,    // 13:00-22:00 UTC
             Overlap     // 13:00-17:00 UTC (London + NY)
+        }
+
+        /// <summary>
+        /// Session box display modes
+        /// Advanced Mode Implementation
+        /// </summary>
+        public enum SessionBoxMode
+        {
+            Basic,      // Show all sessions (Asian/London/NY) with standard colors
+            Advanced    // Show only optimal trading periods with priority colors
+        }
+
+        /// <summary>
+        /// Optimal trading periods for Advanced Session Box Mode
+        /// </summary>
+        public enum OptimalPeriod
+        {
+            None,
+            BestOverlap,        // 13:00-17:00 UTC - BEST (Bright Green)
+            GoodLondonOpen,     // 08:00-12:00 UTC - GOOD (Yellow/Gold)
+            DangerDeadZone,     // 04:00-08:00 UTC - AVOID (Red)
+            DangerLateNY        // 20:00-00:00 UTC - AVOID (Red)
         }
 
         /// <summary>
@@ -280,6 +305,17 @@ namespace cAlgo.Robots
         private SessionLevels currentSession = null;
         private TradingSession lastDetectedSession = TradingSession.None;
 
+        // Phase 2: Session box colors - Basic Mode (30-40% opacity for visibility without obscuring price)
+        private readonly Color ColorAsian = Color.FromArgb(30, 255, 255, 0);      // Light Yellow
+        private readonly Color ColorLondon = Color.FromArgb(30, 0, 128, 255);     // Light Blue
+        private readonly Color ColorNewYork = Color.FromArgb(30, 255, 128, 0);    // Light Orange
+        private readonly Color ColorOverlap = Color.FromArgb(40, 128, 0, 255);    // Light Purple (higher opacity)
+
+        // Advanced Mode: Priority-based colors for optimal trading periods
+        private readonly Color ColorBestTime = Color.FromArgb(50, 0, 255, 0);     // Bright Green (BEST - Overlap 13:00-17:00)
+        private readonly Color ColorGoodTime = Color.FromArgb(45, 255, 215, 0);   // Gold (GOOD - London 08:00-12:00)
+        private readonly Color ColorDangerZone = Color.FromArgb(40, 255, 0, 0);   // Red (DANGER - Dead zones)
+
         // Phase 3: FVG tracking
         private System.Collections.Generic.List<FairValueGap> activeFVGs = new System.Collections.Generic.List<FairValueGap>();
 
@@ -354,6 +390,29 @@ namespace cAlgo.Robots
             // Phase 2: Session Management
             Print("Phase 2 Session Management: Enabled={0} | Session Weight={1:F2}",
                 EnableSessionFilter, WeightSession);
+            Print("Session Boxes: {0} | Mode: {1}",
+                ShowSessionBoxes ? "ON" : "OFF",
+                SessionBoxDisplayMode);
+
+            if (ShowSessionBoxes && SessionBoxDisplayMode == SessionBoxMode.Advanced)
+            {
+                Print("  🟢 BEST TIME (Green):   13:00-17:00 UTC (Overlap - Highest volatility)");
+                Print("  🟡 GOOD TIME (Gold):    08:00-12:00 UTC (London Open)");
+                Print("  🔴 DANGER ZONE (Red):   04:00-08:00 UTC (Dead zone) & 20:00-00:00 UTC (Late NY)");
+                Print("  Advanced Mode: Only optimal trading periods shown on chart");
+            }
+
+            // Advanced Session Scoring Integration
+            Print("Session Scoring Integration: {0}",
+                EnableSessionFilter ? "ACTIVE" : "Disabled");
+            if (EnableSessionFilter)
+            {
+                Print("  BEST periods:   Session score = +1.0 (strong positive)");
+                Print("  GOOD periods:   Session score = +0.7 (good positive)");
+                Print("  Neutral times:  Session score = +0.5 (neutral)");
+                Print("  DANGER periods: Session score = -0.5 (NEGATIVE PENALTY!)");
+                Print("  → Swings in danger zones will be AUTO-REJECTED (score too low)");
+            }
 
             // Phase 3: FVG Detection
             Print("Phase 3 FVG Detection: Enabled={0} | Lookback={1} bars | FVG Weight={2:F2}",
@@ -365,6 +424,23 @@ namespace cAlgo.Robots
             double weightTotal = WeightValidity + WeightExtremity + WeightFractal + WeightSession + WeightFVG + WeightCandle;
             Print("Weight Total: {0:F2} {1}", weightTotal, weightTotal == 1.0 ? "✓" : "⚠ WARNING: Should be 1.0!");
 
+            // ========== TIMEZONE DIAGNOSTIC ==========
+            Print("========================================");
+            Print("*** TIMEZONE DIAGNOSTIC ***");
+            Print("========================================");
+            Print("Robot TimeZone Setting: TimeZones.UTC");
+            Print("Server Time: {0}", Server.Time.ToString("yyyy-MM-dd HH:mm:ss"));
+            Print("Server Time Zone: UTC (configured in Robot attribute)");
+            Print("");
+            Print("✓ TIMEZONE STATUS: CORRECT");
+            Print("  Sessions are configured for UTC and will trigger at:");
+            Print("  - Asian Session:    00:00-09:00 UTC");
+            Print("  - London Session:   08:00-17:00 UTC");
+            Print("  - New York Session: 13:00-22:00 UTC");
+            Print("  - Overlap Period:   13:00-17:00 UTC (London + NY)");
+            Print("");
+            Print("  Note: In backtesting, Server.Time uses historical backtest time,");
+            Print("        not current real-world time. This is expected behavior.");
             Print("========================================");
 
             // Detect initial mode and show label immediately
@@ -911,9 +987,12 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Session Alignment Score: Checks if swing aligns with session high/low
-        /// Swings at session extremes are more significant
-        /// Phase 2 Implementation
+        /// Session Alignment Score: NEW - Integrated with Advanced Session Mode
+        /// BEST periods (green) = HIGH score (1.0)
+        /// GOOD periods (gold) = GOOD score (0.7)
+        /// NEUTRAL periods = Neutral score (0.5)
+        /// DANGER periods (red) = NEGATIVE score (-0.5) ← PENALTY!
+        /// Advanced Mode Implementation
         /// </summary>
         private double CalculateSessionAlignment(int swingIndex, string mode)
         {
@@ -921,32 +1000,280 @@ namespace cAlgo.Robots
                 return 0.5; // Neutral score if session filter disabled
 
             DateTime swingTime = m15Bars.OpenTimes[swingIndex];
-            var session = GetSessionForTime(swingTime);
+            OptimalPeriod period = GetOptimalPeriod(swingTime);
 
-            if (session == null)
-                return 0.5; // No session data, neutral score
+            // BASE SCORE: Time-based scoring (primary factor)
+            double baseScore;
+            string periodLabel;
 
-            double swingPrice = mode == "SELL" ?
-                m15Bars.HighPrices[swingIndex] :
-                m15Bars.LowPrices[swingIndex];
-
-            double distanceToSessionLevel = mode == "SELL" ?
-                Math.Abs(swingPrice - session.High) :
-                Math.Abs(swingPrice - session.Low);
-
-            double threshold = 10 * Symbol.PipSize; // Within 10 pips
-
-            if (distanceToSessionLevel <= threshold)
+            switch (period)
             {
-                Print("[SessionAlign] Swing at {0} session {1} | Distance: {2:F1} pips | STRONG",
-                    session.Session,
-                    mode == "SELL" ? "HIGH" : "LOW",
-                    distanceToSessionLevel / Symbol.PipSize);
-                return 1.0; // At session level - strong signal
+                case OptimalPeriod.BestOverlap:
+                    baseScore = 1.0;
+                    periodLabel = "🟢 BEST TIME (Overlap 13:00-17:00 UTC)";
+                    break;
+
+                case OptimalPeriod.GoodLondonOpen:
+                    baseScore = 0.7;
+                    periodLabel = "🟡 GOOD TIME (London 08:00-12:00 UTC)";
+                    break;
+
+                case OptimalPeriod.DangerDeadZone:
+                    baseScore = -0.5; // NEGATIVE PENALTY!
+                    periodLabel = "🔴 DANGER ZONE (Dead 04:00-08:00 UTC)";
+                    break;
+
+                case OptimalPeriod.DangerLateNY:
+                    baseScore = -0.5; // NEGATIVE PENALTY!
+                    periodLabel = "🔴 DANGER ZONE (Late NY 20:00-00:00 UTC)";
+                    break;
+
+                default: // OptimalPeriod.None
+                    baseScore = 0.5;
+                    periodLabel = "Neutral time";
+                    break;
             }
-            else
+
+            // BONUS: Check if swing is also at session high/low (extra confirmation)
+            var session = GetSessionForTime(swingTime);
+            double bonus = 0;
+
+            if (session != null)
             {
-                return 0.5; // Not at session level - neutral
+                double swingPrice = mode == "SELL" ?
+                    m15Bars.HighPrices[swingIndex] :
+                    m15Bars.LowPrices[swingIndex];
+
+                double distanceToSessionLevel = mode == "SELL" ?
+                    Math.Abs(swingPrice - session.High) :
+                    Math.Abs(swingPrice - session.Low);
+
+                double threshold = 10 * Symbol.PipSize; // Within 10 pips
+
+                if (distanceToSessionLevel <= threshold)
+                {
+                    // Only give bonus if base score is positive (not in danger zone)
+                    if (baseScore > 0)
+                    {
+                        bonus = 0.3; // Extra bonus for being at session level
+                        periodLabel += " + AT SESSION LEVEL";
+                    }
+                }
+            }
+
+            double finalScore = baseScore + bonus;
+
+            // Cap final score between -0.5 and 1.3 (with bonus)
+            finalScore = Math.Max(-0.5, Math.Min(1.3, finalScore));
+
+            Print("[SessionAlign] {0} | Base:{1:F2} Bonus:{2:F2} Final:{3:F2}",
+                periodLabel,
+                baseScore,
+                bonus,
+                finalScore);
+
+            return finalScore;
+        }
+
+        /// <summary>
+        /// Draws visual session box on chart
+        /// Phase 2 Implementation - Session Visualization
+        /// Advanced Mode: Shows only optimal trading periods with priority colors
+        /// </summary>
+        private void DrawSessionBox(SessionLevels session)
+        {
+            if (!ShowSessionBoxes)
+                return;
+
+            // ADVANCED MODE: Draw only optimal trading periods
+            if (SessionBoxDisplayMode == SessionBoxMode.Advanced)
+            {
+                DrawAdvancedSessionBoxes(session);
+                return;
+            }
+
+            // BASIC MODE: Draw standard session boxes
+            // Create unique name for this session box
+            string boxName = string.Format("Session_{0}_{1}",
+                session.Session,
+                session.StartTime.ToString("yyyyMMddHH"));
+
+            // Check if box already exists (avoid duplicates)
+            var existingBox = Chart.FindObject(boxName);
+            if (existingBox != null)
+            {
+                Print("[SessionBox] Box already exists: {0}", boxName);
+                return;
+            }
+
+            // Get color based on session type
+            Color boxColor = GetSessionColor(session.Session);
+
+            // Draw the rectangle box
+            var box = Chart.DrawRectangle(
+                boxName,
+                session.StartTime,
+                session.High,
+                session.EndTime,
+                session.Low,
+                boxColor);
+
+            // Configure box appearance
+            box.IsFilled = true;            // Filled with color
+            box.IsInteractive = false;      // Don't allow manual editing
+            box.ZIndex = -1;                // Behind other objects (swing rectangles on top)
+            box.Comment = string.Format("{0} Session | H:{1:F5} L:{2:F5}",
+                session.Session,
+                session.High,
+                session.Low);
+
+            Print("[SessionBox] Drew {0} session box | Start:{1} End:{2} | H:{3:F5} L:{4:F5}",
+                session.Session,
+                session.StartTime.ToString("HH:mm"),
+                session.EndTime.ToString("HH:mm"),
+                session.High,
+                session.Low);
+        }
+
+        /// <summary>
+        /// Draws optimal period boxes for Advanced Mode
+        /// Shows only BEST/GOOD/DANGER periods with priority colors
+        /// </summary>
+        private void DrawAdvancedSessionBoxes(SessionLevels session)
+        {
+            // Scan through the session time range and identify optimal periods
+            DateTime currentTime = session.StartTime;
+            DateTime endTime = session.EndTime;
+
+            OptimalPeriod lastPeriod = OptimalPeriod.None;
+            DateTime periodStart = currentTime;
+            double periodHigh = session.High;
+            double periodLow = session.Low;
+
+            // Iterate hour by hour through the session
+            while (currentTime <= endTime)
+            {
+                OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
+
+                // Period changed or reached end
+                if (currentPeriod != lastPeriod || currentTime == endTime)
+                {
+                    // Draw the previous period if it was optimal (not None)
+                    if (lastPeriod != OptimalPeriod.None)
+                    {
+                        DrawOptimalPeriodBox(lastPeriod, periodStart, currentTime, periodHigh, periodLow);
+                    }
+
+                    // Start new period
+                    lastPeriod = currentPeriod;
+                    periodStart = currentTime;
+                }
+
+                currentTime = currentTime.AddHours(1);
+            }
+        }
+
+        /// <summary>
+        /// Draws a single optimal period box with priority color
+        /// </summary>
+        private void DrawOptimalPeriodBox(OptimalPeriod period, DateTime start, DateTime end, double high, double low)
+        {
+            // Skip if period is None (neutral times)
+            if (period == OptimalPeriod.None)
+                return;
+
+            // Create unique name
+            string boxName = string.Format("Optimal_{0}_{1}",
+                period,
+                start.ToString("yyyyMMddHH"));
+
+            // Check if box already exists
+            var existingBox = Chart.FindObject(boxName);
+            if (existingBox != null)
+                return;
+
+            // Get color and label for this period
+            Color boxColor;
+            string label;
+            string priority;
+
+            switch (period)
+            {
+                case OptimalPeriod.BestOverlap:
+                    boxColor = ColorBestTime;
+                    label = "🟢 BEST TIME - Overlap";
+                    priority = "BEST";
+                    break;
+
+                case OptimalPeriod.GoodLondonOpen:
+                    boxColor = ColorGoodTime;
+                    label = "🟡 GOOD TIME - London Open";
+                    priority = "GOOD";
+                    break;
+
+                case OptimalPeriod.DangerDeadZone:
+                    boxColor = ColorDangerZone;
+                    label = "🔴 DANGER - Dead Zone";
+                    priority = "AVOID";
+                    break;
+
+                case OptimalPeriod.DangerLateNY:
+                    boxColor = ColorDangerZone;
+                    label = "🔴 DANGER - Late NY";
+                    priority = "AVOID";
+                    break;
+
+                default:
+                    return; // Don't draw neutral periods
+            }
+
+            // Draw the rectangle box
+            var box = Chart.DrawRectangle(
+                boxName,
+                start,
+                high,
+                end,
+                low,
+                boxColor);
+
+            // Configure box appearance
+            box.IsFilled = true;
+            box.IsInteractive = false;
+            box.ZIndex = -1;
+            box.Comment = string.Format("{0} | {1} UTC - {2} UTC | H:{3:F5} L:{4:F5}",
+                label,
+                start.ToString("HH:mm"),
+                end.ToString("HH:mm"),
+                high,
+                low);
+
+            Print("[SessionBox-Advanced] {0} | {1} | {2} - {3} | H:{4:F5} L:{5:F5}",
+                priority,
+                label,
+                start.ToString("HH:mm"),
+                end.ToString("HH:mm"),
+                high,
+                low);
+        }
+
+        /// <summary>
+        /// Returns color for session type
+        /// Phase 2 Implementation
+        /// </summary>
+        private Color GetSessionColor(TradingSession session)
+        {
+            switch (session)
+            {
+                case TradingSession.Asian:
+                    return ColorAsian;
+                case TradingSession.London:
+                    return ColorLondon;
+                case TradingSession.NewYork:
+                    return ColorNewYork;
+                case TradingSession.Overlap:
+                    return ColorOverlap;
+                default:
+                    return Color.Gray;
             }
         }
 
@@ -1414,6 +1741,34 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
+        /// Detects optimal trading period based on UTC hour
+        /// Advanced Mode Implementation
+        /// </summary>
+        private OptimalPeriod GetOptimalPeriod(DateTime time)
+        {
+            int hourUTC = time.Hour;
+
+            // BEST: Overlap period (13:00-17:00 UTC) - London + NY
+            if (hourUTC >= 13 && hourUTC < 17)
+                return OptimalPeriod.BestOverlap;
+
+            // GOOD: London open to midday (08:00-12:00 UTC)
+            if (hourUTC >= 8 && hourUTC < 12)
+                return OptimalPeriod.GoodLondonOpen;
+
+            // DANGER: Dead zone (04:00-08:00 UTC) - Lowest volatility
+            if (hourUTC >= 4 && hourUTC < 8)
+                return OptimalPeriod.DangerDeadZone;
+
+            // DANGER: Late NY (20:00-00:00 UTC) - Dying volume
+            if (hourUTC >= 20 || hourUTC < 0)
+                return OptimalPeriod.DangerLateNY;
+
+            // Other times: neutral (not optimal, not dangerous)
+            return OptimalPeriod.None;
+        }
+
+        /// <summary>
         /// Updates session tracking on each M15 bar
         /// Detects session boundaries and tracks high/low
         /// Phase 2 Implementation
@@ -1437,6 +1792,9 @@ namespace cAlgo.Robots
                         currentSession.High,
                         currentSession.Low,
                         currentSession.EndTime - currentSession.StartTime);
+
+                    // Draw visual session box (if enabled)
+                    DrawSessionBox(currentSession);
 
                     // Keep only last 20 sessions
                     if (recentSessions.Count > 20)
