@@ -1080,6 +1080,34 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
+        /// Gets session start time for a given session type
+        /// Returns the start time based on current hour to handle day boundaries
+        /// </summary>
+        private DateTime GetSessionStartTime(TradingSession session, DateTime currentTime)
+        {
+            int hour = currentTime.Hour;
+            DateTime today = currentTime.Date;
+
+            switch (session)
+            {
+                case TradingSession.Asian:
+                    // Asian starts at 00:00 UTC
+                    return hour < 9 ? today.AddHours(0) : today.AddDays(1).AddHours(0);
+                case TradingSession.London:
+                    // London starts at 08:00 UTC
+                    return hour < 8 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
+                case TradingSession.NewYork:
+                    // NY starts at 13:00 UTC
+                    return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
+                case TradingSession.Overlap:
+                    // Overlap starts at 13:00 UTC
+                    return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
+                default:
+                    return currentTime;
+            }
+        }
+
+        /// <summary>
         /// Draws visual session box on chart
         /// Phase 2 Implementation - Session Visualization
         /// Advanced Mode: Shows only optimal trading periods with priority colors
