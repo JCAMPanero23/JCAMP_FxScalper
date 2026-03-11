@@ -1151,8 +1151,10 @@ namespace cAlgo.Robots
                     // 04:00-08:00 UTC
                     return hour < 4 ? today.AddHours(4) : today.AddDays(1).AddHours(4);
                 case OptimalPeriod.DangerLateNY:
-                    // 20:00-00:00 UTC
-                    return hour < 20 ? today.AddHours(20) : today.AddDays(1).AddHours(20);
+                    // 20:00-00:00 UTC (crosses midnight boundary)
+                    // If hour >= 20, we're in the current period (use today)
+                    // If hour < 20, we're looking back at previous period (use yesterday)
+                    return hour >= 20 ? today.AddHours(20) : today.AddDays(-1).AddHours(20);
                 default:
                     return currentTime;
             }
