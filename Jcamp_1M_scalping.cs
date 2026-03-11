@@ -305,6 +305,10 @@ namespace cAlgo.Robots
         private SessionLevels currentSession = null;
         private TradingSession lastDetectedSession = TradingSession.None;
 
+        // Phase 2: Period transition tracking for live session box drawing
+        private TradingSession lastDrawnSession = TradingSession.None;
+        private OptimalPeriod lastDrawnPeriod = OptimalPeriod.None;
+
         // Phase 2: Session box colors - Basic Mode (30-40% opacity for visibility without obscuring price)
         private readonly Color ColorAsian = Color.FromArgb(30, 255, 255, 0);      // Light Yellow
         private readonly Color ColorLondon = Color.FromArgb(30, 0, 128, 255);     // Light Blue
