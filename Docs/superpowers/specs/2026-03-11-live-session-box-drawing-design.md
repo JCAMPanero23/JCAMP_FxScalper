@@ -71,10 +71,10 @@ if (currentSession != null)
 **After:**
 ```csharp
 // In UpdateSessionTracking() - when NEW period detected
-if (newPeriodDetected)
+if (primarySession != lastDrawnSession)
 {
-    DrawSessionBoxAtStart(period, startTime, endTime);  // ← Draw at START
-    activeSessionBoxes[boxName] = box;  // Track active box
+    DrawSessionBox(periodName, startTime, endTime, color);  // ← Draw at START
+    lastDrawnSession = primarySession;  // Track to prevent duplicates
 }
 ```
 
@@ -140,15 +140,12 @@ Uses existing `GetSessionState()` method to detect:
 
 ```
 Each M15 bar in UpdateSessionTracking():
-1. Call GetSessionState(currentTime)
-2. Determine primary session (Overlap > NewYork > London > Asian)
-3. If NEW session detected:
+1. Call GetPrimarySession(currentTime)
+2. If NEW session detected (primarySession != lastDrawnSession):
    a. Draw full-height box (startTime to endTime)
    b. Use session-specific color
-   c. Add to activeSessionBoxes tracking
-4. If session ended:
-   a. Remove from activeSessionBoxes tracking
-   b. Box remains visible on chart (historical)
+   c. Update lastDrawnSession to prevent duplicate drawing
+3. Box remains visible on chart (no cleanup needed)
 ```
 
 #### Visual Timeline Example
@@ -191,12 +188,12 @@ Uses existing `GetOptimalPeriod()` method to detect:
 ```
 Each M15 bar in UpdateSessionTracking():
 1. Call GetOptimalPeriod(currentTime)
-2. If NEW optimal period detected (and != None):
+2. If NEW optimal period detected (currentPeriod != lastDrawnPeriod AND currentPeriod != None):
    a. Draw full-height box (startTime to endTime)
    b. Use priority color (Green/Gold/Red)
-   c. Add to activeSessionBoxes tracking
-3. If period ended OR changed to None:
-   a. Remove from activeSessionBoxes tracking
+   c. Update lastDrawnPeriod to prevent duplicate drawing
+3. If period ended (currentPeriod == None):
+   a. Reset lastDrawnPeriod = None
    b. Box remains visible on chart (historical)
 ```
 
@@ -453,6 +450,26 @@ private DateTime GetOptimalPeriodEnd(OptimalPeriod period, DateTime currentTime)
 }
 
 /// <summary>
+/// Returns color for session type (Basic Mode)
+/// </summary>
+private Color GetSessionColor(TradingSession session)
+{
+    switch (session)
+    {
+        case TradingSession.Asian:
+            return ColorAsian;
+        case TradingSession.London:
+            return ColorLondon;
+        case TradingSession.NewYork:
+            return ColorNewYork;
+        case TradingSession.Overlap:
+            return ColorOverlap;
+        default:
+            return Color.Gray;
+    }
+}
+
+/// <summary>
 /// Returns color for optimal period type (Advanced Mode)
 /// </summary>
 private Color GetOptimalPeriodColor(OptimalPeriod period)
@@ -481,6 +498,10 @@ private Color GetOptimalPeriodColor(OptimalPeriod period)
 1. **DrawAdvancedSessionBoxes() (lines 1142-1174)**
    - Hour-by-hour iteration logic
    - No longer needed (draw at start, not at end)
+
+2. **DrawOptimalPeriodBox() (lines 1179+)**
+   - Helper method called only by DrawAdvancedSessionBoxes()
+   - Becomes orphaned code after parent method deletion
 
 #### Delete Specific Lines
 
@@ -659,11 +680,13 @@ Action: Advance to 08:00 UTC (London open)
 Expected: Gold band appears immediately (Advanced Mode)
 ```
 
-**Test 2: Box spans full chart height**
+**Test 2: Box uses large price buffer**
 ```
 Setup: Any session active
 Action: Check box coordinates
-Expected: box.High ≈ Chart.TopY, box.Low ≈ Chart.BottomY
+Expected: box.High = currentPrice + (10000 * Symbol.PipSize)
+Expected: box.Low = currentPrice - (10000 * Symbol.PipSize)
+Expected: Box extends well beyond visible price range
 ```
 
 **Test 3: Multiple bands visible**
@@ -770,12 +793,14 @@ Expected: Smooth rendering, no lag
 
 ## Implementation Checklist
 
-- [ ] Add `activeSessionBoxes` tracking dictionary
-- [ ] Modify `DrawSessionBox()` to use full chart height
+- [ ] Add `lastDrawnSession` and `lastDrawnPeriod` tracking fields
+- [ ] Modify `DrawSessionBox()` to use large price buffer for full height
 - [ ] Add `GetSessionStartTime()` helper method
 - [ ] Add `GetSessionEndTime()` helper method
+- [ ] Add `GetSessionColor()` helper method (if not already present)
 - [ ] Add `GetOptimalPeriodStart()` helper method
 - [ ] Add `GetOptimalPeriodEnd()` helper method
+- [ ] Add `GetOptimalPeriodColor()` helper method
 - [ ] Modify `UpdateSessionTracking()` to draw at period start
 - [ ] Remove line 1797 (draw at session end)
 - [ ] Delete `DrawAdvancedSessionBoxes()` method
@@ -795,9 +820,9 @@ Expected: Smooth rendering, no lag
 ### Key Terminology
 
 - **Session Box:** Vertical time zone band indicating trading session/period
-- **Full-Height:** Box spans entire visible chart range (Chart.TopY to Chart.BottomY)
+- **Full-Height:** Box uses large price buffer (±10000 pips from current price) to ensure coverage well beyond visible chart range
 - **Live/Advance Drawing:** Drawing boxes at period start (not at end)
-- **Active Box Tracking:** Dictionary tracking currently visible boxes
+- **Period Transition Tracking:** Using lastDrawnSession/lastDrawnPeriod fields to detect new periods and prevent duplicate drawing
 - **Internal Tracking:** Session high/low tracking for scoring (separate from visuals)
 
 ### Related Files
