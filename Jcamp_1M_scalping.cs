@@ -1091,17 +1091,17 @@ namespace cAlgo.Robots
             switch (session)
             {
                 case TradingSession.Asian:
-                    // Asian starts at 00:00 UTC
+                    // Asian: 00:00-09:00 UTC (use end time boundary)
                     return hour < 9 ? today.AddHours(0) : today.AddDays(1).AddHours(0);
                 case TradingSession.London:
-                    // London starts at 08:00 UTC
-                    return hour < 8 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
+                    // London: 08:00-17:00 UTC (use end time boundary)
+                    return hour < 17 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
                 case TradingSession.NewYork:
-                    // NY starts at 13:00 UTC
-                    return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
+                    // NY: 13:00-22:00 UTC (use end time boundary)
+                    return hour < 22 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
                 case TradingSession.Overlap:
-                    // Overlap starts at 13:00 UTC
-                    return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
+                    // Overlap: 13:00-17:00 UTC (use end time boundary)
+                    return hour < 17 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
                 default:
                     return currentTime;
             }
@@ -1142,18 +1142,18 @@ namespace cAlgo.Robots
             switch (period)
             {
                 case OptimalPeriod.BestOverlap:
-                    // 13:00-17:00 UTC
-                    return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
+                    // 13:00-17:00 UTC (use end time 17:00 as boundary)
+                    return hour < 17 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
                 case OptimalPeriod.GoodLondonOpen:
-                    // 08:00-12:00 UTC
-                    return hour < 8 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
+                    // 08:00-12:00 UTC (use end time 12:00 as boundary)
+                    return hour < 12 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
                 case OptimalPeriod.DangerDeadZone:
-                    // 04:00-08:00 UTC
-                    return hour < 4 ? today.AddHours(4) : today.AddDays(1).AddHours(4);
+                    // 04:00-08:00 UTC (use end time 08:00 as boundary)
+                    return hour < 8 ? today.AddHours(4) : today.AddDays(1).AddHours(4);
                 case OptimalPeriod.DangerLateNY:
-                    // 20:00-00:00 UTC (crosses midnight boundary)
+                    // 20:00-00:00 UTC (crosses midnight - special handling)
                     // If hour >= 20, we're in the current period (use today)
-                    // If hour < 20, we're looking back at previous period (use yesterday)
+                    // If hour < 20, we're after period end (use yesterday's period)
                     return hour >= 20 ? today.AddHours(20) : today.AddDays(-1).AddHours(20);
                 default:
                     return currentTime;
