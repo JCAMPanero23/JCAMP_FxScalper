@@ -291,8 +291,8 @@ private void UpdateSessionTracking()
             // Detect current session
             TradingSession primarySession = GetPrimarySession(currentTime);
 
-            // If NEW session detected
-            if (primarySession != lastDrawnSession)
+            // If NEW session detected (and not None)
+            if (primarySession != lastDrawnSession && primarySession != TradingSession.None)
             {
                 // Draw session box immediately
                 DateTime sessionStart = GetSessionStartTime(primarySession, currentTime);
@@ -303,6 +303,12 @@ private void UpdateSessionTracking()
 
                 // Update tracking to prevent duplicate drawing
                 lastDrawnSession = primarySession;
+            }
+
+            // If session ends (transitions to None), reset tracking
+            if (primarySession == TradingSession.None && lastDrawnSession != TradingSession.None)
+            {
+                lastDrawnSession = TradingSession.None;
             }
         }
         else // Advanced Mode
@@ -804,6 +810,7 @@ Expected: Smooth rendering, no lag
 - [ ] Modify `UpdateSessionTracking()` to draw at period start
 - [ ] Remove line 1797 (draw at session end)
 - [ ] Delete `DrawAdvancedSessionBoxes()` method
+- [ ] Delete `DrawOptimalPeriodBox()` method
 - [ ] Remove duplicate box checking logic
 - [ ] Test Basic Mode (48 hour backtest)
 - [ ] Test Advanced Mode (48 hour backtest)
