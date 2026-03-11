@@ -1906,9 +1906,6 @@ namespace cAlgo.Robots
                         currentSession.Low,
                         currentSession.EndTime - currentSession.StartTime);
 
-                    // Draw visual session box (if enabled)
-                    DrawSessionBox(currentSession);
-
                     // Keep only last 20 sessions
                     if (recentSessions.Count > 20)
                         recentSessions.RemoveAt(0);
