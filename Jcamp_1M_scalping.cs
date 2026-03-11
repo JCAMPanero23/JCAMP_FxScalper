@@ -1184,63 +1184,48 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Draws visual session box on chart
+        /// Draws visual session box on chart (live at period start)
         /// Phase 2 Implementation - Session Visualization
-        /// Advanced Mode: Shows only optimal trading periods with priority colors
         /// </summary>
-        private void DrawSessionBox(SessionLevels session)
+        private void DrawSessionBox(string periodName, DateTime startTime, DateTime endTime, Color boxColor)
         {
             if (!ShowSessionBoxes)
                 return;
 
-            // ADVANCED MODE: Draw only optimal trading periods
-            if (SessionBoxDisplayMode == SessionBoxMode.Advanced)
-            {
-                DrawAdvancedSessionBoxes(session);
-                return;
-            }
-
-            // BASIC MODE: Draw standard session boxes
             // Create unique name for this session box
             string boxName = string.Format("Session_{0}_{1}",
-                session.Session,
-                session.StartTime.ToString("yyyyMMddHH"));
+                periodName,
+                startTime.ToString("yyyyMMddHH"));
 
-            // Check if box already exists (avoid duplicates)
-            var existingBox = Chart.FindObject(boxName);
-            if (existingBox != null)
-            {
-                Print("[SessionBox] Box already exists: {0}", boxName);
-                return;
-            }
+            // Calculate very large price range to ensure full chart coverage
+            // Using current price ± large pip buffer (e.g., 10000 pips)
+            double priceBuffer = 10000 * Symbol.PipSize;  // ~1.00 for 5-digit pairs like EURUSD
+            double currentPrice = m15Bars.ClosePrices.LastValue;
+            double chartTop = currentPrice + priceBuffer;
+            double chartBottom = currentPrice - priceBuffer;
 
-            // Get color based on session type
-            Color boxColor = GetSessionColor(session.Session);
-
-            // Draw the rectangle box
+            // Draw full-height box
             var box = Chart.DrawRectangle(
                 boxName,
-                session.StartTime,
-                session.High,
-                session.EndTime,
-                session.Low,
+                startTime,
+                chartTop,      // Very high price (full height)
+                endTime,
+                chartBottom,   // Very low price (full height)
                 boxColor);
 
             // Configure box appearance
             box.IsFilled = true;            // Filled with color
             box.IsInteractive = false;      // Don't allow manual editing
             box.ZIndex = -1;                // Behind other objects (swing rectangles on top)
-            box.Comment = string.Format("{0} Session | H:{1:F5} L:{2:F5}",
-                session.Session,
-                session.High,
-                session.Low);
+            box.Comment = string.Format("{0} | {1} - {2} UTC",
+                periodName,
+                startTime.ToString("HH:mm"),
+                endTime.ToString("HH:mm"));
 
-            Print("[SessionBox] Drew {0} session box | Start:{1} End:{2} | H:{3:F5} L:{4:F5}",
-                session.Session,
-                session.StartTime.ToString("HH:mm"),
-                session.EndTime.ToString("HH:mm"),
-                session.High,
-                session.Low);
+            Print("[SessionBox] Drew {0} | {1} - {2}",
+                periodName,
+                startTime.ToString("HH:mm"),
+                endTime.ToString("HH:mm"));
         }
 
         /// <summary>
