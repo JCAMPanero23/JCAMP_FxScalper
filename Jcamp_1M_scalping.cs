@@ -1891,6 +1891,63 @@ namespace cAlgo.Robots
             DateTime currentTime = m15Bars.OpenTimes.LastValue;
             TradingSession currentPrimarySession = GetPrimarySession(currentTime);
 
+            // === VISUAL TRACKING (New behavior - draw at period start) ===
+            if (ShowSessionBoxes)
+            {
+                if (SessionBoxDisplayMode == SessionBoxMode.Basic)
+                {
+                    // Detect current session
+                    TradingSession primarySession = currentPrimarySession;
+
+                    // If NEW session detected (and not None)
+                    if (primarySession != lastDrawnSession && primarySession != TradingSession.None)
+                    {
+                        // Draw session box immediately
+                        DateTime sessionStart = GetSessionStartTime(primarySession, currentTime);
+                        DateTime sessionEnd = GetSessionEndTime(primarySession, currentTime);
+                        Color sessionColor = GetSessionColor(primarySession);
+
+                        DrawSessionBox(primarySession.ToString(), sessionStart, sessionEnd, sessionColor);
+
+                        // Update tracking to prevent duplicate drawing
+                        lastDrawnSession = primarySession;
+                    }
+
+                    // If session ends (transitions to None), reset tracking
+                    if (primarySession == TradingSession.None && lastDrawnSession != TradingSession.None)
+                    {
+                        lastDrawnSession = TradingSession.None;
+                    }
+                }
+                else // Advanced Mode
+                {
+                    // Detect current optimal period
+                    OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
+
+                    // If NEW period detected (and not None)
+                    if (currentPeriod != lastDrawnPeriod && currentPeriod != OptimalPeriod.None)
+                    {
+                        // Draw optimal period box immediately
+                        DateTime periodStart = GetOptimalPeriodStart(currentPeriod, currentTime);
+                        DateTime periodEnd = GetOptimalPeriodEnd(currentPeriod, currentTime);
+                        Color periodColor = GetOptimalPeriodColor(currentPeriod);
+
+                        DrawSessionBox(currentPeriod.ToString(), periodStart, periodEnd, periodColor);
+
+                        // Update tracking to prevent duplicate drawing
+                        lastDrawnPeriod = currentPeriod;
+                    }
+
+                    // If period ends (changes to None), reset tracking
+                    if (currentPeriod == OptimalPeriod.None && lastDrawnPeriod != OptimalPeriod.None)
+                    {
+                        lastDrawnPeriod = OptimalPeriod.None;
+                    }
+                }
+            }
+
+            // === Existing session boundary detection continues below ===
+
             // Detect session boundary (new session started)
             if (currentPrimarySession != lastDetectedSession && currentPrimarySession != TradingSession.None)
             {
