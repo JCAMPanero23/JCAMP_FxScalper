@@ -1197,6 +1197,11 @@ namespace cAlgo.Robots
                 periodName,
                 startTime.ToString("yyyyMMddHH"));
 
+            // Check if box already exists (prevents duplicates on bot restart)
+            var existingBox = Chart.FindObject(boxName);
+            if (existingBox != null)
+                return;  // Box already drawn, skip
+
             // Calculate very large price range to ensure full chart coverage
             // Using current price ± large pip buffer (e.g., 10000 pips)
             double priceBuffer = 10000 * Symbol.PipSize;  // ~1.00 for 5-digit pairs like EURUSD
