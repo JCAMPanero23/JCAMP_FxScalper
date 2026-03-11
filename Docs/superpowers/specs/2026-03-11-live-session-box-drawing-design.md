@@ -88,22 +88,29 @@ Chart.DrawRectangle(name, startTime, session.High, endTime, session.Low, color);
 
 **After:**
 ```csharp
-// Use full chart visible range
-Chart.DrawRectangle(name, startTime, Chart.TopY, endTime, Chart.BottomY, color);
+// Use very large price range to ensure full chart coverage
+// Using Symbol price ± large pip buffer (e.g., 10000 pips = 1.00 for EURUSD)
+double priceBuffer = 10000 * Symbol.PipSize;  // 10000 pips = ~1.00 for 5-digit pairs
+double currentPrice = m15Bars.ClosePrices.LastValue;
+double chartTop = currentPrice + priceBuffer;
+double chartBottom = currentPrice - priceBuffer;
+
+Chart.DrawRectangle(name, startTime, chartTop, endTime, chartBottom, color);
 ```
 
-#### 3. Active Box Tracking
+#### 3. Active Period Tracking
 
-**New Field:**
+**New Fields:**
 ```csharp
-// Track currently visible session boxes
-private Dictionary<string, ChartRectangle> activeSessionBoxes = new Dictionary<string, ChartRectangle>();
+// Track last detected session/period to detect transitions
+private TradingSession lastDrawnSession = TradingSession.None;
+private OptimalPeriod lastDrawnPeriod = OptimalPeriod.None;
 ```
 
 **Purpose:**
-- Know which boxes are currently active
-- Clean up tracking when period ends (box stays visible, just stop tracking)
-- Prevent duplicate box creation
+- Detect when a new session/period starts (transition detection)
+- Prevent duplicate box creation on same period
+- Simple state tracking for "did we already draw this period?"
 
 #### 4. Decoupled Tracking
 
@@ -238,17 +245,20 @@ private void DrawSessionBox(string periodName, DateTime startTime, DateTime endT
         periodName,
         startTime.ToString("yyyyMMddHH"));
 
-    // Get full chart height
-    double chartTop = Chart.TopY;
-    double chartBottom = Chart.BottomY;
+    // Calculate very large price range to ensure full chart coverage
+    // Using current price ± large pip buffer (e.g., 10000 pips)
+    double priceBuffer = 10000 * Symbol.PipSize;  // ~1.00 for 5-digit pairs like EURUSD
+    double currentPrice = m15Bars.ClosePrices.LastValue;
+    double chartTop = currentPrice + priceBuffer;
+    double chartBottom = currentPrice - priceBuffer;
 
     // Draw full-height box
     var box = Chart.DrawRectangle(
         boxName,
         startTime,
-        chartTop,      // ← Full height
+        chartTop,      // ← Very high price
         endTime,
-        chartBottom,   // ← Full height
+        chartBottom,   // ← Very low price
         boxColor);
 
     // Configure
@@ -259,9 +269,6 @@ private void DrawSessionBox(string periodName, DateTime startTime, DateTime endT
         periodName,
         startTime.ToString("HH:mm"),
         endTime.ToString("HH:mm"));
-
-    // Track active box
-    activeSessionBoxes[boxName] = box;
 
     Print("[SessionBox] Drew {0} | {1} - {2}",
         periodName,
@@ -285,11 +292,10 @@ private void UpdateSessionTracking()
         if (SessionBoxDisplayMode == SessionBoxMode.Basic)
         {
             // Detect current session
-            var currentState = GetSessionState(currentTime);
-            TradingSession primarySession = DeterminePrimarySession(currentState);
+            TradingSession primarySession = GetPrimarySession(currentTime);
 
             // If NEW session detected
-            if (primarySession != lastDetectedSession)
+            if (primarySession != lastDrawnSession)
             {
                 // Draw session box immediately
                 DateTime sessionStart = GetSessionStartTime(primarySession, currentTime);
@@ -298,7 +304,8 @@ private void UpdateSessionTracking()
 
                 DrawSessionBox(primarySession.ToString(), sessionStart, sessionEnd, sessionColor);
 
-                lastDetectedSession = primarySession;
+                // Update tracking to prevent duplicate drawing
+                lastDrawnSession = primarySession;
             }
         }
         else // Advanced Mode
@@ -307,7 +314,7 @@ private void UpdateSessionTracking()
             OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
 
             // If NEW period detected (and not None)
-            if (currentPeriod != lastOptimalPeriod && currentPeriod != OptimalPeriod.None)
+            if (currentPeriod != lastDrawnPeriod && currentPeriod != OptimalPeriod.None)
             {
                 // Draw optimal period box immediately
                 DateTime periodStart = GetOptimalPeriodStart(currentPeriod, currentTime);
@@ -316,7 +323,14 @@ private void UpdateSessionTracking()
 
                 DrawSessionBox(currentPeriod.ToString(), periodStart, periodEnd, periodColor);
 
-                lastOptimalPeriod = currentPeriod;
+                // Update tracking to prevent duplicate drawing
+                lastDrawnPeriod = currentPeriod;
+            }
+
+            // If period ends (changes to None), reset tracking
+            if (currentPeriod == OptimalPeriod.None && lastDrawnPeriod != OptimalPeriod.None)
+            {
+                lastDrawnPeriod = OptimalPeriod.None;
             }
         }
     }
@@ -351,13 +365,17 @@ private DateTime GetSessionStartTime(TradingSession session, DateTime currentTim
     switch (session)
     {
         case TradingSession.Asian:
-            return hour < 9 ? today : today.AddDays(1);
+            // Asian starts at 00:00 UTC
+            return hour < 9 ? today.AddHours(0) : today.AddDays(1).AddHours(0);
         case TradingSession.London:
-            return today.AddHours(8);
+            // London starts at 08:00 UTC
+            return hour < 8 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
         case TradingSession.NewYork:
-            return today.AddHours(13);
+            // NY starts at 13:00 UTC
+            return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
         case TradingSession.Overlap:
-            return today.AddHours(13);
+            // Overlap starts at 13:00 UTC
+            return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
         default:
             return currentTime;
     }
@@ -373,34 +391,83 @@ private DateTime GetSessionEndTime(TradingSession session, DateTime currentTime)
     switch (session)
     {
         case TradingSession.Asian:
-            return start.AddHours(9);
+            return start.AddHours(9);  // 00:00 + 9 = 09:00
         case TradingSession.London:
-            return start.AddHours(9);
+            return start.AddHours(9);  // 08:00 + 9 = 17:00
         case TradingSession.NewYork:
-            return start.AddHours(9);
+            return start.AddHours(9);  // 13:00 + 9 = 22:00
         case TradingSession.Overlap:
-            return start.AddHours(4);
+            return start.AddHours(4);  // 13:00 + 4 = 17:00
         default:
             return currentTime;
     }
 }
 
-// Similar methods for GetOptimalPeriodStart() and GetOptimalPeriodEnd()
-```
-
-#### 4. Box Cleanup
-
-```csharp
 /// <summary>
-/// Removes box from active tracking when period ends
-/// Box stays visible on chart, just stops being tracked
+/// Gets optimal period start time
 /// </summary>
-private void CleanupActiveSessionBox(string boxName)
+private DateTime GetOptimalPeriodStart(OptimalPeriod period, DateTime currentTime)
 {
-    if (activeSessionBoxes.ContainsKey(boxName))
+    int hour = currentTime.Hour;
+    DateTime today = currentTime.Date;
+
+    switch (period)
     {
-        activeSessionBoxes.Remove(boxName);
-        Print("[SessionBox] Cleanup: {0}", boxName);
+        case OptimalPeriod.BestOverlap:
+            // 13:00-17:00 UTC
+            return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
+        case OptimalPeriod.GoodLondonOpen:
+            // 08:00-12:00 UTC
+            return hour < 8 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
+        case OptimalPeriod.DangerDeadZone:
+            // 04:00-08:00 UTC
+            return hour < 4 ? today.AddHours(4) : today.AddDays(1).AddHours(4);
+        case OptimalPeriod.DangerLateNY:
+            // 20:00-00:00 UTC
+            return hour < 20 ? today.AddHours(20) : today.AddDays(1).AddHours(20);
+        default:
+            return currentTime;
+    }
+}
+
+/// <summary>
+/// Gets optimal period end time
+/// </summary>
+private DateTime GetOptimalPeriodEnd(OptimalPeriod period, DateTime currentTime)
+{
+    DateTime start = GetOptimalPeriodStart(period, currentTime);
+
+    switch (period)
+    {
+        case OptimalPeriod.BestOverlap:
+            return start.AddHours(4);  // 13:00 + 4 = 17:00
+        case OptimalPeriod.GoodLondonOpen:
+            return start.AddHours(4);  // 08:00 + 4 = 12:00
+        case OptimalPeriod.DangerDeadZone:
+            return start.AddHours(4);  // 04:00 + 4 = 08:00
+        case OptimalPeriod.DangerLateNY:
+            return start.AddHours(4);  // 20:00 + 4 = 24:00 (00:00 next day)
+        default:
+            return currentTime;
+    }
+}
+
+/// <summary>
+/// Returns color for optimal period type (Advanced Mode)
+/// </summary>
+private Color GetOptimalPeriodColor(OptimalPeriod period)
+{
+    switch (period)
+    {
+        case OptimalPeriod.BestOverlap:
+            return ColorBestTime;
+        case OptimalPeriod.GoodLondonOpen:
+            return ColorGoodTime;
+        case OptimalPeriod.DangerDeadZone:
+        case OptimalPeriod.DangerLateNY:
+            return ColorDangerZone;
+        default:
+            return Color.Gray;
     }
 }
 ```
@@ -555,19 +622,21 @@ Parameters → Session Management → Session Box Mode:
 
 **Files to Update:**
 
-1. **ADVANCED_SESSION_BOX_MODE.md**
-   - Update description: "Boxes now appear at session start, not end"
+1. **ADVANCED_SESSION_BOX_MODE.md** (if exists)
+   - Update description: "Boxes now appear at period start, not end"
    - Update visual examples
    - Add note about full-height time zone bands
+   - Note: This file exists in the repo
 
-2. **SESSION_BOX_IMPLEMENTATION.md**
+2. **SESSION_BOX_IMPLEMENTATION.md** (if exists)
    - Update implementation guide
    - New drawing approach
    - Remove "draw at session end" instructions
+   - Note: This file exists in the repo
 
 3. **Master_Plan.md**
    - Mark Phase 2 as updated
-   - Note: Session boxes now live/advance
+   - Note: Session boxes now live/advance with full-height time zone bands
 
 ### Rollout Plan
 
