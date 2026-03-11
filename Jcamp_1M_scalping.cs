@@ -1108,6 +1108,80 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
+        /// Gets session end time for a given session type
+        /// Calculates based on session start + duration
+        /// </summary>
+        private DateTime GetSessionEndTime(TradingSession session, DateTime currentTime)
+        {
+            DateTime start = GetSessionStartTime(session, currentTime);
+
+            switch (session)
+            {
+                case TradingSession.Asian:
+                    return start.AddHours(9);  // 00:00 + 9 = 09:00
+                case TradingSession.London:
+                    return start.AddHours(9);  // 08:00 + 9 = 17:00
+                case TradingSession.NewYork:
+                    return start.AddHours(9);  // 13:00 + 9 = 22:00
+                case TradingSession.Overlap:
+                    return start.AddHours(4);  // 13:00 + 4 = 17:00
+                default:
+                    return currentTime;
+            }
+        }
+
+        /// <summary>
+        /// Gets optimal period start time (Advanced Mode)
+        /// Returns start time based on current hour to handle day boundaries
+        /// </summary>
+        private DateTime GetOptimalPeriodStart(OptimalPeriod period, DateTime currentTime)
+        {
+            int hour = currentTime.Hour;
+            DateTime today = currentTime.Date;
+
+            switch (period)
+            {
+                case OptimalPeriod.BestOverlap:
+                    // 13:00-17:00 UTC
+                    return hour < 13 ? today.AddHours(13) : today.AddDays(1).AddHours(13);
+                case OptimalPeriod.GoodLondonOpen:
+                    // 08:00-12:00 UTC
+                    return hour < 8 ? today.AddHours(8) : today.AddDays(1).AddHours(8);
+                case OptimalPeriod.DangerDeadZone:
+                    // 04:00-08:00 UTC
+                    return hour < 4 ? today.AddHours(4) : today.AddDays(1).AddHours(4);
+                case OptimalPeriod.DangerLateNY:
+                    // 20:00-00:00 UTC
+                    return hour < 20 ? today.AddHours(20) : today.AddDays(1).AddHours(20);
+                default:
+                    return currentTime;
+            }
+        }
+
+        /// <summary>
+        /// Gets optimal period end time (Advanced Mode)
+        /// Calculates based on period start + duration
+        /// </summary>
+        private DateTime GetOptimalPeriodEnd(OptimalPeriod period, DateTime currentTime)
+        {
+            DateTime start = GetOptimalPeriodStart(period, currentTime);
+
+            switch (period)
+            {
+                case OptimalPeriod.BestOverlap:
+                    return start.AddHours(4);  // 13:00 + 4 = 17:00
+                case OptimalPeriod.GoodLondonOpen:
+                    return start.AddHours(4);  // 08:00 + 4 = 12:00
+                case OptimalPeriod.DangerDeadZone:
+                    return start.AddHours(4);  // 04:00 + 4 = 08:00
+                case OptimalPeriod.DangerLateNY:
+                    return start.AddHours(4);  // 20:00 + 4 = 24:00 (00:00 next day)
+                default:
+                    return currentTime;
+            }
+        }
+
+        /// <summary>
         /// Draws visual session box on chart
         /// Phase 2 Implementation - Session Visualization
         /// Advanced Mode: Shows only optimal trading periods with priority colors
@@ -1304,6 +1378,26 @@ namespace cAlgo.Robots
                     return ColorNewYork;
                 case TradingSession.Overlap:
                     return ColorOverlap;
+                default:
+                    return Color.Gray;
+            }
+        }
+
+        /// <summary>
+        /// Returns color for optimal period type (Advanced Mode)
+        /// Maps periods to their priority colors (Green/Gold/Red)
+        /// </summary>
+        private Color GetOptimalPeriodColor(OptimalPeriod period)
+        {
+            switch (period)
+            {
+                case OptimalPeriod.BestOverlap:
+                    return ColorBestTime;
+                case OptimalPeriod.GoodLondonOpen:
+                    return ColorGoodTime;
+                case OptimalPeriod.DangerDeadZone:
+                case OptimalPeriod.DangerLateNY:
+                    return ColorDangerZone;
                 default:
                     return Color.Gray;
             }
