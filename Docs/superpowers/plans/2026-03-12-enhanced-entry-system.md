@@ -68,22 +68,40 @@ public double MinPreZoneScore { get; set; }
 #endregion
 ```
 
-- [ ] **Step 2: Verify code compiles in cTrader**
+- [ ] **Step 2: Add enhanced FVG parameters to FVG Detection region**
+
+Find the `#region Parameters - FVG Detection` section (around line 208) and add these parameters:
+
+```csharp
+[Parameter("Min FVG Size (pips)", DefaultValue = 1.5, MinValue = 0.5, MaxValue = 5.0, Step = 0.5, Group = "FVG Detection")]
+public double MinFVGSizePips { get; set; }
+
+[Parameter("FVG Max Age (bars)", DefaultValue = 30, MinValue = 10, MaxValue = 100, Group = "FVG Detection")]
+public int FVGMaxAgeBars { get; set; }
+```
+
+- [ ] **Step 3: Verify code compiles in cTrader**
 
 Build the cBot and verify no compilation errors.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add Jcamp_1M_scalping.cs
-git commit -m "feat: add PRE-Zone System parameters
+git commit -m "feat: add PRE-Zone System and enhanced FVG parameters
 
-Add 8 new parameters for displacement detection and zone lifecycle:
+Add 9 new parameters:
+
+PRE-Zone System:
 - EnablePreZoneSystem (master toggle)
 - ATRPeriod, ATRMultiplier (displacement thresholds)
 - PreZoneExpiryMinutes, ValidZoneExpiryMinutes (zone timing)
 - FractalZoneTolerancePips (fractal confirmation)
 - MinPreZoneScore (quality filter)
+
+FVG Detection (enhanced):
+- MinFVGSizePips (minimum gap size filter)
+- FVGMaxAgeBars (maximum age filter)
 
 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 ```
@@ -1121,10 +1139,11 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 
 - [ ] **Step 2: Add fractal confirmation check before creating fractal zone**
 
-After `FindSignificantSwing()` returns a valid swing index, add:
+After `FindSignificantSwing()` returns a valid swing index, add this check BEFORE the existing swing zone creation:
 
 ```csharp
 // Phase 4: Check if fractal confirms existing PRE-zone
+bool skipFractalZoneCreation = false;
 if (EnablePreZoneSystem && activeZone != null && activeZone.State == ZoneState.Pre)
 {
     double fractalPrice = currentMode == "SELL" ?
@@ -1144,11 +1163,19 @@ if (EnablePreZoneSystem && activeZone != null && activeZone.State == ZoneState.P
             DrawZoneRectangle();  // Redraw with VALID color
         }
 
-        // Skip normal fractal zone creation
-        return;
+        // Skip normal fractal zone creation (but continue with other M15 processing)
+        skipFractalZoneCreation = true;
     }
 }
+
+// Only create fractal zone if not confirmed by PRE-zone
+if (!skipFractalZoneCreation)
+{
+    // ... existing UpdateSwingZone() call goes here
+}
 ```
+
+**Note:** Do NOT use `return;` here as it would skip M1 entry processing. Use a flag to skip only the fractal zone creation section.
 
 - [ ] **Step 3: Verify code compiles**
 
