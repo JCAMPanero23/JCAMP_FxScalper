@@ -117,6 +117,37 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region PRE-Zone Enums and Classes - Phase 4 Implementation
+
+        /// <summary>
+        /// Represents the lifecycle state of a PRE-zone
+        /// Phase 4 Implementation - Zone State Management
+        /// </summary>
+        public enum ZoneState
+        {
+            Pre,          // Created from displacement + FVG, not yet confirmed
+            Valid,        // Confirmed by Williams Fractal
+            Armed,        // Price within proximity, ready for entry
+            Expired,      // Time limit exceeded
+            Invalidated   // Wrong-direction breakout
+        }
+
+        /// <summary>
+        /// Represents a displacement (impulse) candle that initiates zone creation
+        /// Phase 4 Implementation - Displacement Candle Tracking
+        /// </summary>
+        public class DisplacementCandle
+        {
+            public int BarIndex { get; set; }
+            public DateTime Time { get; set; }
+            public double ImpulseSize { get; set; }      // Body size in pips
+            public double ATRMultiple { get; set; }      // How many × ATR
+            public bool IsBullish { get; set; }          // Direction (close > open)
+            public double OriginPrice { get; set; }      // Zone anchor point
+        }
+
+        #endregion
+
         #region Session Enums and Classes
 
         /// <summary>
