@@ -17,7 +17,7 @@ M15 Swing Forms → Wait 2 bars (30 min) → Fractal Confirms → Draw Rectangle
 
 **Enhanced Flow (Immediate):**
 ```
-M15 Displacement → FVG Forms → Create PRE-Zone (IMMEDIATE) → Price enters → Trade
+M15 Displacement → FVG Forms (next bar) → Create PRE-Zone → Price enters → Trade
 ```
 
 ---
@@ -48,6 +48,18 @@ Displacement = TRUE if:
    Candle Body Size >= ATRMultiplier × ATR(ATRPeriod)
 
 Default: Body Size >= 1.5 × ATR(14)
+```
+
+### ATR Indicator Initialization
+
+**IMPORTANT**: Add ATR indicator to the cBot:
+
+```csharp
+// In class fields
+private AverageTrueRange atr;
+
+// In OnStart() after m15Bars is initialized
+atr = Indicators.AverageTrueRange(m15Bars, ATRPeriod, MovingAverageType.Simple);
 ```
 
 ### Data Structure
@@ -110,11 +122,33 @@ class FairValueGap
     bool IsFilled;
 
     // NEW fields
-    bool IsHighQuality;        // Formed during displacement candle
+    bool IsHighQuality;        // Candle B (impulse) meets displacement criteria
     double GapSizeInPips;      // For filtering
     int DisplacementBarIndex;  // Links to impulse candle (-1 if none)
 }
 ```
+
+### FVG + Displacement Linking (Clarified)
+
+**FVG Structure Reminder:**
+- Candle A (idx-1): Before the impulse
+- **Candle B (idx): The IMPULSE candle** ← This is checked for displacement
+- Candle C (idx+1): After the impulse
+
+**IsHighQuality = TRUE when:**
+```
+Candle B (the impulse candle at idx) meets displacement criteria:
+   BodySize(CandleB) >= ATRMultiplier × ATR(14)
+```
+
+### FVG Detection Timing (Clarified)
+
+FVG detection requires Candle C to be **closed**. This means:
+- Displacement occurs on bar N (Candle B)
+- FVG is confirmed on bar N+1 (when Candle C closes)
+- PRE-zone is created on bar N+1
+
+**This is still 15 minutes faster than fractal confirmation (which needs bar N+2).**
 
 ### Filtering Logic
 
@@ -122,9 +156,18 @@ class FairValueGap
 1. Calculate gap size in pips
 2. IF gap size < MinFVGSizePips (1.5) → Discard
 3. IF age > FVGMaxAgeBars (30) → Discard
-4. IF formed during displacement → Mark IsHighQuality = true
-5. Only IsHighQuality FVGs trigger PRE-zone creation
+4. Check if Candle B (impulse) meets displacement criteria
+5. IF YES → Mark IsHighQuality = true
+6. Only IsHighQuality FVGs trigger PRE-zone creation
 ```
+
+### Multiple FVGs Rule
+
+If a single displacement candle creates multiple FVGs:
+- Select the FVG **in the same direction** as the displacement
+- Bullish displacement → use Bullish FVG only
+- Bearish displacement → use Bearish FVG only
+- If multiple same-direction FVGs, use the **largest gap size**
 
 ### Parameters
 
@@ -152,7 +195,7 @@ class FairValueGap
 │      │  Score: New │                                             │
 │      └──────┬──────┘                                             │
 │             │                                                    │
-│    [Williams Fractal confirms at zone price]                     │
+│    [Williams Fractal confirms within tolerance]                  │
 │             │                                                    │
 │             ▼                                                    │
 │      ┌─────────────┐                                             │
@@ -181,6 +224,40 @@ class FairValueGap
 | EXPIRED | Time exceeds expiry | - | No |
 | INVALIDATED | Wrong-direction breakout | - | No |
 
+### Fractal Confirmation Tolerance
+
+**Fractal "confirms at zone" when:**
+```
+Fractal Price is within FractalZoneTolerance pips of Zone Origin
+
+SELL Zone: |FractalHigh - ZoneOrigin| <= 5 pips
+BUY Zone:  |FractalLow - ZoneOrigin| <= 5 pips
+
+Default FractalZoneTolerance: 5 pips (configurable)
+```
+
+### Zone Storage Strategy
+
+**Single Active Zone Model:**
+- Only ONE zone can be active at a time (matching current system)
+- New `TradingZone` object replaces existing state variables
+
+**Variable Mapping:**
+```csharp
+// OLD variables (still populated for compatibility)
+swingTopPrice    ← TradingZone.TopPrice
+swingBottomPrice ← TradingZone.BottomPrice
+hasActiveSwing   ← TradingZone.State == Armed
+hasValidRectangle ← TradingZone.State != Expired && State != Invalidated
+currentMode      ← TradingZone.Mode
+rectangleExpiryTime ← TradingZone.ExpiryTime
+
+// NEW variable
+private TradingZone activeZone;  // The single active zone (or null)
+```
+
+This ensures **existing entry logic works unchanged** - it still reads `swingTopPrice`, `swingBottomPrice`, etc.
+
 ### Zone Data Structure
 
 ```csharp
@@ -195,6 +272,7 @@ class TradingZone
     // Price Levels
     double TopPrice;           // Upper boundary
     double BottomPrice;        // Lower boundary
+    double OriginPrice;        // Displacement origin (for fractal matching)
 
     // Timing
     DateTime CreatedTime;
@@ -231,12 +309,54 @@ BUY Zone (bullish displacement):
 └── Bottom = Displacement Origin (Low) - 2 pips
 ```
 
+**Note**: This differs from fractal zones which use candle body (close-to-high or close-to-low). PRE-zones use fixed 4-pip width for consistency.
+
+### Zone Invalidation Rules (Detailed)
+
+**Invalidation occurs when:**
+
+```
+SELL Zone Invalidated:
+  M1 candle body closes ABOVE zone top
+  (close > ZoneTopPrice AND open > ZoneTopPrice)
+
+BUY Zone Invalidated:
+  M1 candle body closes BELOW zone bottom
+  (close < ZoneBottomPrice AND open < ZoneBottomPrice)
+```
+
+This matches existing `ProcessBreakoutEntry()` invalidation logic exactly.
+
+**Invalidation applies to ALL zone states** (PRE, VALID, ARMED).
+
+### ARMED Zone Expiry Behavior
+
+**Rule**: ARMED zones remain active until **entry or invalidation**, regardless of expiry timer.
+
+```
+IF Zone.State == Armed:
+    Ignore expiry timer
+    Zone remains active until:
+      - Entry is triggered (trade executed)
+      - OR Invalidation occurs (wrong-direction breakout)
+```
+
+### Overlapping Zones Rule
+
+**Only one zone per direction exists:**
+- If new PRE-zone created while existing zone active:
+  - Compare scores
+  - Keep higher-scoring zone
+  - Expire lower-scoring zone
+- System tracks ONE `activeZone` at a time
+
 ### Parameters
 
 | Parameter | Default | Range | Description |
 |-----------|---------|-------|-------------|
 | PRE-Zone Expiry (min) | 60 | 30-120 | Time until PRE-zone expires |
 | VALID-Zone Expiry (min) | 120 | 60-240 | Time until VALID-zone expires |
+| Fractal Zone Tolerance (pips) | 5 | 2-10 | Max distance for fractal to confirm zone |
 
 ---
 
@@ -284,19 +404,30 @@ Score:
 
 #### Session Alignment (25%)
 
-**Reuse existing `CalculateSessionAlignment()` function.**
+**New overload function** (existing function requires swingIndex):
 
-```
-Check if zone price aligns with session high/low:
-  AT session level (±0 pips)    → 1.0
-  NEAR session level (±5 pips)  → 0.85
-  CLOSE to session (±10 pips)   → 0.7
-  Not aligned                    → 0.5
+```csharp
+// NEW overload for PRE-zones
+private double CalculateSessionAlignmentForZone(double zonePrice, DateTime zoneTime, string mode)
+{
+    // Get session that contains zoneTime
+    SessionLevels session = GetSessionForTime(zoneTime);
+    if (session == null) return 0.5;
+
+    // Check alignment with session high/low
+    double targetLevel = mode == "SELL" ? session.High : session.Low;
+    double distancePips = Math.Abs(zonePrice - targetLevel) / Symbol.PipSize;
+
+    if (distancePips <= 0) return 1.0;      // AT session level
+    if (distancePips <= 5) return 0.85;     // NEAR
+    if (distancePips <= 10) return 0.7;     // CLOSE
+    return 0.5;                              // Not aligned
+}
 ```
 
 #### Optimal Period (10%)
 
-**Reuse existing `GetOptimalPeriod()` function.**
+**Uses existing `GetOptimalPeriod()` function with positive-only scores:**
 
 ```
 BestOverlap (13:00-17:00)    → 1.0
@@ -305,6 +436,8 @@ None (neutral times)          → 0.5
 DangerDeadZone (04:00-08:00) → 0.25
 DangerLateNY (20:00-00:00)   → 0.25
 ```
+
+**Note**: PRE-zone scoring uses **positive values only** (0.25 minimum), unlike existing session alignment which can return -0.5 for danger zones. This is intentional - PRE-zones still form during danger zones but with lower scores.
 
 ### Minimum Score Threshold
 
@@ -319,6 +452,9 @@ PRE-zones require minimum score of **0.50** (lower than fractal's 0.60 since we 
 ```
 OnBar (M15):
 │
+├── IF EnablePreZoneSystem == FALSE:
+│   └── Skip to step 6 (use fractal-only mode)
+│
 ├── 1. UpdateH1Levels()              [NO CHANGE]
 ├── 2. UpdateM15Levels()             [NO CHANGE]
 ├── 3. UpdateSessionTracking()       [NO CHANGE]
@@ -328,39 +464,66 @@ OnBar (M15):
 │
 ├── 7. ZONE CREATION LOGIC           [NEW]
 │   │
-│   ├── IF Displacement + High-Quality FVG:
+│   ├── IF EnablePreZoneSystem AND Displacement + High-Quality FVG:
 │   │   └── CreatePreZone()
+│   │   └── Sync to legacy variables (swingTopPrice, etc.)
 │   │
 │   ├── ELSE IF Williams Fractal found:
-│   │   ├── IF PRE-zone exists at price:
+│   │   ├── IF PRE-zone exists within tolerance:
 │   │   │   └── UpgradeToValidZone()
 │   │   └── ELSE:
 │   │       └── CreateFractalZone() (fallback)
+│   │       └── Sync to legacy variables
 │   │
 │   └── UpdateZoneStates()
-│       ├── Check expiry
+│       ├── Check expiry (skip if ARMED)
 │       ├── Check proximity (arm zones)
 │       └── Check invalidation
+│       └── Sync state to legacy variables
 │
-└── 8. UpdateSwingZone()             [MODIFIED - uses TradingZone]
+└── 8. DrawSwingRectangle()          [MODIFIED - color by state]
+```
+
+### Legacy Variable Sync Function
+
+```csharp
+private void SyncZoneToLegacyVariables()
+{
+    if (activeZone != null && activeZone.State != ZoneState.Expired
+        && activeZone.State != ZoneState.Invalidated)
+    {
+        swingTopPrice = activeZone.TopPrice;
+        swingBottomPrice = activeZone.BottomPrice;
+        hasValidRectangle = true;
+        hasActiveSwing = (activeZone.State == ZoneState.Armed);
+        currentMode = activeZone.Mode;
+        rectangleExpiryTime = activeZone.ExpiryTime;
+    }
+    else
+    {
+        hasValidRectangle = false;
+        hasActiveSwing = false;
+    }
+}
 ```
 
 ### Priority Rules
 
 | Scenario | Action |
 |----------|--------|
-| PRE-zone and Fractal at same level | Upgrade PRE to VALID |
-| PRE-zone and Fractal at different levels | Keep highest scoring only |
-| Multiple PRE-zones | Keep highest scoring, expire others |
-| No PRE-zone, Fractal found | Use fractal zone (fallback) |
+| PRE-zone and Fractal within tolerance | Upgrade PRE to VALID |
+| PRE-zone and Fractal NOT within tolerance | Keep higher scoring, expire other |
+| Multiple PRE-zones same direction | Keep highest scoring, expire others |
+| No PRE-zone, Fractal found | Create fractal zone (fallback) |
+| EnablePreZoneSystem = false | Use fractal zones only |
 
-### Entry Logic
+### Entry Logic Integration
 
-**No changes to entry logic.** Existing functions work with any zone type:
+**Entry logic is UNCHANGED.** The `SyncZoneToLegacyVariables()` function populates the existing variables that entry logic reads:
 
-- `ProcessBreakoutEntry()` - Uses zone's TopPrice/BottomPrice
-- `ProcessRetestEntry()` - Uses zone's TopPrice/BottomPrice
-- `ExecuteBuyTrade()` / `ExecuteSellTrade()` - Unchanged
+- `ProcessBreakoutEntry()` reads `swingTopPrice`, `swingBottomPrice` ← populated from `activeZone`
+- `ProcessRetestEntry()` reads `swingTopPrice`, `swingBottomPrice` ← populated from `activeZone`
+- `ExecuteBuyTrade()` / `ExecuteSellTrade()` - No changes needed
 
 ---
 
@@ -376,15 +539,17 @@ OnBar (M15):
 | `CalculatePreZoneScore()` | New scoring formula for PRE-zones |
 | `CalculateDisplacementStrength()` | Score based on ATR multiple |
 | `CalculateFVGQuality()` | Score based on gap size |
-| `GetActiveZone()` | Return current tradeable zone (if any) |
+| `CalculateSessionAlignmentForZone()` | Session alignment using zone price/time |
+| `GetActiveZone()` | Return current tradeable zone (or null) |
+| `SyncZoneToLegacyVariables()` | Populate swingTopPrice, etc. from activeZone |
 
 ## Modified Functions
 
 | Function | Modification |
 |----------|-------------|
+| `OnStart()` | Initialize ATR indicator |
 | `DetectFVGs()` | Add min size filter, max age filter, IsHighQuality flag |
-| `UpdateSwingZone()` | Use TradingZone instead of raw rectangle values |
-| `DrawSwingRectangle()` | Color-code by zone state (PRE/VALID/ARMED) |
+| `DrawSwingRectangle()` | Color-code by zone state (PRE=Yellow, VALID=Blue, ARMED=Green) |
 
 ## Unchanged Functions
 
@@ -394,11 +559,11 @@ OnBar (M15):
 - `DetectTrendMode()`
 - `FindSignificantSwing()` (still used as fallback)
 - `CalculateSwingScore()` (still used for fractal zones)
-- `CalculateSessionAlignment()` (reused for PRE-zones)
-- `GetOptimalPeriod()` (reused for PRE-zones)
+- `CalculateSessionAlignment()` (kept for fractal zones)
+- `GetOptimalPeriod()` (reused)
 - `ProcessEntryLogic()`
-- `ProcessBreakoutEntry()`
-- `ProcessRetestEntry()`
+- `ProcessBreakoutEntry()` ← reads legacy variables, unchanged
+- `ProcessRetestEntry()` ← reads legacy variables, unchanged
 - `ExecuteBuyTrade()`
 - `ExecuteSellTrade()`
 
@@ -425,7 +590,7 @@ OnBar (M15):
 [Zone] Upgraded to VALID | Fractal confirmed at bar 145 | New expiry: 16:30
 [Zone] ARMED | Price within 8 pips of zone
 [Zone] Expired | No entry triggered | Was: PRE-Zone at 1.09520
-[Zone] Invalidated | Wrong-direction breakout
+[Zone] Invalidated | Body closed above zone top
 ```
 
 ---
@@ -441,6 +606,7 @@ OnBar (M15):
 | ATR Multiplier | 1.5 | Displacement Detection |
 | PRE-Zone Expiry (min) | 60 | Displacement Detection |
 | VALID-Zone Expiry (min) | 120 | Displacement Detection |
+| Fractal Zone Tolerance (pips) | 5 | Displacement Detection |
 | Min FVG Size (pips) | 1.5 | FVG Detection |
 | FVG Max Age (bars) | 30 | FVG Detection |
 
@@ -455,6 +621,7 @@ All existing parameters remain functional for fallback fractal system.
 ### Unit Tests
 
 1. **Displacement Detection**
+   - Verify ATR indicator initialization
    - Verify ATR calculation
    - Verify impulse size threshold
    - Verify origin price (high for bearish, low for bullish)
@@ -462,20 +629,24 @@ All existing parameters remain functional for fallback fractal system.
 2. **FVG Filtering**
    - Verify minimum size filter
    - Verify max age filter
-   - Verify IsHighQuality flag
+   - Verify IsHighQuality flag when Candle B is displacement
 
 3. **Zone Lifecycle**
-   - PRE-zone creation timing
-   - VALID upgrade on fractal confirmation
+   - PRE-zone creation timing (one bar after displacement)
+   - VALID upgrade on fractal confirmation within tolerance
    - ARMED state on price proximity
-   - Expiry at correct times
+   - Expiry at correct times (skip if ARMED)
    - Invalidation on wrong-direction breakout
+
+4. **Legacy Variable Sync**
+   - Verify swingTopPrice matches activeZone.TopPrice
+   - Verify entry logic works unchanged
 
 ### Integration Tests
 
 1. **Backtest: PRE-Zone vs Fractal Timing**
    - Measure: How many minutes earlier are PRE-zones created?
-   - Expected: 15-30 minutes earlier on average
+   - Expected: 15 minutes earlier on average
 
 2. **Backtest: Hit Rate Comparison**
    - PRE-zone entries vs Fractal-only entries
@@ -489,9 +660,9 @@ All existing parameters remain functional for fallback fractal system.
 
 ## Success Criteria
 
-1. PRE-zones created **immediately** after displacement + FVG (no 2-bar delay)
-2. Existing fractal system works as fallback when no PRE-zone
-3. Entry logic unchanged - seamless integration
+1. PRE-zones created **one bar after displacement** (15 min faster than fractal)
+2. Existing fractal system works as fallback when no PRE-zone or when disabled
+3. Entry logic unchanged - seamless integration via legacy variable sync
 4. Console output shows clear zone lifecycle
 5. Backtest shows improved entry timing
 
@@ -504,8 +675,9 @@ All existing parameters remain functional for fallback fractal system.
 | Displacement Detection | ~150 |
 | FVG Enhancements | ~50 |
 | Zone Lifecycle Management | ~200 |
-| PRE-Zone Scoring | ~50 |
-| **Total New Code** | **~450 lines** |
+| PRE-Zone Scoring | ~80 |
+| Legacy Variable Sync | ~30 |
+| **Total New Code** | **~510 lines** |
 
 ---
 
