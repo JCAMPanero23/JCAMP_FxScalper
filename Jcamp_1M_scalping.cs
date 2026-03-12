@@ -216,6 +216,40 @@ namespace cAlgo.Robots
         [Parameter("FVG Lookback Bars", DefaultValue = 50, MinValue = 20, MaxValue = 100, Group = "FVG Detection")]
         public int FVGLookbackBars { get; set; }
 
+        [Parameter("Min FVG Size (pips)", DefaultValue = 1.5, MinValue = 0.5, MaxValue = 5.0, Step = 0.5, Group = "FVG Detection")]
+        public double MinFVGSizePips { get; set; }
+
+        [Parameter("FVG Max Age (bars)", DefaultValue = 30, MinValue = 10, MaxValue = 100, Group = "FVG Detection")]
+        public int FVGMaxAgeBars { get; set; }
+
+        #endregion
+
+        #region Parameters - PRE-Zone System
+
+        [Parameter("=== PRE-ZONE SYSTEM ===", DefaultValue = "")]
+        public string PreZoneHeader { get; set; }
+
+        [Parameter("Enable PRE-Zone System", DefaultValue = true, Group = "PRE-Zone System")]
+        public bool EnablePreZoneSystem { get; set; }
+
+        [Parameter("ATR Period", DefaultValue = 14, MinValue = 5, MaxValue = 50, Group = "PRE-Zone System")]
+        public int ATRPeriod { get; set; }
+
+        [Parameter("ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 3.0, Step = 0.1, Group = "PRE-Zone System")]
+        public double ATRMultiplier { get; set; }
+
+        [Parameter("PRE-Zone Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 120, Group = "PRE-Zone System")]
+        public int PreZoneExpiryMinutes { get; set; }
+
+        [Parameter("VALID-Zone Expiry (minutes)", DefaultValue = 120, MinValue = 60, MaxValue = 240, Group = "PRE-Zone System")]
+        public int ValidZoneExpiryMinutes { get; set; }
+
+        [Parameter("Fractal Zone Tolerance (pips)", DefaultValue = 5.0, MinValue = 2.0, MaxValue = 10.0, Step = 0.5, Group = "PRE-Zone System")]
+        public double FractalZoneTolerancePips { get; set; }
+
+        [Parameter("Min PRE-Zone Score", DefaultValue = 0.50, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "PRE-Zone System")]
+        public double MinPreZoneScore { get; set; }
+
         #endregion
 
         #region Parameters - Visualization
