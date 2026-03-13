@@ -643,6 +643,32 @@ namespace cAlgo.Robots
                 // Phase 3: Detect Fair Value Gaps
                 DetectFVGs();
 
+                // Phase 4: Detect displacement and create PRE-zone if applicable
+                if (EnablePreZoneSystem)
+                {
+                    lastDisplacement = DetectDisplacement();
+
+                    // Check for high-quality FVG that matches displacement direction
+                    if (lastDisplacement != null)
+                    {
+                        var matchingFVG = FindMatchingHighQualityFVG(lastDisplacement);
+                        if (matchingFVG != null)
+                        {
+                            var newZone = CreatePreZone(lastDisplacement, matchingFVG);
+                            if (newZone != null)
+                            {
+                                activeZone = newZone;
+                                SyncZoneToLegacyVariables();
+
+                                if (ShowRectangles)
+                                {
+                                    DrawZoneRectangle();
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 1. Detect current trend mode
                 string newMode = DetectTrendMode();
 
@@ -2001,6 +2027,28 @@ namespace cAlgo.Robots
                 hasValidRectangle = false;
                 hasActiveSwing = false;
             }
+        }
+
+        /// <summary>
+        /// Finds a high-quality FVG that matches the displacement direction
+        /// Returns the largest gap by pip size
+        /// Phase 4 Implementation
+        /// </summary>
+        private FairValueGap FindMatchingHighQualityFVG(DisplacementCandle displacement)
+        {
+            var matchingFVGs = activeFVGs
+                .Where(f => f.IsHighQuality && f.IsBullish == displacement.IsBullish)
+                .OrderByDescending(f => f.GapSizeInPips)
+                .ToList();
+
+            if (matchingFVGs.Count == 0)
+            {
+                Print("[PRE-Zone] No matching high-quality FVG for {0} displacement",
+                    displacement.IsBullish ? "bullish" : "bearish");
+                return null;
+            }
+
+            return matchingFVGs[0];  // Return largest gap
         }
 
         #endregion
