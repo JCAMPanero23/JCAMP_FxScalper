@@ -1574,6 +1574,89 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Phase 4: PRE-Zone System
+
+        /// <summary>
+        /// Detects if the current M15 bar is a displacement (impulse) candle
+        /// Displacement = Body Size >= ATRMultiplier × ATR
+        /// Phase 4 Implementation
+        /// </summary>
+        private DisplacementCandle DetectDisplacement()
+        {
+            if (!EnablePreZoneSystem || atr == null)
+                return null;
+
+            int lastIdx = m15Bars.Count - 2;  // Last completed bar
+            if (lastIdx < 1)
+                return null;
+
+            // Calculate body size
+            double open = m15Bars.OpenPrices[lastIdx];
+            double close = m15Bars.ClosePrices[lastIdx];
+            double high = m15Bars.HighPrices[lastIdx];
+            double low = m15Bars.LowPrices[lastIdx];
+            double bodySize = Math.Abs(close - open);
+
+            // Get ATR value
+            double atrValue = atr.Result[lastIdx];
+            if (atrValue <= 0)
+                return null;
+
+            // Check displacement threshold
+            double atrMultiple = bodySize / atrValue;
+            if (atrMultiple < ATRMultiplier)
+                return null;
+
+            // Displacement detected!
+            bool isBullish = close > open;
+            double originPrice = isBullish ? low : high;  // Where move started
+            double bodySizePips = bodySize / Symbol.PipSize;
+
+            var displacement = new DisplacementCandle
+            {
+                BarIndex = lastIdx,
+                Time = m15Bars.OpenTimes[lastIdx],
+                ImpulseSize = bodySizePips,
+                ATRMultiple = atrMultiple,
+                IsBullish = isBullish,
+                OriginPrice = originPrice
+            };
+
+            Print("[Displacement] {0} impulse at {1} | Size: {2:F1} pips | ATR x {3:F1}",
+                isBullish ? "Bullish" : "Bearish",
+                displacement.Time.ToString("HH:mm"),
+                bodySizePips,
+                atrMultiple);
+
+            return displacement;
+        }
+
+        /// <summary>
+        /// Checks if a specific bar index qualifies as a displacement candle
+        /// Used for FVG quality checking
+        /// Phase 4 Implementation
+        /// </summary>
+        private bool IsDisplacementCandle(int barIndex)
+        {
+            if (!EnablePreZoneSystem || atr == null)
+                return false;
+
+            if (barIndex < 1 || barIndex >= m15Bars.Count)
+                return false;
+
+            double open = m15Bars.OpenPrices[barIndex];
+            double close = m15Bars.ClosePrices[barIndex];
+            double bodySize = Math.Abs(close - open);
+
+            double atrValue = atr.Result[barIndex];
+            if (atrValue <= 0)
+                return false;
+
+            return (bodySize / atrValue) >= ATRMultiplier;
+        }
+
+        #endregion
+
         #region Phase 1C: Market Structure Levels
 
         /// <summary>
