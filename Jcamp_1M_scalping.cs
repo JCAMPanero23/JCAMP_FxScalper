@@ -362,6 +362,15 @@ namespace cAlgo.Robots
         [Parameter("Max Rectangles", DefaultValue = 10, MinValue = 1, MaxValue = 50, Group = "Visualization")]
         public int MaxRectangles { get; set; }
 
+        [Parameter("PRE-Zone Color", DefaultValue = "Yellow", Group = "Visualization")]
+        public string ColorPreZoneName { get; set; }
+
+        [Parameter("VALID-Zone Color", DefaultValue = "Blue", Group = "Visualization")]
+        public string ColorValidZoneName { get; set; }
+
+        [Parameter("ARMED-Zone Color", DefaultValue = "Green", Group = "Visualization")]
+        public string ColorArmedZoneName { get; set; }
+
         #endregion
 
         #region Parameters - Score Weights
@@ -3091,6 +3100,55 @@ namespace cAlgo.Robots
 
             Print("[Cleanup] Removed {0} old rectangles | Remaining: {1}",
                 toRemove, drawnRectangles.Count);
+        }
+
+        /// <summary>
+        /// Draws zone rectangle with state-based coloring (PRE=Yellow, VALID=Blue, ARMED=Green)
+        /// </summary>
+        private void DrawZoneRectangle()
+        {
+            if (activeZone == null || !ShowRectangles)
+                return;
+
+            // Remove old zone rectangle if exists
+            string oldRectName = $"ZoneRect_{activeZone.Id}";
+            if (Chart.FindObject(oldRectName) != null)
+            {
+                Chart.RemoveObject(oldRectName);
+            }
+
+            // Select color based on state
+            Color rectColor;
+            switch (activeZone.State)
+            {
+                case ZoneState.Pre:
+                    rectColor = ColorPreZone;      // Yellow
+                    break;
+                case ZoneState.Valid:
+                    rectColor = ColorValidZone;    // Blue
+                    break;
+                case ZoneState.Armed:
+                    rectColor = ColorArmedZone;    // Green
+                    break;
+                default:
+                    return;  // Don't draw expired/invalidated
+            }
+
+            // Calculate rectangle times
+            DateTime startTime = activeZone.CreatedTime;
+            DateTime endTime = activeZone.ExpiryTime;
+
+            // Draw rectangle
+            string rectName = $"ZoneRect_{activeZone.Id}";
+            var rect = Chart.DrawRectangle(rectName, startTime, activeZone.TopPrice,
+                endTime, activeZone.BottomPrice, rectColor);
+            rect.IsFilled = true;
+
+            // Add label
+            string stateLabel = activeZone.State.ToString().ToUpper();
+            string labelName = $"ZoneLabel_{activeZone.Id}";
+            Chart.DrawText(labelName, $"{activeZone.Mode} {stateLabel} ({activeZone.TotalScore:F2})",
+                startTime, activeZone.TopPrice + (5 * Symbol.PipSize), rectColor);
         }
 
         /// <summary>
