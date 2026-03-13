@@ -1422,71 +1422,95 @@ namespace cAlgo.Robots
 
         /// <summary>
         /// Detects Fair Value Gaps (FVGs) on M15 timeframe
-        /// FVG Structure:
-        /// Candle A (idx-1) = BEFORE the impulse
-        /// Candle B (idx)   = IMPULSE candle (the big move)
-        /// Candle C (idx+1) = AFTER the impulse
-        ///
-        /// Bullish FVG: Gap between A.High and C.Low (price gapped up)
-        /// Bearish FVG: Gap between A.Low and C.High (price gapped down)
-        /// Phase 3 Implementation
+        /// ENHANCED: Adds minimum size filter, max age filter, and displacement quality flag
+        /// Phase 4 Enhancement
         /// </summary>
         private void DetectFVGs()
         {
-            activeFVGs.Clear(); // Reset each scan
+            activeFVGs.Clear();
 
             int lookback = Math.Min(FVGLookbackBars, m15Bars.Count - 3);
 
-            // Start at 1 to ensure we have candle before and after
             for (int i = 1; i < lookback - 1; i++)
             {
-                int idx = m15Bars.Count - 1 - i; // Impulse candle index
+                int idx = m15Bars.Count - 1 - i;  // Impulse candle index (Candle B)
 
-                // Bounds check
                 if (idx - 1 < 0 || idx + 1 >= m15Bars.Count)
                     continue;
 
-                // Get candle data
-                double candleA_High = m15Bars.HighPrices[idx - 1]; // Before impulse
+                // Check age limit (Phase 4 enhancement)
+                if (i > FVGMaxAgeBars)
+                    continue;
+
+                double candleA_High = m15Bars.HighPrices[idx - 1];
                 double candleA_Low = m15Bars.LowPrices[idx - 1];
-                double candleC_High = m15Bars.HighPrices[idx + 1]; // After impulse
+                double candleC_High = m15Bars.HighPrices[idx + 1];
                 double candleC_Low = m15Bars.LowPrices[idx + 1];
 
+                // Check if Candle B (impulse) is a displacement candle
+                bool isDisplacement = IsDisplacementCandle(idx);
+
                 // BULLISH FVG: Candle A's HIGH is BELOW Candle C's LOW
-                // This means price gapped UP, leaving an unfilled zone
                 if (candleA_High < candleC_Low)
                 {
+                    double gapSize = candleC_Low - candleA_High;
+                    double gapSizePips = gapSize / Symbol.PipSize;
+
+                    // Phase 4: Minimum size filter
+                    if (gapSizePips < MinFVGSizePips)
+                    {
+                        Print("[FVG] Filtered: gap too small ({0:F1} pips < {1:F1} min)", gapSizePips, MinFVGSizePips);
+                        continue;
+                    }
+
                     var fvg = new FairValueGap
                     {
                         Time = m15Bars.OpenTimes[idx],
-                        BottomPrice = candleA_High,   // Bottom of gap
-                        TopPrice = candleC_Low,       // Top of gap
+                        BottomPrice = candleA_High,
+                        TopPrice = candleC_Low,
                         IsBullish = true,
-                        IsFilled = false
+                        IsFilled = false,
+                        // Phase 4 new fields
+                        IsHighQuality = isDisplacement,
+                        GapSizeInPips = gapSizePips,
+                        DisplacementBarIndex = isDisplacement ? idx : -1
                     };
 
-                    // Check if gap has been filled by subsequent price action
                     fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
 
                     if (!fvg.IsFilled)
                     {
                         activeFVGs.Add(fvg);
-                        Print("[FVG] Bullish gap detected at {0} | Zone: {1:F5} - {2:F5}",
-                            fvg.Time, fvg.BottomPrice, fvg.TopPrice);
+                        Print("[FVG] {0} Bullish gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips",
+                            fvg.IsHighQuality ? "High-quality" : "Standard",
+                            fvg.BottomPrice, fvg.TopPrice, gapSizePips);
                     }
                 }
 
                 // BEARISH FVG: Candle A's LOW is ABOVE Candle C's HIGH
-                // This means price gapped DOWN, leaving an unfilled zone
                 if (candleA_Low > candleC_High)
                 {
+                    double gapSize = candleA_Low - candleC_High;
+                    double gapSizePips = gapSize / Symbol.PipSize;
+
+                    // Phase 4: Minimum size filter
+                    if (gapSizePips < MinFVGSizePips)
+                    {
+                        Print("[FVG] Filtered: gap too small ({0:F1} pips < {1:F1} min)", gapSizePips, MinFVGSizePips);
+                        continue;
+                    }
+
                     var fvg = new FairValueGap
                     {
                         Time = m15Bars.OpenTimes[idx],
-                        TopPrice = candleA_Low,       // Top of gap
-                        BottomPrice = candleC_High,   // Bottom of gap
+                        TopPrice = candleA_Low,
+                        BottomPrice = candleC_High,
                         IsBullish = false,
-                        IsFilled = false
+                        IsFilled = false,
+                        // Phase 4 new fields
+                        IsHighQuality = isDisplacement,
+                        GapSizeInPips = gapSizePips,
+                        DisplacementBarIndex = isDisplacement ? idx : -1
                     };
 
                     fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
@@ -1494,13 +1518,15 @@ namespace cAlgo.Robots
                     if (!fvg.IsFilled)
                     {
                         activeFVGs.Add(fvg);
-                        Print("[FVG] Bearish gap detected at {0} | Zone: {1:F5} - {2:F5}",
-                            fvg.Time, fvg.TopPrice, fvg.BottomPrice);
+                        Print("[FVG] {0} Bearish gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips",
+                            fvg.IsHighQuality ? "High-quality" : "Standard",
+                            fvg.TopPrice, fvg.BottomPrice, gapSizePips);
                     }
                 }
             }
 
-            Print("[FVG] Scan complete | Active FVGs: {0}", activeFVGs.Count);
+            int highQualityCount = activeFVGs.Count(f => f.IsHighQuality);
+            Print("[FVG] Scan complete | Active: {0} | High-quality: {1}", activeFVGs.Count, highQualityCount);
         }
 
         /// <summary>
