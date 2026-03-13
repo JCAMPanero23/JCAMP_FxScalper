@@ -1861,6 +1861,148 @@ namespace cAlgo.Robots
                 fractalBarIndex, zone.ExpiryTime.ToString("HH:mm"));
         }
 
+        /// <summary>
+        /// Updates zone states: checks expiry, proximity (arming), invalidation
+        /// Called on every M1 bar
+        /// Phase 4 Implementation
+        /// </summary>
+        private void UpdateZoneStates()
+        {
+            if (activeZone == null)
+                return;
+
+            // Skip if already expired or invalidated
+            if (activeZone.State == ZoneState.Expired || activeZone.State == ZoneState.Invalidated)
+                return;
+
+            // Check invalidation first (applies to all states)
+            if (CheckZoneInvalidation())
+            {
+                activeZone.State = ZoneState.Invalidated;
+                Print("[Zone] Invalidated | Body closed wrong direction");
+                SyncZoneToLegacyVariables();
+                return;
+            }
+
+            // Check expiry (skip if ARMED - armed zones stay until entry or invalidation)
+            if (activeZone.State != ZoneState.Armed)
+            {
+                if (Server.Time > activeZone.ExpiryTime)
+                {
+                    string previousState = (activeZone.State == ZoneState.Pre) ? "PRE-Zone" : "VALID-Zone";
+                    activeZone.State = ZoneState.Expired;
+                    Print("[Zone] Expired | No entry triggered | Was: {0} at {1:F5}",
+                        previousState,
+                        activeZone.OriginPrice);
+                    SyncZoneToLegacyVariables();
+                    return;
+                }
+            }
+
+            // Check proximity for arming (if not already armed)
+            if (activeZone.State == ZoneState.Pre || activeZone.State == ZoneState.Valid)
+            {
+                if (CheckZoneProximity())
+                {
+                    activeZone.State = ZoneState.Armed;
+                    double distancePips = GetDistanceToZone();
+                    Print("[Zone] ARMED | Price within {0:F1} pips of zone", distancePips);
+                    SyncZoneToLegacyVariables();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if current price is within MaxDistanceToArm of the zone
+        /// Phase 4 Implementation
+        /// </summary>
+        private bool CheckZoneProximity()
+        {
+            if (activeZone == null)
+                return false;
+
+            double currentPrice = Symbol.Bid;
+            double distancePips = GetDistanceToZone();
+
+            return distancePips <= MaxDistanceToArm;
+        }
+
+        /// <summary>
+        /// Gets distance from current price to zone in pips
+        /// Phase 4 Implementation
+        /// </summary>
+        private double GetDistanceToZone()
+        {
+            if (activeZone == null)
+                return double.MaxValue;
+
+            double currentPrice = Symbol.Bid;
+
+            if (activeZone.Mode == "SELL")
+            {
+                // For SELL, price should be approaching from below
+                return (activeZone.BottomPrice - currentPrice) / Symbol.PipSize;
+            }
+            else
+            {
+                // For BUY, price should be approaching from above
+                return (currentPrice - activeZone.TopPrice) / Symbol.PipSize;
+            }
+        }
+
+        /// <summary>
+        /// Checks if zone should be invalidated (wrong-direction breakout)
+        /// Phase 4 Implementation
+        /// </summary>
+        private bool CheckZoneInvalidation()
+        {
+            if (activeZone == null)
+                return false;
+
+            // Get last closed M1 candle
+            int lastIdx = Bars.Count - 2;
+            if (lastIdx < 0)
+                return false;
+
+            double open = Bars.OpenPrices[lastIdx];
+            double close = Bars.ClosePrices[lastIdx];
+
+            if (activeZone.Mode == "SELL")
+            {
+                // SELL zone invalidated if body closes ABOVE zone top
+                return (close > activeZone.TopPrice && open > activeZone.TopPrice);
+            }
+            else
+            {
+                // BUY zone invalidated if body closes BELOW zone bottom
+                return (close < activeZone.BottomPrice && open < activeZone.BottomPrice);
+            }
+        }
+
+        /// <summary>
+        /// Syncs activeZone to legacy variables for backward compatibility
+        /// Entry logic reads these variables unchanged
+        /// Phase 4 Implementation
+        /// </summary>
+        private void SyncZoneToLegacyVariables()
+        {
+            if (activeZone != null && activeZone.State != ZoneState.Expired
+                && activeZone.State != ZoneState.Invalidated)
+            {
+                swingTopPrice = activeZone.TopPrice;
+                swingBottomPrice = activeZone.BottomPrice;
+                hasValidRectangle = true;
+                hasActiveSwing = (activeZone.State == ZoneState.Armed);
+                currentMode = activeZone.Mode;
+                rectangleExpiryTime = activeZone.ExpiryTime;
+            }
+            else
+            {
+                hasValidRectangle = false;
+                hasActiveSwing = false;
+            }
+        }
+
         #endregion
 
         #region Phase 1C: Market Structure Levels
