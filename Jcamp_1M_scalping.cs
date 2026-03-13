@@ -749,6 +749,12 @@ namespace cAlgo.Robots
                 TryRearmRectangle();
             }
 
+            // Phase 4: Update zone states (expiry, arming, invalidation)
+            if (EnablePreZoneSystem && activeZone != null)
+            {
+                UpdateZoneStates();
+            }
+
             // Phase 1B: Entry detection on M1 bar close
             // Process breakout entry logic if trading is enabled
             if (EnableTrading && hasActiveSwing)
