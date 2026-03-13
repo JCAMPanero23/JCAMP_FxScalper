@@ -146,6 +146,54 @@ namespace cAlgo.Robots
             public double OriginPrice { get; set; }      // Zone anchor point
         }
 
+        #region Trading Zone Class
+
+        /// <summary>
+        /// Represents a trading zone with full lifecycle management
+        /// Tracks zone state, price levels, timing, source references, and scoring
+        /// Phase 4 Implementation - Zone Lifecycle Management
+        /// </summary>
+        public class TradingZone
+        {
+            // Identity
+            public string Id { get; set; }
+            public ZoneState State { get; set; }
+
+            // Price Levels
+            public double TopPrice { get; set; }
+            public double BottomPrice { get; set; }
+            public double OriginPrice { get; set; }      // Displacement origin for fractal matching
+
+            // Timing
+            public DateTime CreatedTime { get; set; }
+            public DateTime ExpiryTime { get; set; }
+
+            // Source References
+            public DisplacementCandle Displacement { get; set; }
+            public FairValueGap FVG { get; set; }
+            public int? FractalBarIndex { get; set; }    // Set when upgraded to VALID
+
+            // Scoring
+            public double DisplacementScore { get; set; }
+            public double FVGScore { get; set; }
+            public double SessionScore { get; set; }
+            public double PeriodScore { get; set; }
+            public double TotalScore { get; set; }
+
+            // Direction
+            public string Mode { get; set; }             // "BUY" or "SELL"
+
+            /// <summary>
+            /// Creates a unique ID for this zone
+            /// </summary>
+            public static string GenerateId(DateTime time, string mode)
+            {
+                return $"Zone_{mode}_{time:yyyyMMdd_HHmmssfff}";
+            }
+        }
+
+        #endregion
+
         #endregion
 
         #region Session Enums and Classes
