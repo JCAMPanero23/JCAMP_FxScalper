@@ -487,6 +487,13 @@ namespace cAlgo.Robots
             // between M1 and M15 chart runs (same data source = same results)
             m15Bars = MarketData.GetBars(TimeFrame.Minute15);
 
+            // Phase 4: Initialize ATR indicator for displacement detection
+            if (EnablePreZoneSystem)
+            {
+                atr = Indicators.AverageTrueRange(m15Bars, ATRPeriod, MovingAverageType.Simple);
+                Print("[PRE-Zone] ATR indicator initialized | Period: {0} | Multiplier: {1:F1}x", ATRPeriod, ATRMultiplier);
+            }
+
             if (isM15Chart)
             {
                 Print("Chart: M15 | Analysis: M15 (via MarketData.GetBars)");
@@ -549,6 +556,13 @@ namespace cAlgo.Robots
             // Phase 3: FVG Detection
             Print("Phase 3 FVG Detection: Enabled={0} | Lookback={1} bars | FVG Weight={2:F2}",
                 EnableFVGFilter, FVGLookbackBars, WeightFVG);
+
+            // Phase 4: PRE-Zone System
+            Print("PRE-Zone System: {0} | ATR: {1} | Multiplier: {2:F1}x | Min Score: {3:F2}",
+                EnablePreZoneSystem ? "ON" : "OFF",
+                ATRPeriod,
+                ATRMultiplier,
+                MinPreZoneScore);
 
             // Print weight summary
             Print("Score Weights: Validity={0:F2} | Extremity={1:F2} | Fractal={2:F2} | Session={3:F2} | FVG={4:F2} | Candle={5:F2}",
