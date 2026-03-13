@@ -1681,6 +1681,101 @@ namespace cAlgo.Robots
             return (bodySize / atrValue) >= ATRMultiplier;
         }
 
+        /// <summary>
+        /// Calculates displacement strength score (40% of PRE-zone score)
+        /// Based on ATR multiple of the impulse candle
+        /// Phase 4 Implementation
+        /// </summary>
+        private double CalculateDisplacementStrength(double atrMultiple)
+        {
+            if (atrMultiple >= 3.0) return 1.0;   // Exceptional
+            if (atrMultiple >= 2.5) return 0.9;
+            if (atrMultiple >= 2.0) return 0.8;
+            if (atrMultiple >= 1.5) return 0.7;   // Minimum
+            return 0.0;                            // Not a displacement
+        }
+
+        /// <summary>
+        /// Calculates FVG quality score (25% of PRE-zone score)
+        /// Based on gap size in pips
+        /// Phase 4 Implementation
+        /// </summary>
+        private double CalculateFVGQuality(double gapSizePips)
+        {
+            if (gapSizePips >= 5.0) return 1.0;   // Large gap
+            if (gapSizePips >= 3.0) return 0.8;
+            if (gapSizePips >= 2.0) return 0.6;
+            if (gapSizePips >= 1.5) return 0.5;   // Minimum
+            return 0.0;                            // Too small (filtered)
+        }
+
+        /// <summary>
+        /// Calculates session alignment score for PRE-zones (25% of score)
+        /// Checks if zone price aligns with session high/low
+        /// Phase 4 Implementation
+        /// </summary>
+        private double CalculateSessionAlignmentForZone(double zonePrice, DateTime zoneTime, string mode)
+        {
+            SessionLevels session = GetSessionForTime(zoneTime);
+            if (session == null)
+                return 0.5;  // Neutral if no session found
+
+            double targetLevel = mode == "SELL" ? session.High : session.Low;
+            double distancePips = Math.Abs(zonePrice - targetLevel) / Symbol.PipSize;
+
+            if (distancePips <= 0) return 1.0;    // AT session level
+            if (distancePips <= 5) return 0.85;   // NEAR
+            if (distancePips <= 10) return 0.7;   // CLOSE
+            return 0.5;                            // Not aligned
+        }
+
+        /// <summary>
+        /// Calculates optimal period score for PRE-zones (10% of score)
+        /// Uses positive-only values (no negative penalties)
+        /// Phase 4 Implementation
+        /// </summary>
+        private double CalculateOptimalPeriodScore(DateTime time)
+        {
+            OptimalPeriod period = GetOptimalPeriod(time);
+
+            switch (period)
+            {
+                case OptimalPeriod.BestOverlap:
+                    return 1.0;
+                case OptimalPeriod.GoodLondonOpen:
+                    return 0.75;
+                case OptimalPeriod.DangerDeadZone:
+                case OptimalPeriod.DangerLateNY:
+                    return 0.25;
+                default:
+                    return 0.5;  // Neutral times
+            }
+        }
+
+        /// <summary>
+        /// Calculates total PRE-zone score
+        /// Formula: Displacement(40%) + FVG(25%) + Session(25%) + Period(10%)
+        /// Phase 4 Implementation
+        /// </summary>
+        private double CalculatePreZoneScore(DisplacementCandle displacement, FairValueGap fvg, string mode)
+        {
+            double dispScore = CalculateDisplacementStrength(displacement.ATRMultiple);
+            double fvgScore = CalculateFVGQuality(fvg.GapSizeInPips);
+            double sessionScore = CalculateSessionAlignmentForZone(displacement.OriginPrice, displacement.Time, mode);
+            double periodScore = CalculateOptimalPeriodScore(displacement.Time);
+
+            double totalScore =
+                (dispScore * 0.40) +
+                (fvgScore * 0.25) +
+                (sessionScore * 0.25) +
+                (periodScore * 0.10);
+
+            Print("[PRE-Zone] Scoring: Disp={0:F2} FVG={1:F2} Session={2:F2} Period={3:F2} | Total={4:F2}",
+                dispScore, fvgScore, sessionScore, periodScore, totalScore);
+
+            return totalScore;
+        }
+
         #endregion
 
         #region Phase 1C: Market Structure Levels
