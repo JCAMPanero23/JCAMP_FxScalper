@@ -1776,6 +1776,91 @@ namespace cAlgo.Robots
             return totalScore;
         }
 
+        /// <summary>
+        /// Creates a PRE-zone from displacement + high-quality FVG
+        /// Zone is created immediately (15 min faster than fractal)
+        /// Phase 4 Implementation
+        /// </summary>
+        private TradingZone CreatePreZone(DisplacementCandle displacement, FairValueGap fvg)
+        {
+            // Determine mode based on displacement direction
+            // Bearish displacement (price dropped) = SELL zone at high
+            // Bullish displacement (price rose) = BUY zone at low
+            string mode = displacement.IsBullish ? "BUY" : "SELL";
+
+            // Calculate zone boundaries (4 pips total width)
+            double originPrice = displacement.OriginPrice;
+            double topPrice = originPrice + (2 * Symbol.PipSize);
+            double bottomPrice = originPrice - (2 * Symbol.PipSize);
+
+            // Calculate score
+            double score = CalculatePreZoneScore(displacement, fvg, mode);
+
+            // Check minimum score threshold
+            if (score < MinPreZoneScore)
+            {
+                Print("[PRE-Zone] Rejected | Score {0:F2} < Min {1:F2}", score, MinPreZoneScore);
+                return null;
+            }
+
+            // Check if existing zone has higher score
+            if (activeZone != null && activeZone.State != ZoneState.Expired && activeZone.State != ZoneState.Invalidated)
+            {
+                if (activeZone.TotalScore >= score)
+                {
+                    Print("[PRE-Zone] Rejected | Existing zone has higher score ({0:F2} >= {1:F2})",
+                        activeZone.TotalScore, score);
+                    return null;
+                }
+                Print("[PRE-Zone] Replacing existing zone (new score {0:F2} > old {1:F2})",
+                    score, activeZone.TotalScore);
+            }
+
+            // Create the zone
+            var zone = new TradingZone
+            {
+                Id = TradingZone.GenerateId(displacement.Time, mode),
+                State = ZoneState.Pre,
+                TopPrice = topPrice,
+                BottomPrice = bottomPrice,
+                OriginPrice = originPrice,
+                CreatedTime = Server.Time,
+                ExpiryTime = Server.Time.AddMinutes(PreZoneExpiryMinutes),
+                Displacement = displacement,
+                FVG = fvg,
+                FractalBarIndex = null,
+                DisplacementScore = CalculateDisplacementStrength(displacement.ATRMultiple),
+                FVGScore = CalculateFVGQuality(fvg.GapSizeInPips),
+                SessionScore = CalculateSessionAlignmentForZone(originPrice, displacement.Time, mode),
+                PeriodScore = CalculateOptimalPeriodScore(displacement.Time),
+                TotalScore = score,
+                Mode = mode
+            };
+
+            Print("[PRE-Zone] Created {0} zone | Price: {1:F5}-{2:F5} | Score: {3:F2} | Expiry: {4}",
+                mode, bottomPrice, topPrice, score, zone.ExpiryTime.ToString("HH:mm"));
+
+            return zone;
+        }
+
+        /// <summary>
+        /// Upgrades PRE-zone to VALID when Williams Fractal confirms
+        /// Extends expiry time to ValidZoneExpiryMinutes
+        /// Phase 4 Implementation
+        /// </summary>
+        private void UpgradeToValidZone(TradingZone zone, int fractalBarIndex)
+        {
+            if (zone == null || zone.State != ZoneState.Pre)
+                return;
+
+            zone.State = ZoneState.Valid;
+            zone.FractalBarIndex = fractalBarIndex;
+            zone.ExpiryTime = Server.Time.AddMinutes(ValidZoneExpiryMinutes);
+
+            Print("[Zone] Upgraded to VALID | Fractal confirmed at bar {0} | New expiry: {1}",
+                fractalBarIndex, zone.ExpiryTime.ToString("HH:mm"));
+        }
+
         #endregion
 
         #region Phase 1C: Market Structure Levels
