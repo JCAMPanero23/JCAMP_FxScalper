@@ -280,6 +280,11 @@ namespace cAlgo.Robots
             public double BottomPrice { get; set; }
             public bool IsBullish { get; set; }
             public bool IsFilled { get; set; }
+
+            // NEW fields for Phase 4
+            public bool IsHighQuality { get; set; }          // Candle B meets displacement criteria
+            public double GapSizeInPips { get; set; }        // For filtering
+            public int DisplacementBarIndex { get; set; }    // Links to impulse candle (-1 if none)
         }
 
         #endregion
