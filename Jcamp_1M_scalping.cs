@@ -701,8 +701,40 @@ namespace cAlgo.Robots
                         lastSwingTime = swingTime;
                         hasBreakoutOccurred = false;  // Reset breakout tracking for new swing
 
-                        // UpdateSwingZone will set hasActiveSwing based on proximity check
-                        UpdateSwingZone(swingIndex, currentMode);
+                        // Phase 4: Check if fractal confirms existing PRE-zone
+                        bool skipFractalZoneCreation = false;
+                        if (EnablePreZoneSystem && activeZone != null && activeZone.State == ZoneState.Pre)
+                        {
+                            double fractalPrice = currentMode == "SELL" ?
+                                m15Bars.HighPrices[swingIndex] :
+                                m15Bars.LowPrices[swingIndex];
+
+                            double distanceToZone = Math.Abs(fractalPrice - activeZone.OriginPrice) / Symbol.PipSize;
+
+                            if (distanceToZone <= FractalZoneTolerancePips)
+                            {
+                                // Fractal confirms PRE-zone - upgrade to VALID
+                                UpgradeToValidZone(activeZone, swingIndex);
+                                SyncZoneToLegacyVariables();
+
+                                if (ShowRectangles)
+                                {
+                                    DrawSwingRectangle(swingIndex, currentMode);  // Redraw with VALID color
+                                }
+
+                                // Skip normal fractal zone creation (but continue with other M15 processing)
+                                skipFractalZoneCreation = true;
+                                Print("[FractalConfirm] ✅ Fractal confirms PRE-zone at {0:F5} | Distance: {1:F1} pips | UPGRADED to VALID",
+                                    fractalPrice, distanceToZone);
+                            }
+                        }
+
+                        // Only create fractal zone if not confirmed by PRE-zone
+                        if (!skipFractalZoneCreation)
+                        {
+                            // UpdateSwingZone will set hasActiveSwing based on proximity check
+                            UpdateSwingZone(swingIndex, currentMode);
+                        }
                     }
                 }
             }
