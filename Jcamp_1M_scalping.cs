@@ -441,6 +441,16 @@ namespace cAlgo.Robots
         // Phase 3: FVG tracking
         private System.Collections.Generic.List<FairValueGap> activeFVGs = new System.Collections.Generic.List<FairValueGap>();
 
+        // Phase 4: PRE-Zone System
+        private AverageTrueRange atr;                    // ATR indicator for displacement detection
+        private TradingZone activeZone = null;           // Current active zone (or null)
+        private DisplacementCandle lastDisplacement = null;  // Most recent displacement detected
+
+        // Phase 4: Zone colors
+        private readonly Color ColorPreZone = Color.FromArgb(60, 255, 255, 0);    // Yellow (PRE)
+        private readonly Color ColorValidZone = Color.FromArgb(60, 0, 128, 255);  // Blue (VALID)
+        private readonly Color ColorArmedZone = Color.FromArgb(60, 0, 255, 0);    // Green (ARMED)
+
         // Visualization tracking
         private int rectangleCounter = 0;
         private class RectangleInfo
