@@ -273,7 +273,7 @@ namespace cAlgo.Robots
         /// Fair Value Gap (FVG) class for tracking price inefficiencies
         /// Phase 3 Implementation
         /// </summary>
-        private class FairValueGap
+        public class FairValueGap
         {
             public DateTime Time { get; set; }
             public double TopPrice { get; set; }
