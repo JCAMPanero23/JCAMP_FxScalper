@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using cAlgo.API;
 using cAlgo.API.Indicators;
@@ -535,6 +536,9 @@ namespace cAlgo.Robots
         private readonly Color ColorValidZone = Color.FromArgb(60, 0, 128, 255);  // Blue (VALID)
         private readonly Color ColorArmedZone = Color.FromArgb(60, 0, 255, 0);    // Green (ARMED)
 
+        // Chandelier trailing stop tracking
+        private Dictionary<int, ChandelierState> _chandelierStates;
+
         // Visualization tracking
         private ChartStaticText modeLabel;
 
@@ -563,6 +567,9 @@ namespace cAlgo.Robots
             // Always use MarketData.GetBars for M15 data to ensure consistency
             // between M1 and M15 chart runs (same data source = same results)
             m15Bars = MarketData.GetBars(TimeFrame.Minute15);
+
+            // Initialize chandelier state tracking
+            _chandelierStates = new Dictionary<int, ChandelierState>();
 
             // Phase 4: Initialize ATR indicators for displacement detection
             if (EnablePreZoneSystem)
