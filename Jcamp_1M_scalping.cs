@@ -632,6 +632,11 @@ namespace cAlgo.Robots
             }
 
             // ============================================================
+            // M1 FVG DETECTION: Process on every M1 bar close
+            // ============================================================
+            DetectFVGs();  // Scan M1 bars for Fair Value Gaps
+
+            // ============================================================
             // SWING DETECTION: Only process when a NEW M15 bar appears
             // ============================================================
             bool isNewM15Bar = (m15Bars.OpenTimes.LastValue != lastM15BarTime);
@@ -648,9 +653,6 @@ namespace cAlgo.Robots
 
                 // Phase 2: Update session tracking
                 UpdateSessionTracking();
-
-                // Phase 3: Detect Fair Value Gaps
-                DetectFVGs();
 
                 // Phase 4: Detect displacement and create PRE-zone if applicable
                 if (EnablePreZoneSystem)
@@ -1495,114 +1497,140 @@ namespace cAlgo.Robots
         #region Phase 3: FVG Detection
 
         /// <summary>
-        /// Detects Fair Value Gaps (FVGs) on M15 timeframe
-        /// ENHANCED: Adds minimum size filter, max age filter, and displacement quality flag
-        /// Phase 4 Enhancement
+        /// Detects Fair Value Gaps (FVGs) on M1 timeframe for precise entry detection
+        /// ENHANCED: Scans M1 bars on every bar close for real-time FVG tracking
+        /// Phase 4 Enhancement - Switched from M15 to M1 for better precision
         /// </summary>
         private void DetectFVGs()
         {
+            int previousFVGCount = activeFVGs.Count;
             activeFVGs.Clear();
 
-            int lookback = Math.Min(FVGLookbackBars, m15Bars.Count - 3);
+            // M1 lookback: Focus on RECENT FVGs only (last 30 minutes)
+            // Older FVGs are likely already filled or no longer relevant for scalping entries
+            int m1Lookback = Math.Min(30, Bars.Count - 3);  // Max 30 M1 bars (~30 minutes)
+
+            // M1 minimum size: Very small threshold for M1 gaps
+            // M1 FVGs are naturally smaller than M15 FVGs
+            double m1MinFVGSizePips = 0.1;  // 0.1 pips minimum (~1 point on EURUSD)
+
+            int fvgsFound = 0;
+            int fvgsTooSmall = 0;
+            int fvgsFilled = 0;
 
             // Start at i=2 to ensure all 3 candles (A, B, C) are completed
-            // i=1 would use current incomplete bar as Candle C
-            for (int i = 2; i < lookback - 1; i++)
+            for (int i = 2; i < m1Lookback - 1; i++)
             {
-                int idx = m15Bars.Count - 1 - i;  // Impulse candle index (Candle B)
+                int idx = Bars.Count - 1 - i;  // Impulse candle index (Candle B)
 
-                if (idx - 1 < 0 || idx + 1 >= m15Bars.Count)
+                if (idx - 1 < 0 || idx + 1 >= Bars.Count)
                     continue;
 
-                // Check age limit (Phase 4 enhancement)
-                if (i > FVGMaxAgeBars)
-                    continue;
+                double candleA_High = Bars.HighPrices[idx - 1];
+                double candleA_Low = Bars.LowPrices[idx - 1];
+                double candleC_High = Bars.HighPrices[idx + 1];
+                double candleC_Low = Bars.LowPrices[idx + 1];
 
-                double candleA_High = m15Bars.HighPrices[idx - 1];
-                double candleA_Low = m15Bars.LowPrices[idx - 1];
-                double candleC_High = m15Bars.HighPrices[idx + 1];
-                double candleC_Low = m15Bars.LowPrices[idx + 1];
-
-                // Check if Candle B (impulse) is a displacement candle
-                bool isDisplacement = IsDisplacementCandle(idx);
+                // Check if Candle B (impulse) is a strong move (displacement-like on M1)
+                double candleB_Body = Math.Abs(Bars.ClosePrices[idx] - Bars.OpenPrices[idx]);
+                double candleB_Range = Bars.HighPrices[idx] - Bars.LowPrices[idx];
+                bool isStrongMove = candleB_Range > 0 && (candleB_Body / candleB_Range) > 0.6;
 
                 // BULLISH FVG: Candle A's HIGH is BELOW Candle C's LOW
                 if (candleA_High < candleC_Low)
                 {
+                    fvgsFound++;
                     double gapSize = candleC_Low - candleA_High;
                     double gapSizePips = gapSize / Symbol.PipSize;
 
-                    // Phase 4: Minimum size filter
-                    if (gapSizePips < MinFVGSizePips)
+                    // Minimum size filter for M1
+                    if (gapSizePips < m1MinFVGSizePips)
                     {
-                        Print("[FVG] Filtered: gap too small ({0:F1} pips < {1:F1} min)", gapSizePips, MinFVGSizePips);
+                        fvgsTooSmall++;
                         continue;
                     }
 
                     var fvg = new FairValueGap
                     {
-                        Time = m15Bars.OpenTimes[idx],
+                        Time = Bars.OpenTimes[idx],
                         BottomPrice = candleA_High,
                         TopPrice = candleC_Low,
                         IsBullish = true,
                         IsFilled = false,
-                        // Phase 4 new fields
-                        IsHighQuality = isDisplacement,
+                        IsHighQuality = isStrongMove && gapSizePips >= (m1MinFVGSizePips * 3),
                         GapSizeInPips = gapSizePips,
-                        DisplacementBarIndex = isDisplacement ? idx : -1
+                        DisplacementBarIndex = isStrongMove ? idx : -1
                     };
 
-                    fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
+                    fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
 
-                    if (!fvg.IsFilled)
+                    if (fvg.IsFilled)
+                    {
+                        fvgsFilled++;
+                    }
+                    else
                     {
                         activeFVGs.Add(fvg);
-                        Print("[FVG] {0} Bullish gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips",
-                            fvg.IsHighQuality ? "High-quality" : "Standard",
-                            fvg.BottomPrice, fvg.TopPrice, gapSizePips);
                     }
                 }
 
                 // BEARISH FVG: Candle A's LOW is ABOVE Candle C's HIGH
                 if (candleA_Low > candleC_High)
                 {
+                    fvgsFound++;
                     double gapSize = candleA_Low - candleC_High;
                     double gapSizePips = gapSize / Symbol.PipSize;
 
-                    // Phase 4: Minimum size filter
-                    if (gapSizePips < MinFVGSizePips)
+                    // Minimum size filter for M1
+                    if (gapSizePips < m1MinFVGSizePips)
                     {
-                        Print("[FVG] Filtered: gap too small ({0:F1} pips < {1:F1} min)", gapSizePips, MinFVGSizePips);
+                        fvgsTooSmall++;
                         continue;
                     }
 
                     var fvg = new FairValueGap
                     {
-                        Time = m15Bars.OpenTimes[idx],
+                        Time = Bars.OpenTimes[idx],
                         TopPrice = candleA_Low,
                         BottomPrice = candleC_High,
                         IsBullish = false,
                         IsFilled = false,
-                        // Phase 4 new fields
-                        IsHighQuality = isDisplacement,
+                        IsHighQuality = isStrongMove && gapSizePips >= (m1MinFVGSizePips * 3),
                         GapSizeInPips = gapSizePips,
-                        DisplacementBarIndex = isDisplacement ? idx : -1
+                        DisplacementBarIndex = isStrongMove ? idx : -1
                     };
 
-                    fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
+                    fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
 
-                    if (!fvg.IsFilled)
+                    if (fvg.IsFilled)
+                    {
+                        fvgsFilled++;
+                    }
+                    else
                     {
                         activeFVGs.Add(fvg);
-                        Print("[FVG] {0} Bearish gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips",
-                            fvg.IsHighQuality ? "High-quality" : "Standard",
-                            fvg.TopPrice, fvg.BottomPrice, gapSizePips);
                     }
                 }
             }
 
             int highQualityCount = activeFVGs.Count(f => f.IsHighQuality);
-            Print("[FVG] Scan complete | Active: {0} | High-quality: {1}", activeFVGs.Count, highQualityCount);
+
+            // Log every 15 M1 bars OR when FVG count changes
+            bool shouldLog = (Bars.Count % 15 == 0) || (activeFVGs.Count != previousFVGCount) || (highQualityCount > 0);
+
+            if (shouldLog)
+            {
+                Print("[M1 FVG] Scanned:{0} | Found:{1} | TooSmall:{2} | Filled:{3} | Active:{4} | HQ:{5}",
+                    m1Lookback, fvgsFound, fvgsTooSmall, fvgsFilled, activeFVGs.Count, highQualityCount);
+
+                // Log details of high-quality FVGs
+                foreach (var fvg in activeFVGs.Where(f => f.IsHighQuality))
+                {
+                    Print("[M1 FVG] {0} gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips | Time: {4:HH:mm}",
+                        fvg.IsBullish ? "Bullish" : "Bearish",
+                        fvg.BottomPrice, fvg.TopPrice, fvg.GapSizeInPips, fvg.Time);
+                }
+            }
         }
 
         /// <summary>
@@ -1759,24 +1787,29 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Checks if M1 FVG has been filled
-        /// Phase 4 Enhancement
+        /// Checks if M1 FVG has been FULLY filled (invalidated)
+        /// FVG is only considered filled if price passes THROUGH the entire gap
+        /// Partial fills (mitigations) keep the FVG active for trading
         /// </summary>
         private bool IsFVGFilledM1(FairValueGap fvg, int startIdx)
         {
-            // Check bars after FVG creation to see if gap was filled
-            for (int i = startIdx; i < Bars.Count; i++)
+            // Check bars after FVG creation up to (but not including) current bar
+            int endIdx = Bars.Count - 2;
+
+            for (int i = startIdx; i <= endIdx; i++)
             {
                 if (fvg.IsBullish)
                 {
-                    // Bullish FVG filled if price drops back into gap
-                    if (Bars.LowPrices[i] <= fvg.TopPrice)
+                    // Bullish FVG FULLY filled only if price drops THROUGH entire gap
+                    // (price low goes below the bottom of the gap)
+                    if (Bars.LowPrices[i] <= fvg.BottomPrice)
                         return true;
                 }
                 else
                 {
-                    // Bearish FVG filled if price rises back into gap
-                    if (Bars.HighPrices[i] >= fvg.BottomPrice)
+                    // Bearish FVG FULLY filled only if price rises THROUGH entire gap
+                    // (price high goes above the top of the gap)
+                    if (Bars.HighPrices[i] >= fvg.TopPrice)
                         return true;
                 }
             }
