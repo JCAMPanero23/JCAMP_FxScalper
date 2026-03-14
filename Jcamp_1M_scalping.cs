@@ -359,9 +359,6 @@ namespace cAlgo.Robots
         [Parameter("Rectangle Transparency", DefaultValue = 80, MinValue = 0, MaxValue = 255, Group = "Visualization")]
         public int RectangleTransparency { get; set; }
 
-        [Parameter("Max Rectangles", DefaultValue = 10, MinValue = 1, MaxValue = 50, Group = "Visualization")]
-        public int MaxRectangles { get; set; }
-
         [Parameter("PRE-Zone Color", DefaultValue = "Yellow", Group = "Visualization")]
         public string ColorPreZoneName { get; set; }
 
@@ -414,7 +411,6 @@ namespace cAlgo.Robots
         private double swingBottomPrice = 0;
         private bool hasActiveSwing = false;
         private bool hasValidRectangle = false;  // Rectangle exists (may or may not be armed)
-        private DateTime rectangleCreatedTime = DateTime.MinValue;  // Track when rectangle was created
         private DateTime rectangleExpiryTime = DateTime.MinValue;   // Track when rectangle expires
 
         // Phase 1B: Entry tracking
@@ -451,7 +447,8 @@ namespace cAlgo.Robots
         private System.Collections.Generic.List<FairValueGap> activeFVGs = new System.Collections.Generic.List<FairValueGap>();
 
         // Phase 4: PRE-Zone System
-        private AverageTrueRange atr;                    // ATR indicator for displacement detection
+        private AverageTrueRange atr;                    // ATR indicator for displacement detection (M15)
+        private AverageTrueRange atrM1;                  // ATR indicator for M1 displacement detection
         private TradingZone activeZone = null;           // Current active zone (or null)
         private DisplacementCandle lastDisplacement = null;  // Most recent displacement detected
 
@@ -461,13 +458,6 @@ namespace cAlgo.Robots
         private readonly Color ColorArmedZone = Color.FromArgb(60, 0, 255, 0);    // Green (ARMED)
 
         // Visualization tracking
-        private int rectangleCounter = 0;
-        private class RectangleInfo
-        {
-            public string Name { get; set; }
-            public DateTime CreatedAt { get; set; }
-        }
-        private System.Collections.Generic.List<RectangleInfo> drawnRectangles = new System.Collections.Generic.List<RectangleInfo>();
         private ChartStaticText modeLabel;
 
         #endregion
@@ -496,11 +486,12 @@ namespace cAlgo.Robots
             // between M1 and M15 chart runs (same data source = same results)
             m15Bars = MarketData.GetBars(TimeFrame.Minute15);
 
-            // Phase 4: Initialize ATR indicator for displacement detection
+            // Phase 4: Initialize ATR indicators for displacement detection
             if (EnablePreZoneSystem)
             {
                 atr = Indicators.AverageTrueRange(m15Bars, ATRPeriod, MovingAverageType.Simple);
-                Print("[PRE-Zone] ATR indicator initialized | Period: {0} | Multiplier: {1:F1}x", ATRPeriod, ATRMultiplier);
+                atrM1 = Indicators.AverageTrueRange(Bars, ATRPeriod, MovingAverageType.Simple);
+                Print("[PRE-Zone] ATR indicators initialized | Period: {0} | Multiplier: {1:F1}x | M1+M15 displacement", ATRPeriod, ATRMultiplier);
             }
 
             if (isM15Chart)
@@ -637,6 +628,36 @@ namespace cAlgo.Robots
             DetectFVGs();  // Scan M1 bars for Fair Value Gaps
 
             // ============================================================
+            // M1 DISPLACEMENT DETECTION: Process on every M1 bar close
+            // ============================================================
+            if (EnablePreZoneSystem)
+            {
+                var m1Displacement = DetectM1Displacement();
+
+                if (m1Displacement != null)
+                {
+                    // Use existing M1 FVGs (already detected above)
+                    var matchingFVG = FindMatchingHighQualityFVG(m1Displacement);
+                    if (matchingFVG != null)
+                    {
+                        var newZone = CreatePreZone(m1Displacement, matchingFVG);
+                        if (newZone != null)
+                        {
+                            // Remove previous zone's visualization before replacing
+                            RemoveZoneVisualization();
+                            activeZone = newZone;
+                            SyncZoneToLegacyVariables();
+
+                            if (ShowRectangles)
+                            {
+                                DrawZoneRectangle();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ============================================================
             // SWING DETECTION: Only process when a NEW M15 bar appears
             // ============================================================
             bool isNewM15Bar = (m15Bars.OpenTimes.LastValue != lastM15BarTime);
@@ -654,32 +675,8 @@ namespace cAlgo.Robots
                 // Phase 2: Update session tracking
                 UpdateSessionTracking();
 
-                // Phase 4: Detect displacement and create PRE-zone if applicable
-                if (EnablePreZoneSystem)
-                {
-                    lastDisplacement = DetectDisplacement();
-
-                    // If displacement detected, scan M1 bars for FVGs within displacement window
-                    if (lastDisplacement != null)
-                    {
-                        DetectM1FVGs();  // Scan M1 timeframe for precise entry FVGs
-                        var matchingFVG = FindMatchingHighQualityFVG(lastDisplacement);
-                        if (matchingFVG != null)
-                        {
-                            var newZone = CreatePreZone(lastDisplacement, matchingFVG);
-                            if (newZone != null)
-                            {
-                                activeZone = newZone;
-                                SyncZoneToLegacyVariables();
-
-                                if (ShowRectangles)
-                                {
-                                    DrawZoneRectangle();
-                                }
-                            }
-                        }
-                    }
-                }
+                // Note: M15 displacement detection removed - now handled on M1 bars above
+                // This allows faster PRE-zone creation (within 1 minute instead of 15)
 
                 // 1. Detect current trend mode
                 string newMode = DetectTrendMode();
@@ -731,7 +728,7 @@ namespace cAlgo.Robots
 
                                 if (ShowRectangles)
                                 {
-                                    DrawSwingRectangle(swingIndex, currentMode);  // Redraw with VALID color
+                                    DrawZoneRectangle();  // Redraw with VALID state color
                                 }
 
                                 // Skip normal fractal zone creation (but continue with other M15 processing)
@@ -1945,6 +1942,61 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
+        /// Detects displacement on M1 timeframe for faster PRE-zone creation
+        /// Displacement = Body Size >= ATRMultiplier × ATR (on M1 bars)
+        /// Phase 4 Implementation - M1 Fast Detection
+        /// </summary>
+        private DisplacementCandle DetectM1Displacement()
+        {
+            if (!EnablePreZoneSystem || atrM1 == null)
+                return null;
+
+            int lastIdx = Bars.Count - 2;  // Last completed M1 bar
+            if (lastIdx < 1)
+                return null;
+
+            // Calculate body size on M1 bar
+            double open = Bars.OpenPrices[lastIdx];
+            double close = Bars.ClosePrices[lastIdx];
+            double high = Bars.HighPrices[lastIdx];
+            double low = Bars.LowPrices[lastIdx];
+            double bodySize = Math.Abs(close - open);
+
+            // Get M1 ATR value
+            double atrValue = atrM1.Result[lastIdx];
+            if (atrValue <= 0)
+                return null;
+
+            // Check displacement threshold (same multiplier as M15)
+            double atrMultiple = bodySize / atrValue;
+            if (atrMultiple < ATRMultiplier)
+                return null;
+
+            // M1 Displacement detected!
+            bool isBullish = close > open;
+            double originPrice = isBullish ? low : high;
+            double bodySizePips = bodySize / Symbol.PipSize;
+
+            var displacement = new DisplacementCandle
+            {
+                BarIndex = lastIdx,
+                Time = Bars.OpenTimes[lastIdx],
+                ImpulseSize = bodySizePips,
+                ATRMultiple = atrMultiple,
+                IsBullish = isBullish,
+                OriginPrice = originPrice
+            };
+
+            Print("[M1 Displacement] {0} impulse at {1:HH:mm} | Size: {2:F1} pips | ATR x {3:F1}",
+                isBullish ? "Bullish" : "Bearish",
+                displacement.Time,
+                bodySizePips,
+                atrMultiple);
+
+            return displacement;
+        }
+
+        /// <summary>
         /// Checks if a specific bar index qualifies as a displacement candle
         /// Used for FVG quality checking
         /// Phase 4 Implementation
@@ -2070,6 +2122,18 @@ namespace cAlgo.Robots
         /// </summary>
         private TradingZone CreatePreZone(DisplacementCandle displacement, FairValueGap fvg)
         {
+            // Block zone creation during danger zones
+            if (EnableSessionFilter)
+            {
+                OptimalPeriod currentPeriod = GetOptimalPeriod(displacement.Time);
+                if (currentPeriod == OptimalPeriod.DangerDeadZone || currentPeriod == OptimalPeriod.DangerLateNY)
+                {
+                    Print("[PRE-Zone] Blocked | Danger zone ({0}) - no zone creation allowed",
+                        currentPeriod == OptimalPeriod.DangerDeadZone ? "04:00-08:00 UTC" : "20:00-00:00 UTC");
+                    return null;
+                }
+            }
+
             // Determine mode based on displacement direction
             // Bearish displacement (price dropped) = SELL zone at high
             // Bullish displacement (price rose) = BUY zone at low
@@ -2292,20 +2356,25 @@ namespace cAlgo.Robots
 
         /// <summary>
         /// Finds a high-quality FVG that matches the displacement direction
+        /// For M1 displacement, looks for FVGs within last 5 minutes
         /// Returns the largest gap by pip size
-        /// Phase 4 Implementation
+        /// Phase 4 Implementation - Updated for M1 timing
         /// </summary>
         private FairValueGap FindMatchingHighQualityFVG(DisplacementCandle displacement)
         {
+            // For M1 displacement, look for FVGs within last 5 minutes
+            DateTime cutoffTime = displacement.Time.AddMinutes(-5);
+
             var matchingFVGs = activeFVGs
-                .Where(f => f.IsHighQuality && f.IsBullish == displacement.IsBullish)
+                .Where(f => f.IsBullish == displacement.IsBullish)
+                .Where(f => f.IsHighQuality || f.Time >= cutoffTime)  // Recent or high-quality
                 .OrderByDescending(f => f.GapSizeInPips)
                 .ToList();
 
             if (matchingFVGs.Count == 0)
             {
-                Print("[PRE-Zone] No matching high-quality FVG for {0} displacement",
-                    displacement.IsBullish ? "bullish" : "bearish");
+                Print("[PRE-Zone] No matching FVG for {0} M1 displacement",
+                    displacement.IsBullish ? "Bullish" : "Bearish");
                 return null;
             }
 
@@ -2625,10 +2694,9 @@ namespace cAlgo.Robots
         /// </summary>
         private OptimalPeriod GetOptimalPeriod(DateTime time)
         {
-            // Convert broker time to UTC using TimeZoneInfo
-            // cTrader times are in broker timezone, need UTC for accurate period detection
-            DateTime utcTime = TimeZoneInfo.ConvertTimeToUtc(time);
-            int hourUTC = utcTime.Hour;
+            // Robot is configured with TimeZone = TimeZones.UTC, so bar times are already in UTC
+            // No conversion needed - use the hour directly
+            int hourUTC = time.Hour;
 
             // BEST: Overlap period (13:00-17:00 UTC) - London + NY
             if (hourUTC >= 13 && hourUTC < 17)
@@ -2797,6 +2865,20 @@ namespace cAlgo.Robots
         /// </summary>
         private void UpdateSwingZone(int swingIndex, string mode)
         {
+            // Block zone creation during danger zones (check CURRENT time, not swing time)
+            if (EnableSessionFilter)
+            {
+                DateTime currentTime = m15Bars.OpenTimes.LastValue;
+                OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
+                if (currentPeriod == OptimalPeriod.DangerDeadZone || currentPeriod == OptimalPeriod.DangerLateNY)
+                {
+                    Print("[SwingZone] Blocked | Danger zone ({0}) at {1:HH:mm} - no zone creation allowed",
+                        currentPeriod == OptimalPeriod.DangerDeadZone ? "04:00-08:00 UTC" : "20:00-00:00 UTC",
+                        currentTime);
+                    return;
+                }
+            }
+
             if (mode == "SELL")
             {
                 // SELL Mode: Rectangle from Close to High
@@ -2813,13 +2895,30 @@ namespace cAlgo.Robots
             double heightPips = (swingTopPrice - swingBottomPrice) / Symbol.PipSize;
 
             // Set rectangle timing (for entry expiry logic - Issue 3 Fix)
-            rectangleCreatedTime = m15Bars.OpenTimes.LastValue;
-            rectangleExpiryTime = rectangleCreatedTime.AddMinutes(RectangleWidthMinutes);
+            DateTime zoneCreatedTime = m15Bars.OpenTimes.LastValue;
+            rectangleExpiryTime = zoneCreatedTime.AddMinutes(RectangleWidthMinutes);
 
             Print("[SwingZone] {0} Mode | Top: {1:F5} | Bottom: {2:F5} | Height: {3:F1} pips",
                 mode, swingTopPrice, swingBottomPrice, heightPips);
             Print("[SwingZone] Created: {0} | Expires: {1} ({2} min window)",
-                rectangleCreatedTime, rectangleExpiryTime, RectangleWidthMinutes);
+                zoneCreatedTime, rectangleExpiryTime, RectangleWidthMinutes);
+
+            // Remove previous zone's visualization before creating new one
+            RemoveZoneVisualization();
+
+            // Create activeZone for visualization (fractal-based zone)
+            activeZone = new TradingZone
+            {
+                Id = TradingZone.GenerateId(zoneCreatedTime, mode),
+                State = ZoneState.Valid,  // Fractal-based zones start as VALID
+                TopPrice = swingTopPrice,
+                BottomPrice = swingBottomPrice,
+                OriginPrice = mode == "SELL" ? swingTopPrice : swingBottomPrice,
+                CreatedTime = zoneCreatedTime,
+                ExpiryTime = rectangleExpiryTime,
+                Mode = mode,
+                FractalBarIndex = swingIndex
+            };
 
             // Issue 1 Fix: Check if current price is close enough to rectangle to "arm" it
             double currentPrice = Symbol.Bid;
@@ -2856,10 +2955,10 @@ namespace cAlgo.Robots
                 hasActiveSwing = true;  // Arm the rectangle for trading
             }
 
-            // Draw rectangle on chart
+            // Draw rectangle on chart using zone system
             if (ShowRectangles)
             {
-                DrawSwingRectangle(swingIndex, mode);
+                DrawZoneRectangle();
             }
 
             // Update mode label
@@ -2884,8 +2983,19 @@ namespace cAlgo.Robots
             if (positions.Length >= MaxPositions)
                 return;
 
-            // FIX Issue 3: Check if rectangle has expired (time-based cutoff)
+            // Check if we're in a danger zone - NO TRADING during these periods
             DateTime currentTime = Bars.OpenTimes.LastValue;
+            if (EnableSessionFilter)
+            {
+                OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
+                if (currentPeriod == OptimalPeriod.DangerDeadZone || currentPeriod == OptimalPeriod.DangerLateNY)
+                {
+                    // Don't log every bar - only log once when entering danger zone
+                    return;
+                }
+            }
+
+            // FIX Issue 3: Check if rectangle has expired (time-based cutoff)
             if (currentTime > rectangleExpiryTime)
             {
                 Print("[RectangleExpired] Rectangle expired at {0} | Current time: {1} | Disabling swing",
@@ -3223,53 +3333,6 @@ namespace cAlgo.Robots
         #region Visualization Methods
 
         /// <summary>
-        /// Draws rectangle on chart at swing point
-        /// Rectangle spans from swing bar time to current time + RectangleWidthMinutes
-        /// This ensures the rectangle extends forward from NOW, not from swing detection
-        /// </summary>
-        private void DrawSwingRectangle(int swingIndex, string mode)
-        {
-            rectangleCounter++;
-            string rectName = string.Format("SwingRect_{0}_{1}", mode, rectangleCounter);
-
-            // Start time: The swing bar's open time (where the fractal formed)
-            DateTime startTime = m15Bars.OpenTimes[swingIndex];
-
-            // End time: Use M15 bar time + width (more reliable than Server.Time in backtesting)
-            DateTime currentM15Time = m15Bars.OpenTimes.LastValue;
-            DateTime endTime = currentM15Time.AddMinutes(RectangleWidthMinutes);
-
-            // Debug: Show all time references
-            Print("[RectangleDebug] SwingIndex: {0} | SwingBarTime: {1}", swingIndex, startTime);
-            Print("[RectangleDebug] Server.Time: {0} | M15 LastBar: {1} | EndTime: {2}",
-                Server.Time, currentM15Time, endTime);
-
-            // Parse color and add transparency
-            Color baseColor = mode == "BUY" ? ParseColor(BuyColorName) : ParseColor(SellColorName);
-            Color rectColor = Color.FromArgb(RectangleTransparency, baseColor);
-
-            // Draw rectangle using native API
-            var rectangle = Chart.DrawRectangle(rectName, startTime, swingTopPrice, endTime, swingBottomPrice, rectColor);
-            rectangle.IsFilled = true;
-            rectangle.IsInteractive = true;
-
-            // Track for cleanup
-            drawnRectangles.Add(new RectangleInfo
-            {
-                Name = rectName,
-                CreatedAt = Server.Time
-            });
-
-            double heightPips = (swingTopPrice - swingBottomPrice) / Symbol.PipSize;
-
-            Print("[RectangleDraw] ✅ {0} Mode Rectangle #{1}", mode, rectangleCounter);
-            Print("   Start: {0} | End: {1} | Height: {2:F1} pips", startTime, endTime, heightPips);
-
-            // Cleanup old rectangles
-            CleanupOldRectangles();
-        }
-
-        /// <summary>
         /// Updates mode display label on chart
         /// </summary>
         private void UpdateModeDisplay(string mode)
@@ -3295,28 +3358,21 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Removes oldest rectangles to keep chart clean
+        /// Removes the current zone's rectangle and label from the chart
+        /// Call this before replacing activeZone with a new zone
         /// </summary>
-        private void CleanupOldRectangles()
+        private void RemoveZoneVisualization()
         {
-            if (drawnRectangles.Count <= MaxRectangles)
+            if (activeZone == null)
                 return;
 
-            // Sort by creation time (oldest first)
-            var sortedRects = drawnRectangles.OrderBy(r => r.CreatedAt).ToList();
+            string rectName = $"ZoneRect_{activeZone.Id}";
+            string labelName = $"ZoneLabel_{activeZone.Id}";
 
-            // Remove oldest rectangles
-            int toRemove = drawnRectangles.Count - MaxRectangles;
-
-            for (int i = 0; i < toRemove; i++)
-            {
-                var rect = sortedRects[i];
-                Chart.RemoveObject(rect.Name);
-                drawnRectangles.Remove(rect);
-            }
-
-            Print("[Cleanup] Removed {0} old rectangles | Remaining: {1}",
-                toRemove, drawnRectangles.Count);
+            if (Chart.FindObject(rectName) != null)
+                Chart.RemoveObject(rectName);
+            if (Chart.FindObject(labelName) != null)
+                Chart.RemoveObject(labelName);
         }
 
         /// <summary>
@@ -3327,11 +3383,16 @@ namespace cAlgo.Robots
             if (activeZone == null || !ShowRectangles)
                 return;
 
-            // Remove old zone rectangle if exists
+            // Remove current zone's rectangle if it exists (for redrawing with new state)
             string oldRectName = $"ZoneRect_{activeZone.Id}";
             if (Chart.FindObject(oldRectName) != null)
             {
                 Chart.RemoveObject(oldRectName);
+            }
+            string oldLabelName = $"ZoneLabel_{activeZone.Id}";
+            if (Chart.FindObject(oldLabelName) != null)
+            {
+                Chart.RemoveObject(oldLabelName);
             }
 
             // Select color based on state
