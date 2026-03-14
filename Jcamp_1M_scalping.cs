@@ -126,6 +126,17 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Chandelier TP Mode Enum
+
+        public enum ChandelierTPMode
+        {
+            KeepOriginal,   // TP stays at original level throughout
+            RemoveTP,       // TP removed on activation; exit via chandelier SL only
+            TrailingTP      // TP trails ahead of chandelier SL by offset
+        }
+
+        #endregion
+
         #region PRE-Zone Enums and Classes - Phase 4 Implementation
 
         /// <summary>
