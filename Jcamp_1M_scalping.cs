@@ -1645,8 +1645,9 @@ namespace cAlgo.Robots
                     double gapSize = candleC_Low - candleA_High;
                     double gapSizePips = gapSize / Symbol.PipSize;
 
-                    // Minimum size filter (use same parameter as M15)
-                    if (gapSizePips < MinFVGSizePips)
+                    // Minimum size filter (M1 uses 1/3 of M15 threshold for smaller gaps)
+                    double m1MinSize = MinFVGSizePips / 3.0;  // e.g., 1.5 / 3 = 0.5 pips
+                    if (gapSizePips < m1MinSize)
                         continue;
 
                     var fvg = new FairValueGap
@@ -1676,8 +1677,9 @@ namespace cAlgo.Robots
                     double gapSize = candleA_Low - candleC_High;
                     double gapSizePips = gapSize / Symbol.PipSize;
 
-                    // Minimum size filter
-                    if (gapSizePips < MinFVGSizePips)
+                    // Minimum size filter (M1 uses 1/3 of M15 threshold for smaller gaps)
+                    double m1MinSize = MinFVGSizePips / 3.0;  // e.g., 1.5 / 3 = 0.5 pips
+                    if (gapSizePips < m1MinSize)
                         continue;
 
                     var fvg = new FairValueGap
@@ -3219,7 +3221,7 @@ namespace cAlgo.Robots
             modeLabel = Chart.DrawStaticText("ModeLabel", modeText,
                 VerticalAlignment.Top, HorizontalAlignment.Right, labelColor);
 
-            Print("[ModeDisplay] Updated to: {0}", modeText);
+            //Print("[ModeDisplay] Updated to: {0}", modeText);
         }
 
         /// <summary>
