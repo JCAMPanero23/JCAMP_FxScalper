@@ -1621,6 +1621,16 @@ namespace cAlgo.Robots
             // Scan recent M1 bars for FVG patterns
             int lookback = Math.Min(90, Bars.Count - 3); // Last 90 M1 bars = 1.5 hours
 
+            int fvgsDetected = 0;
+            int fvgsFiltered = 0;
+            int fvgsFilled = 0;
+            int fvgsHighQuality = 0;
+
+            Print("[M1 FVG] Scanning {0} M1 bars | Disp: {1} @ {2}",
+                lookback,
+                lastDisplacement?.IsBullish == true ? "BULL" : (lastDisplacement?.IsBullish == false ? "BEAR" : "NONE"),
+                lastDisplacement?.Time.ToString("HH:mm") ?? "N/A");
+
             // Start at i=2 to ensure all 3 candles (A, B, C) are completed
             for (int i = 2; i < lookback; i++)
             {
@@ -1645,10 +1655,15 @@ namespace cAlgo.Robots
                     double gapSize = candleC_Low - candleA_High;
                     double gapSizePips = gapSize / Symbol.PipSize;
 
+                    fvgsDetected++;
+
                     // Minimum size filter (M1 uses 1/3 of M15 threshold for smaller gaps)
                     double m1MinSize = MinFVGSizePips / 3.0;  // e.g., 1.5 / 3 = 0.5 pips
                     if (gapSizePips < m1MinSize)
+                    {
+                        fvgsFiltered++;
                         continue;
+                    }
 
                     var fvg = new FairValueGap
                     {
@@ -1662,10 +1677,17 @@ namespace cAlgo.Robots
                         DisplacementBarIndex = isWithinDisplacement ? idx : -1
                     };
 
+                    if (isWithinDisplacement)
+                        fvgsHighQuality++;
+
                     // Check if filled
                     fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
 
-                    if (!fvg.IsFilled)
+                    if (fvg.IsFilled)
+                    {
+                        fvgsFilled++;
+                    }
+                    else
                     {
                         activeFVGs.Add(fvg);
                     }
@@ -1677,10 +1699,15 @@ namespace cAlgo.Robots
                     double gapSize = candleA_Low - candleC_High;
                     double gapSizePips = gapSize / Symbol.PipSize;
 
+                    fvgsDetected++;
+
                     // Minimum size filter (M1 uses 1/3 of M15 threshold for smaller gaps)
                     double m1MinSize = MinFVGSizePips / 3.0;  // e.g., 1.5 / 3 = 0.5 pips
                     if (gapSizePips < m1MinSize)
+                    {
+                        fvgsFiltered++;
                         continue;
+                    }
 
                     var fvg = new FairValueGap
                     {
@@ -1694,14 +1721,24 @@ namespace cAlgo.Robots
                         DisplacementBarIndex = isWithinDisplacement ? idx : -1
                     };
 
+                    if (isWithinDisplacement)
+                        fvgsHighQuality++;
+
                     fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
 
-                    if (!fvg.IsFilled)
+                    if (fvg.IsFilled)
+                    {
+                        fvgsFilled++;
+                    }
+                    else
                     {
                         activeFVGs.Add(fvg);
                     }
                 }
             }
+
+            Print("[M1 FVG] Results: Detected={0} | Filtered={1} | Filled={2} | HighQuality={3} | Active={4}",
+                fvgsDetected, fvgsFiltered, fvgsFilled, fvgsHighQuality, activeFVGs.Count);
         }
 
         /// <summary>
