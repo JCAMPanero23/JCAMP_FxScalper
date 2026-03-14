@@ -2411,7 +2411,10 @@ namespace cAlgo.Robots
         /// </summary>
         private OptimalPeriod GetOptimalPeriod(DateTime time)
         {
-            int hourUTC = time.Hour;
+            // Convert broker time to UTC using TimeZoneInfo
+            // cTrader times are in broker timezone, need UTC for accurate period detection
+            DateTime utcTime = TimeZoneInfo.ConvertTimeToUtc(time);
+            int hourUTC = utcTime.Hour;
 
             // BEST: Overlap period (13:00-17:00 UTC) - London + NY
             if (hourUTC >= 13 && hourUTC < 17)
