@@ -3415,6 +3415,214 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Chandelier Trailing Stop Methods
+
+        /// <summary>
+        /// Gets commission cost in price terms for breakeven calculation
+        /// </summary>
+        private double GetCommissionInPrice(Position position)
+        {
+            // Symbol.Commission is per-lot per-side in account currency
+            double commissionPerLot = Symbol.Commission * 2;  // Round trip
+            if (commissionPerLot <= 0) return 0;
+
+            // Convert to price movement
+            double commissionInPrice = (commissionPerLot / position.VolumeInUnits) * Symbol.LotSize;
+            return commissionInPrice;
+        }
+
+        /// <summary>
+        /// Calculates the chandelier stop loss value
+        /// </summary>
+        private double CalculateChandelierSL(TradeType tradeType)
+        {
+            int lookback = Math.Min(ChandelierLookback, Bars.Count - 1);
+            if (lookback < 1) return 0;
+
+            double atrValue = atrM1.Result.LastValue;
+            double atrDistance = atrValue * ATRMultiplier;
+
+            if (tradeType == TradeType.Buy)
+            {
+                // LONG: Highest High - ATR
+                double highestHigh = 0;
+                for (int i = 1; i <= lookback; i++)
+                {
+                    if (Bars.HighPrices.Last(i) > highestHigh)
+                        highestHigh = Bars.HighPrices.Last(i);
+                }
+                return highestHigh - atrDistance;
+            }
+            else
+            {
+                // SHORT: Lowest Low + ATR
+                double lowestLow = double.MaxValue;
+                for (int i = 1; i <= lookback; i++)
+                {
+                    if (Bars.LowPrices.Last(i) < lowestLow)
+                        lowestLow = Bars.LowPrices.Last(i);
+                }
+                return lowestLow + atrDistance;
+            }
+        }
+
+        /// <summary>
+        /// Processes chandelier trailing stop for all tracked positions
+        /// Called from OnBar()
+        /// </summary>
+        private void ProcessChandelierStops()
+        {
+            if (!EnableChandelierSL) return;
+
+            // Get positions opened by this bot
+            var myPositions = Positions.Where(p => p.Label == MagicNumber.ToString()).ToList();
+
+            // Clean up states for closed positions
+            var closedIds = _chandelierStates.Keys.Where(id => !myPositions.Any(p => p.Id == id)).ToList();
+            foreach (var id in closedIds)
+            {
+                _chandelierStates.Remove(id);
+            }
+
+            // Process each open position
+            foreach (var position in myPositions)
+            {
+                if (!_chandelierStates.TryGetValue(position.Id, out var state))
+                    continue;  // Position not tracked (opened before bot start)
+
+                ProcessSinglePosition(position, state);
+            }
+        }
+
+        /// <summary>
+        /// Processes chandelier logic for a single position
+        /// </summary>
+        private void ProcessSinglePosition(Position position, ChandelierState state)
+        {
+            double currentPrice = position.TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask;
+
+            // Phase 1: Check for activation
+            if (!state.IsActivated)
+            {
+                bool shouldActivate = position.TradeType == TradeType.Buy
+                    ? currentPrice >= state.ActivationPrice
+                    : currentPrice <= state.ActivationPrice;
+
+                if (shouldActivate)
+                {
+                    ActivateChandelier(position, state);
+                }
+                return;  // Don't trail until activated
+            }
+
+            // Phase 2 & 3: Trail the stop
+            TrailChandelierStop(position, state);
+        }
+
+        /// <summary>
+        /// Activates chandelier mode - moves SL to BE+commission
+        /// </summary>
+        private void ActivateChandelier(Position position, ChandelierState state)
+        {
+            state.IsActivated = true;
+            state.CurrentTrailingSL = state.BreakevenPrice;
+            state.HighestTrailingSL = state.BreakevenPrice;
+
+            // Determine new TP based on mode
+            double? newTP = null;
+            if (ChandelierTPModeSelection == ChandelierTPMode.RemoveTP)
+            {
+                newTP = null;  // Remove TP
+            }
+            else
+            {
+                newTP = state.OriginalTP;  // Keep original for now
+            }
+
+            // Modify position
+            ModifyPosition(position, state.CurrentTrailingSL, newTP);
+
+            Print("[CHANDELIER] Position {0} activated at {1:F5}, SL moved to BE+comm: {2:F5}",
+                position.Id, position.TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask, state.CurrentTrailingSL);
+        }
+
+        /// <summary>
+        /// Trails the chandelier stop loss (and optionally TP)
+        /// </summary>
+        private void TrailChandelierStop(Position position, ChandelierState state)
+        {
+            double chandelierSL = CalculateChandelierSL(position.TradeType);
+            if (chandelierSL <= 0) return;
+
+            bool isBuy = position.TradeType == TradeType.Buy;
+            double newSL = state.CurrentTrailingSL;
+            double? newTP = position.TakeProfit;
+
+            // Check if chandelier provides a better SL
+            bool chandelierBetter = isBuy
+                ? chandelierSL > state.HighestTrailingSL
+                : chandelierSL < state.HighestTrailingSL;
+
+            if (chandelierBetter)
+            {
+                // Check minimum movement threshold (0.5 pips)
+                double movement = Math.Abs(chandelierSL - state.CurrentTrailingSL) / Symbol.PipSize;
+                if (movement >= 0.5)
+                {
+                    double oldSL = state.CurrentTrailingSL;
+                    state.CurrentTrailingSL = chandelierSL;
+                    state.HighestTrailingSL = chandelierSL;
+                    newSL = chandelierSL;
+
+                    Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5}",
+                        position.Id, oldSL, newSL);
+
+                    // Start TP trailing if mode is TrailingTP and SL moved beyond BE
+                    if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
+                    {
+                        bool beyondBE = isBuy
+                            ? chandelierSL > state.BreakevenPrice
+                            : chandelierSL < state.BreakevenPrice;
+
+                        if (beyondBE)
+                        {
+                            state.TPTrailingStarted = true;
+                            Print("[CHANDELIER] Position {0} TP trailing started", position.Id);
+                        }
+                    }
+
+                    // Trail TP if enabled and started
+                    if (state.TPTrailingStarted && ChandelierTPModeSelection == ChandelierTPMode.TrailingTP)
+                    {
+                        double trailingTP = isBuy
+                            ? chandelierSL + (TrailingTPOffset * Symbol.PipSize)
+                            : chandelierSL - (TrailingTPOffset * Symbol.PipSize);
+
+                        // TP only moves in favorable direction
+                        bool tpBetter = isBuy
+                            ? trailingTP > state.HighestTrailingTP
+                            : trailingTP < state.HighestTrailingTP;
+
+                        if (tpBetter || state.HighestTrailingTP == 0)
+                        {
+                            double oldTP = state.CurrentTrailingTP;
+                            state.CurrentTrailingTP = trailingTP;
+                            state.HighestTrailingTP = trailingTP;
+                            newTP = trailingTP;
+
+                            Print("[CHANDELIER] Position {0} TP trailed: {1:F5} → {2:F5}",
+                                position.Id, oldTP, newTP);
+                        }
+                    }
+
+                    // Apply modifications
+                    ModifyPosition(position, newSL, newTP);
+                }
+            }
+        }
+
+        #endregion
+
         #region Visualization Methods
 
         /// <summary>
