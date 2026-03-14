@@ -79,6 +79,28 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Chandelier Stop Loss
+
+        [Parameter("=== CHANDELIER SL ===", DefaultValue = "")]
+        public string ChandelierHeader { get; set; }
+
+        [Parameter("Enable Chandelier SL", DefaultValue = true, Group = "Chandelier SL")]
+        public bool EnableChandelierSL { get; set; }
+
+        [Parameter("Activation RR Fraction", DefaultValue = 0.75, MinValue = 0.5, MaxValue = 0.85, Step = 0.05, Group = "Chandelier SL")]
+        public double ChandelierActivationRR { get; set; }
+
+        [Parameter("Chandelier Lookback Bars", DefaultValue = 22, MinValue = 10, MaxValue = 30, Step = 2, Group = "Chandelier SL")]
+        public int ChandelierLookback { get; set; }
+
+        [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
+        public ChandelierTPMode ChandelierTPModeSelection { get; set; }
+
+        [Parameter("Trailing TP Offset (pips)", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 1.0, Group = "Chandelier SL")]
+        public double TrailingTPOffset { get; set; }
+
+        #endregion
+
         #region Parameters - TP Management
 
         [Parameter("=== TP MANAGEMENT ===", DefaultValue = "")]
