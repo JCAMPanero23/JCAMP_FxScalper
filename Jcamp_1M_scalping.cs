@@ -236,6 +236,30 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Chandelier State Class
+
+        /// <summary>
+        /// Tracks chandelier trailing stop state for each position
+        /// </summary>
+        private class ChandelierState
+        {
+            public int PositionId { get; set; }
+            public bool IsActivated { get; set; }
+            public double EntryPrice { get; set; }
+            public double OriginalTP { get; set; }
+            public double OriginalSL { get; set; }
+            public double ActivationPrice { get; set; }
+            public double BreakevenPrice { get; set; }
+            public double CurrentTrailingSL { get; set; }
+            public double CurrentTrailingTP { get; set; }
+            public double HighestTrailingSL { get; set; }
+            public double HighestTrailingTP { get; set; }
+            public bool TPTrailingStarted { get; set; }
+            public TradeType TradeDirection { get; set; }
+        }
+
+        #endregion
+
         #endregion
 
         #region Session Enums and Classes
