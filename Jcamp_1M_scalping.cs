@@ -20,13 +20,16 @@ namespace cAlgo.Robots
         [Parameter("=== TREND DETECTION ===", DefaultValue = "")]
         public string TrendHeader { get; set; }
 
-        [Parameter("SMA Period", DefaultValue = 200, MinValue = 50, MaxValue = 500, Group = "Trend Detection")]
+        // SMA Period: 200 is industry standard, optimize in range 100-300 with step 50
+        [Parameter("SMA Period", DefaultValue = 200, MinValue = 100, MaxValue = 300, Step = 50, Group = "Trend Detection")]
         public int SMAPeriod { get; set; }
 
-        [Parameter("Swing Lookback Bars (M15)", DefaultValue = 100, MinValue = 10, MaxValue = 200, Group = "Trend Detection")]
+        // Swing Lookback: How far back to look for fractals. Step=10 gives 7 combinations (20-80)
+        [Parameter("Swing Lookback Bars (M15)", DefaultValue = 30, MinValue = 20, MaxValue = 80, Step = 10, Group = "Trend Detection")]
         public int SwingLookbackBars { get; set; }
 
-        [Parameter("Minimum Swing Score", DefaultValue = 0.60, MinValue = 0.0, MaxValue = 1.0, Group = "Trend Detection")]
+        // Min Swing Score: Quality threshold. Step=0.05 gives 9 combinations (0.40-0.80)
+        [Parameter("Minimum Swing Score", DefaultValue = 0.60, MinValue = 0.40, MaxValue = 0.80, Step = 0.05, Group = "Trend Detection")]
         public double MinimumSwingScore { get; set; }
 
         #endregion
@@ -55,16 +58,20 @@ namespace cAlgo.Robots
         [Parameter("=== TRADE MANAGEMENT ===", DefaultValue = "")]
         public string TradeHeader { get; set; }
 
-        [Parameter("Risk Per Trade %", DefaultValue = 1.0, MinValue = 0.1, MaxValue = 5.0, Step = 0.1, Group = "Trade Management")]
+        // Risk %: Keep conservative range 0.5-2.0%. Step=0.25 gives 7 combinations
+        [Parameter("Risk Per Trade %", DefaultValue = 1.0, MinValue = 0.5, MaxValue = 2.0, Step = 0.25, Group = "Trade Management")]
         public double RiskPercent { get; set; }
 
-        [Parameter("SL Buffer Pips", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 10.0, Step = 0.5, Group = "Trade Management")]
+        // SL Buffer: Protection pips beyond zone. Step=0.5 gives 7 combinations (1-4)
+        [Parameter("SL Buffer Pips", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 4.0, Step = 0.5, Group = "Trade Management")]
         public double SLBufferPips { get; set; }
 
-        [Parameter("Minimum RR Ratio", DefaultValue = 3.0, MinValue = 2.0, MaxValue = 10.0, Step = 0.5, Group = "Trade Management")]
+        // Min RR: Trade quality filter. Step=0.5 gives 7 combinations (2-5)
+        [Parameter("Minimum RR Ratio", DefaultValue = 3.0, MinValue = 2.0, MaxValue = 5.0, Step = 0.5, Group = "Trade Management")]
         public double MinimumRRRatio { get; set; }
 
-        [Parameter("Max Positions", DefaultValue = 1, MinValue = 1, MaxValue = 10, Group = "Trade Management")]
+        // Max Positions: Usually 1-3 for scalping. Step=1 gives 3 combinations
+        [Parameter("Max Positions", DefaultValue = 1, MinValue = 1, MaxValue = 3, Step = 1, Group = "Trade Management")]
         public int MaxPositions { get; set; }
 
         [Parameter("Magic Number", DefaultValue = 100001, Group = "Trade Management")]
@@ -83,7 +90,8 @@ namespace cAlgo.Robots
         [Parameter("Use M15 Levels for TP", DefaultValue = true, Group = "TP Management")]
         public bool UseM15LevelsForTP { get; set; }
 
-        [Parameter("H1 Level Proximity Pips", DefaultValue = 50, MinValue = 10, MaxValue = 200, Group = "TP Management")]
+        // H1 Proximity: How close to H1 level to use it. Step=10 gives 6 combinations (30-80)
+        [Parameter("H1 Level Proximity Pips", DefaultValue = 50, MinValue = 30, MaxValue = 80, Step = 10, Group = "TP Management")]
         public int H1LevelProximityPips { get; set; }
 
         #endregion
@@ -102,7 +110,8 @@ namespace cAlgo.Robots
         [Parameter("Trade on New Swing Only", DefaultValue = true, Group = "Entry Filters")]
         public bool TradeOnNewSwingOnly { get; set; }
 
-        [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 1.0, MaxValue = 50.0, Step = 1.0, Group = "Entry Filters")]
+        // Max Distance to Arm: How far price can be to arm zone. Step=2 gives 6 combinations (4-14)
+        [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 4.0, MaxValue = 14.0, Step = 2.0, Group = "Entry Filters")]
         public double MaxDistanceToArm { get; set; }
 
         #endregion
@@ -297,13 +306,16 @@ namespace cAlgo.Robots
         [Parameter("Enable FVG Filter", DefaultValue = true, Group = "FVG Detection")]
         public bool EnableFVGFilter { get; set; }
 
-        [Parameter("FVG Lookback Bars", DefaultValue = 50, MinValue = 20, MaxValue = 100, Group = "FVG Detection")]
+        // FVG Lookback: How many bars to scan for FVGs. Step=10 gives 5 combinations (20-60)
+        [Parameter("FVG Lookback Bars", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
         public int FVGLookbackBars { get; set; }
 
-        [Parameter("Min FVG Size (pips)", DefaultValue = 1.5, MinValue = 0.5, MaxValue = 5.0, Step = 0.5, Group = "FVG Detection")]
+        // Min FVG Size: Filter noise gaps. Step=0.5 gives 5 combinations (0.5-2.5)
+        [Parameter("Min FVG Size (pips)", DefaultValue = 1.5, MinValue = 0.5, MaxValue = 2.5, Step = 0.5, Group = "FVG Detection")]
         public double MinFVGSizePips { get; set; }
 
-        [Parameter("FVG Max Age (bars)", DefaultValue = 30, MinValue = 10, MaxValue = 100, Group = "FVG Detection")]
+        // FVG Max Age: How old FVG can be. Step=10 gives 5 combinations (20-60)
+        [Parameter("FVG Max Age (bars)", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
         public int FVGMaxAgeBars { get; set; }
 
         #endregion
@@ -316,22 +328,30 @@ namespace cAlgo.Robots
         [Parameter("Enable PRE-Zone System", DefaultValue = true, Group = "PRE-Zone System")]
         public bool EnablePreZoneSystem { get; set; }
 
-        [Parameter("ATR Period", DefaultValue = 14, MinValue = 5, MaxValue = 50, Group = "PRE-Zone System")]
+        // ATR Period: Standard is 14. Step=2 gives 6 combinations (10-20)
+        [Parameter("ATR Period", DefaultValue = 14, MinValue = 10, MaxValue = 20, Step = 2, Group = "PRE-Zone System")]
         public int ATRPeriod { get; set; }
 
-        [Parameter("ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 3.0, Step = 0.1, Group = "PRE-Zone System")]
+        // ATR Multiplier: Displacement sensitivity. Step=0.25 gives 5 combinations (1.0-2.0)
+        // KEY OPTIMIZATION PARAMETER
+        [Parameter("ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.0, Step = 0.25, Group = "PRE-Zone System")]
         public double ATRMultiplier { get; set; }
 
-        [Parameter("PRE-Zone Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 120, Group = "PRE-Zone System")]
+        // PRE-Zone Expiry: How long zone stays active. Step=15 gives 5 combinations (30-90)
+        [Parameter("PRE-Zone Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "PRE-Zone System")]
         public int PreZoneExpiryMinutes { get; set; }
 
-        [Parameter("VALID-Zone Expiry (minutes)", DefaultValue = 120, MinValue = 60, MaxValue = 240, Group = "PRE-Zone System")]
+        // VALID-Zone Expiry: Extended time after fractal confirms. Step=30 gives 5 combinations (60-180)
+        [Parameter("VALID-Zone Expiry (minutes)", DefaultValue = 120, MinValue = 60, MaxValue = 180, Step = 30, Group = "PRE-Zone System")]
         public int ValidZoneExpiryMinutes { get; set; }
 
-        [Parameter("Fractal Zone Tolerance (pips)", DefaultValue = 5.0, MinValue = 2.0, MaxValue = 10.0, Step = 0.5, Group = "PRE-Zone System")]
+        // Fractal Tolerance: How close fractal must be to zone. Step=1 gives 5 combinations (3-7)
+        [Parameter("Fractal Zone Tolerance (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 7.0, Step = 1.0, Group = "PRE-Zone System")]
         public double FractalZoneTolerancePips { get; set; }
 
-        [Parameter("Min PRE-Zone Score", DefaultValue = 0.50, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "PRE-Zone System")]
+        // Min PRE-Zone Score: Quality threshold. Step=0.05 gives 7 combinations (0.40-0.70)
+        // KEY OPTIMIZATION PARAMETER
+        [Parameter("Min PRE-Zone Score", DefaultValue = 0.50, MinValue = 0.40, MaxValue = 0.70, Step = 0.05, Group = "PRE-Zone System")]
         public double MinPreZoneScore { get; set; }
 
         #endregion
@@ -344,7 +364,8 @@ namespace cAlgo.Robots
         [Parameter("Show Rectangles", DefaultValue = true, Group = "Visualization")]
         public bool ShowRectangles { get; set; }
 
-        [Parameter("Rectangle Width (Minutes)", DefaultValue = 60, MinValue = 10, MaxValue = 200, Group = "Visualization")]
+        // Rectangle Width: Trading window duration. Step=15 gives 5 combinations (30-90)
+        [Parameter("Rectangle Width (Minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "Visualization")]
         public int RectangleWidthMinutes { get; set; }
 
         [Parameter("Show Mode Label", DefaultValue = true, Group = "Visualization")]
