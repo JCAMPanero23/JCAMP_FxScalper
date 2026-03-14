@@ -849,6 +849,11 @@ namespace cAlgo.Robots
                 UpdateZoneStates();
             }
 
+            // ============================================================
+            // CHANDELIER TRAILING STOP: Process on every M1 bar close
+            // ============================================================
+            ProcessChandelierStops();
+
             // Phase 1B: Entry detection on M1 bar close
             // Process breakout entry logic if trading is enabled
             if (EnableTrading && hasActiveSwing)
@@ -3334,6 +3339,31 @@ namespace cAlgo.Robots
                 Print("   Position ID: {0} | Risk Amount: ${1:F2}",
                     result.Position.Id, Account.Balance * (RiskPercent / 100.0));
 
+                // Initialize chandelier state tracking
+                if (EnableChandelierSL)
+                {
+                    var state = new ChandelierState
+                    {
+                        PositionId = result.Position.Id,
+                        IsActivated = false,
+                        EntryPrice = entryPrice,
+                        OriginalTP = takeProfit,
+                        OriginalSL = stopLoss,
+                        ActivationPrice = entryPrice - ((entryPrice - takeProfit) * ChandelierActivationRR),
+                        BreakevenPrice = entryPrice - GetCommissionInPrice(result.Position),
+                        CurrentTrailingSL = stopLoss,
+                        CurrentTrailingTP = takeProfit,
+                        HighestTrailingSL = double.MaxValue,  // For SHORT, lower is better
+                        HighestTrailingTP = 0,
+                        TPTrailingStarted = false,
+                        TradeDirection = TradeType.Sell
+                    };
+                    _chandelierStates[result.Position.Id] = state;
+
+                    Print("[CHANDELIER] Tracking SELL position {0}, activation at {1:F5}",
+                        result.Position.Id, state.ActivationPrice);
+                }
+
                 // Disable active swing if trading on new swing only
                 if (TradeOnNewSwingOnly)
                 {
@@ -3398,6 +3428,31 @@ namespace cAlgo.Robots
                 Print("✅ BUY EXECUTED SUCCESSFULLY");
                 Print("   Position ID: {0} | Risk Amount: ${1:F2}",
                     result.Position.Id, Account.Balance * (RiskPercent / 100.0));
+
+                // Initialize chandelier state tracking
+                if (EnableChandelierSL)
+                {
+                    var state = new ChandelierState
+                    {
+                        PositionId = result.Position.Id,
+                        IsActivated = false,
+                        EntryPrice = entryPrice,
+                        OriginalTP = takeProfit,
+                        OriginalSL = stopLoss,
+                        ActivationPrice = entryPrice + ((takeProfit - entryPrice) * ChandelierActivationRR),
+                        BreakevenPrice = entryPrice + GetCommissionInPrice(result.Position),
+                        CurrentTrailingSL = stopLoss,
+                        CurrentTrailingTP = takeProfit,
+                        HighestTrailingSL = 0,  // For LONG, higher is better
+                        HighestTrailingTP = 0,
+                        TPTrailingStarted = false,
+                        TradeDirection = TradeType.Buy
+                    };
+                    _chandelierStates[result.Position.Id] = state;
+
+                    Print("[CHANDELIER] Tracking BUY position {0}, activation at {1:F5}",
+                        result.Position.Id, state.ActivationPrice);
+                }
 
                 // Disable active swing if trading on new swing only
                 if (TradeOnNewSwingOnly)
