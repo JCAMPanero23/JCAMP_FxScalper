@@ -91,8 +91,8 @@ namespace cAlgo.Robots
         [Parameter("Activation RR Fraction", DefaultValue = 0.75, MinValue = 0.5, MaxValue = 0.85, Step = 0.05, Group = "Chandelier SL")]
         public double ChandelierActivationRR { get; set; }
 
-        // Trail Increment: How many pips price must move before SL trails. Step=5 gives 5 combinations (10-30)
-        [Parameter("Trail Increment (pips)", DefaultValue = 10.0, MinValue = 10.0, MaxValue = 30.0, Step = 5.0, Group = "Chandelier SL")]
+        // Trail Increment: How many pips price must move before SL trails. Step=1 gives range (3-30)
+        [Parameter("Trail Increment (pips)", DefaultValue = 10.0, MinValue = 3.0, MaxValue = 30.0, Step = 1.0, Group = "Chandelier SL")]
         public double TrailIncrementPips { get; set; }
 
         [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
