@@ -774,6 +774,12 @@ namespace cAlgo.Robots
                 UpdateModeDisplay(currentMode);
             }
 
+            // Check for expired pending orders
+            if (EntryExecution == EntryExecutionMode.PendingStop)
+            {
+                CheckExpiredPendingOrders();
+            }
+
             // ============================================================
             // M1 FVG DETECTION: Process on every M1 bar close
             // ============================================================
@@ -3750,6 +3756,22 @@ namespace cAlgo.Robots
                     }
                 }
                 _zonePendingOrders.Remove(zoneId);
+            }
+        }
+
+        /// <summary>
+        /// Checks for and cancels expired pending orders
+        /// Called on each bar to clean up orders that reached expiry time
+        /// </summary>
+        private void CheckExpiredPendingOrders()
+        {
+            var expired = _zonePendingOrders.Values
+                .Where(x => x.Order != null && x.Order.IsActive && Server.Time >= x.ExpiresAt)
+                .ToList();
+
+            foreach (var pendingOrder in expired)
+            {
+                CancelZonePendingOrder(pendingOrder.ZoneId, "Order expiry time reached");
             }
         }
 
