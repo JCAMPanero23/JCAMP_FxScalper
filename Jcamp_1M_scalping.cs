@@ -100,6 +100,10 @@ namespace cAlgo.Robots
         [Parameter("Trailing TP Offset (pips)", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 1.0, Group = "Chandelier SL")]
         public double TrailingTPOffset { get; set; }
 
+        // Minimum distance from price for SL modification. Step=1 gives 6 combinations (3-8)
+        [Parameter("Min SL Distance (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 8.0, Step = 1.0, Group = "Chandelier SL")]
+        public double MinChandelierDistance { get; set; }
+
         #endregion
 
         #region Parameters - TP Management
@@ -3618,10 +3622,53 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
+        /// Validates that SL is at minimum distance from current price
+        /// Returns true if valid, false if too close
+        /// </summary>
+        private bool ValidateSLDistance(Position position, double proposedSL, out string reason)
+        {
+            double currentPrice = position.TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask;
+            double minDistance = MinChandelierDistance * Symbol.PipSize;
+
+            if (position.TradeType == TradeType.Buy)
+            {
+                // BUY: SL must be below current price by at least minimum distance
+                double distance = currentPrice - proposedSL;
+                if (distance < minDistance)
+                {
+                    reason = string.Format("SL {0:F5} too close to Bid {1:F5} (distance: {2:F1} pips, min: {3:F1} pips)",
+                        proposedSL, currentPrice, distance / Symbol.PipSize, MinChandelierDistance);
+                    return false;
+                }
+            }
+            else
+            {
+                // SELL: SL must be above current price by at least minimum distance
+                double distance = proposedSL - currentPrice;
+                if (distance < minDistance)
+                {
+                    reason = string.Format("SL {0:F5} too close to Ask {1:F5} (distance: {2:F1} pips, min: {3:F1} pips)",
+                        proposedSL, currentPrice, distance / Symbol.PipSize, MinChandelierDistance);
+                    return false;
+                }
+            }
+
+            reason = null;
+            return true;
+        }
+
+        /// <summary>
         /// Activates chandelier mode - moves SL to BE+commission
         /// </summary>
         private void ActivateChandelier(Position position, ChandelierState state)
         {
+            // Validate minimum distance before activation
+            if (!ValidateSLDistance(position, state.BreakevenPrice, out string reason))
+            {
+                Print("[CHANDELIER] Position {0} activation delayed - {1}", position.Id, reason);
+                return;  // Don't activate yet, will retry on next bar
+            }
+
             state.IsActivated = true;
             state.CurrentTrailingSL = state.BreakevenPrice;
             state.HighestTrailingSL = state.BreakevenPrice;
@@ -3667,6 +3714,13 @@ namespace cAlgo.Robots
                 double movement = Math.Abs(chandelierSL - state.CurrentTrailingSL) / Symbol.PipSize;
                 if (movement >= 0.5)
                 {
+                    // Validate minimum distance from current price
+                    if (!ValidateSLDistance(position, chandelierSL, out string reason))
+                    {
+                        Print("[CHANDELIER] Position {0} SL trail skipped - {1}", position.Id, reason);
+                        return;  // Skip this update, will retry on next bar
+                    }
+
                     double oldSL = state.CurrentTrailingSL;
                     state.CurrentTrailingSL = chandelierSL;
                     state.HighestTrailingSL = chandelierSL;
