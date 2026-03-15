@@ -752,6 +752,9 @@ namespace cAlgo.Robots
                     UpdateModeDisplay(currentMode);
                 }
             }
+
+            // Subscribe to position opened event for pending order tracking
+            Positions.Opened += OnPositionOpenedHandler;
         }
 
         #endregion
@@ -4269,15 +4272,13 @@ namespace cAlgo.Robots
 
         #endregion
 
-        #region OnPositionOpened
+        #region OnPositionOpened Event Handler
 
         /// <summary>
         /// Called when a position is opened (including from pending order fills)
         /// </summary>
-        protected override void OnPositionOpened(PositionOpenedEventArgs args)
+        private void OnPositionOpenedHandler(PositionOpenedEventArgs args)
         {
-            base.OnPositionOpened(args);
-
             // Check if this position came from a pending order
             var pendingOrder = _zonePendingOrders.Values
                 .FirstOrDefault(x => x.Order != null && x.Order.Label == args.Position.Label);
@@ -4288,8 +4289,6 @@ namespace cAlgo.Robots
 
                 // Clean up tracking (order is now a position)
                 _zonePendingOrders.Remove(pendingOrder.ZoneId);
-
-                // Chandelier SL tracking is handled by existing OnPositionOpened in base
             }
         }
 
