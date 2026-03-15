@@ -3,22 +3,24 @@
 ## File Locations
 
 ### Main Bot Code (EDIT THIS LOCATION)
-**Primary file to edit:**
-```
-C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs
-```
-This is the cAlgo working copy that gets built and executed. Always edit this file first.
-
-**Repository copy:**
+**Single file to edit (repository file):**
 ```
 D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs
 ```
-After editing the cAlgo file, copy it here and commit to git.
+This is the source of truth. Edit this file only.
+
+**cAlgo location (SYMLINK - do not edit directly):**
+```
+C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs
+```
+This is a symbolic link pointing to the repository file. cAlgo builds from this symlink.
 
 **Workflow:**
-1. Edit: `C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs`
-2. Copy to: `D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs`
-3. Commit to git repository
+1. Edit: `D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs`
+2. Commit changes to git
+3. cAlgo automatically uses the updated file via symlink (no copy needed!)
+
+**Backup:** Original cAlgo file saved as `Jcamp_1M_scalping.cs.backup` in the cAlgo directory.
 
 ### Backtest Logs Location
 
