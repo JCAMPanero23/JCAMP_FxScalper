@@ -3653,6 +3653,83 @@ namespace cAlgo.Robots
             }
         }
 
+        /// <summary>
+        /// Places a pending SELL STOP order at zone boundary - offset
+        /// </summary>
+        private void PlaceSellPendingOrder(TradingZone zone)
+        {
+            // Check max pending orders limit
+            if (_zonePendingOrders.Count >= MAX_PENDING_ORDERS)
+            {
+                Print("[PENDING ORDER] Max pending orders reached - skipping SELL order");
+                return;
+            }
+
+            // Check max positions
+            if (Positions.Count >= MaxPositions)
+            {
+                Print("[PENDING ORDER] Max positions reached - skipping SELL order");
+                return;
+            }
+
+            // Calculate entry price at zone bottom - offset
+            double entryPrice = zone.BottomPrice - (PendingEntryOffsetPips * Symbol.PipSize);
+
+            // Calculate SL at zone top + buffer
+            double slPrice = zone.TopPrice + (SLBufferPips * Symbol.PipSize);
+            double slPips = (slPrice - entryPrice) / Symbol.PipSize;
+
+            // Calculate TP using existing TP logic
+            double initialTP = entryPrice - (slPips * MinimumRRRatio * Symbol.PipSize);
+            double tpPrice = AdjustTPForMarketStructure(entryPrice, initialTP, slPrice, "SELL");
+
+            if (tpPrice == 0)
+            {
+                Print($"[PENDING SELL] No valid TP found - skipping order");
+                return;
+            }
+
+            double tpPips = (entryPrice - tpPrice) / Symbol.PipSize;
+
+            // Calculate position size
+            double volume = CalculatePositionSize(slPips);
+
+            // Set order expiry
+            DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
+
+            // Place pending STOP order
+            var result = PlaceStopOrder(
+                tradeType: TradeType.Sell,
+                symbolName: SymbolName,
+                volumeInUnits: volume,
+                targetPrice: entryPrice,
+                label: $"SELL_ZONE_{zone.Id}",
+                stopLossPips: slPips,
+                takeProfitPips: tpPips,
+                expiration: expiry
+            );
+
+            if (result.IsSuccessful)
+            {
+                _zonePendingOrders[zone.Id] = new ZonePendingOrder
+                {
+                    ZoneId = zone.Id,
+                    Order = result.PendingOrder,
+                    PlacedAt = Server.Time,
+                    ExpiresAt = expiry,
+                    EntryPrice = entryPrice,
+                    StopLoss = slPrice,
+                    TakeProfit = tpPrice
+                };
+
+                Print($"[PENDING SELL] Zone {zone.Id} | Entry: {entryPrice:F5} | SL: {slPrice:F5} ({slPips:F1} pips) | TP: {tpPrice:F5} ({tpPips:F1} pips) | Expiry: {expiry:HH:mm}");
+            }
+            else
+            {
+                Print($"[ERROR] Failed to place pending SELL order: {result.Error}");
+            }
+        }
+
         #endregion
 
         #region Chandelier Trailing Stop Methods
