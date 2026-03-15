@@ -117,6 +117,10 @@ namespace cAlgo.Robots
         [Parameter("H1 Level Proximity Pips", DefaultValue = 50, MinValue = 30, MaxValue = 80, Step = 10, Group = "TP Management")]
         public int H1LevelProximityPips { get; set; }
 
+        // Max Dynamic RR: Cap on dynamic TP adjustment. Step=0.5 gives 5 combinations (3-5)
+        [Parameter("Max Dynamic RR", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 5.0, Step = 0.5, Group = "TP Management")]
+        public double MaxDynamicRR { get; set; }
+
         #endregion
 
         #region Parameters - Entry Filters
@@ -604,8 +608,8 @@ namespace cAlgo.Robots
 
             // Phase 1C: Initialize H1 bars for TP management
             h1Bars = MarketData.GetBars(TimeFrame.Hour);
-            Print("Phase 1C TP Management: H1 Levels={0} | M15 Levels={1} | Proximity={2} pips",
-                UseH1LevelsForTP, UseM15LevelsForTP, H1LevelProximityPips);
+            Print("Phase 1C TP Management: H1 Levels={0} | M15 Levels={1} | Proximity={2} pips | Max RR: 1:{3:F1}",
+                UseH1LevelsForTP, UseM15LevelsForTP, H1LevelProximityPips, MaxDynamicRR);
 
             // Update market structure levels
             UpdateH1Levels();
@@ -2564,13 +2568,14 @@ namespace cAlgo.Robots
         /// <summary>
         /// Adjusts TP based on market structure levels
         /// Priority: H1 levels > M15 levels > Default 3R
-        /// Always maintains minimum RR ratio
+        /// Always maintains minimum RR ratio and respects maximum RR cap
         /// Phase 1C Implementation
         /// </summary>
         private double AdjustTPForMarketStructure(double entryPrice, double initialTP, double slPrice, string mode)
         {
             double minTPDistance = Math.Abs(initialTP - entryPrice); // Minimum 3R distance
             double riskDistance = Math.Abs(entryPrice - slPrice);
+            double maxTPDistance = riskDistance * MaxDynamicRR; // Maximum allowed TP distance
 
             if (mode == "SELL")
             {
@@ -2587,6 +2592,15 @@ namespace cAlgo.Robots
                         // Only use H1 level if it gives at least minimum RR
                         if (h1TPDistance >= minTPDistance)
                         {
+                            // Cap RR at maximum if exceeded
+                            if (h1RR > MaxDynamicRR)
+                            {
+                                double cappedTP = entryPrice - maxTPDistance;
+                                Print("[TP-H1] H1 support at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
+                                    bestH1Support, h1RR, MaxDynamicRR, cappedTP);
+                                return cappedTP;
+                            }
+
                             Print("[TP-H1] Using H1 support at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 bestH1Support, h1TPDistance / Symbol.PipSize, h1RR);
                             return bestH1Support;
@@ -2611,6 +2625,15 @@ namespace cAlgo.Robots
 
                         if (m15TPDistance >= minTPDistance)
                         {
+                            // Cap RR at maximum if exceeded
+                            if (m15RR > MaxDynamicRR)
+                            {
+                                double cappedTP = entryPrice - maxTPDistance;
+                                Print("[TP-M15] M15 support at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
+                                    m15Support, m15RR, MaxDynamicRR, cappedTP);
+                                return cappedTP;
+                            }
+
                             Print("[TP-M15] Using M15 support at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 m15Support, m15TPDistance / Symbol.PipSize, m15RR);
                             return m15Support;
@@ -2636,6 +2659,15 @@ namespace cAlgo.Robots
 
                         if (h1TPDistance >= minTPDistance)
                         {
+                            // Cap RR at maximum if exceeded
+                            if (h1RR > MaxDynamicRR)
+                            {
+                                double cappedTP = entryPrice + maxTPDistance;
+                                Print("[TP-H1] H1 resistance at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
+                                    bestH1Resistance, h1RR, MaxDynamicRR, cappedTP);
+                                return cappedTP;
+                            }
+
                             Print("[TP-H1] Using H1 resistance at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 bestH1Resistance, h1TPDistance / Symbol.PipSize, h1RR);
                             return bestH1Resistance;
@@ -2660,6 +2692,15 @@ namespace cAlgo.Robots
 
                         if (m15TPDistance >= minTPDistance)
                         {
+                            // Cap RR at maximum if exceeded
+                            if (m15RR > MaxDynamicRR)
+                            {
+                                double cappedTP = entryPrice + maxTPDistance;
+                                Print("[TP-M15] M15 resistance at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
+                                    m15Resistance, m15RR, MaxDynamicRR, cappedTP);
+                                return cappedTP;
+                            }
+
                             Print("[TP-M15] Using M15 resistance at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 m15Resistance, m15TPDistance / Symbol.PipSize, m15RR);
                             return m15Resistance;
