@@ -3,22 +3,25 @@
 ## File Locations
 
 ### Main Bot Code (EDIT THIS LOCATION)
-**Single file to edit (repository file):**
+**Repository file (source of truth):**
 ```
 D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs
 ```
-This is the source of truth. Edit this file only.
+Edit this file only.
 
-**cAlgo location (SYMLINK - do not edit directly):**
+**cAlgo location (build location):**
 ```
 C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs
 ```
-This is a symbolic link pointing to the repository file. cAlgo builds from this symlink.
+cAlgo builds from this file.
 
 **Workflow:**
 1. Edit: `D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs`
-2. Commit changes to git
-3. cAlgo automatically uses the updated file via symlink (no copy needed!)
+2. Copy to cAlgo: `cp "D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs" "C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs"`
+3. Rebuild in cTrader
+4. Commit changes to git
+
+**Note:** Symlinks don't work across drives (C: and D:), so manual copy is required.
 
 **Backup:** Original cAlgo file saved as `Jcamp_1M_scalping.cs.backup` in the cAlgo directory.
 
