@@ -5,8 +5,17 @@
 
 ---
 
-## 📁 Preset Files Overview
+## 📁 Optimization Files Overview
 
+### Optimization Set Files (.optset)
+Four optimization configuration files are provided for systematic testing:
+
+1. **`quick_test.optset`** - Fast initial test (12 combinations)
+2. **`phase1_core_quality.optset`** - Core quality filters (36 combinations)
+3. **`phase2_impulse_strength.optset`** - Impulse strength (16 combinations)
+4. **`entry_quality_optimization.optset`** - Comprehensive (all parameters)
+
+### Preset Configuration Files (.cbotset)
 Three pre-configured parameter sets are provided for different trading styles:
 
 ### 1. `entry_quality_high.cbotset` - CONSERVATIVE
@@ -66,7 +75,36 @@ Three pre-configured parameter sets are provided for different trading styles:
 
 ---
 
-## 🎯 How to Use These Presets
+## 🎯 How to Use Optimization Files
+
+### Method 1: Using .optset Files (Recommended)
+
+**Step 1: Load in cAlgo Optimizer**
+1. Open cAlgo
+2. Load your bot (Jcamp_1M_scalping)
+3. Click **Optimize** button
+4. Click **Import** and select an `.optset` file
+5. All parameter ranges will be loaded automatically
+
+**Step 2: Start with Quick Test**
+1. Load `quick_test.optset` (only 12 combinations)
+2. Run optimization on 1-2 months data
+3. Review results to understand parameter impact
+4. This takes ~5-10 minutes
+
+**Step 3: Phase 1 - Core Quality**
+1. Load `phase1_core_quality.optset` (36 combinations)
+2. Run on 3 months data
+3. Identify top 3 performing combinations
+4. Note the best values for: MinSwingScore, MinFVGSize, MinRRRatio
+
+**Step 4: Phase 2 - Impulse Strength**
+1. Edit `phase2_impulse_strength.optset`
+2. Set the FIXED parameters to your Phase 1 winners
+3. Load and run (16 combinations)
+4. Find overall best configuration
+
+### Method 2: Using .cbotset Presets
 
 ### Step 1: Baseline Test
 1. Load `entry_balanced.cbotset` in cAlgo

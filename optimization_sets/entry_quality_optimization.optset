@@ -1,0 +1,63 @@
+{
+  "OptimizationSettings": {
+    "OptimizationCriteria": "MaxNetProfit",
+    "Parameters": [
+      {
+        "Name": "MinimumSwingScore",
+        "Enabled": true,
+        "Start": 0.60,
+        "End": 0.75,
+        "Step": 0.05
+      },
+      {
+        "Name": "MinFVGSizePips",
+        "Enabled": true,
+        "Start": 1.0,
+        "End": 2.0,
+        "Step": 0.5
+      },
+      {
+        "Name": "MinimumRRRatio",
+        "Enabled": true,
+        "Start": 2.5,
+        "End": 4.0,
+        "Step": 0.5
+      },
+      {
+        "Name": "ATRMultiplier",
+        "Enabled": true,
+        "Start": 1.25,
+        "End": 2.0,
+        "Step": 0.25
+      },
+      {
+        "Name": "MinPreZoneScore",
+        "Enabled": true,
+        "Start": 0.45,
+        "End": 0.60,
+        "Step": 0.05
+      },
+      {
+        "Name": "MaxDistanceToArm",
+        "Enabled": false,
+        "Start": 8,
+        "End": 12,
+        "Step": 2
+      },
+      {
+        "Name": "SessionWeight",
+        "Enabled": false,
+        "Start": 0.20,
+        "End": 0.35,
+        "Step": 0.05
+      },
+      {
+        "Name": "MaxDynamicRR",
+        "Enabled": false,
+        "Start": 4.0,
+        "End": 5.0,
+        "Step": 0.5
+      }
+    ]
+  }
+}

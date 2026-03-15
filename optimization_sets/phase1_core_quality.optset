@@ -1,0 +1,48 @@
+{
+  "OptimizationSettings": {
+    "OptimizationCriteria": "MaxNetProfit",
+    "Description": "Phase 1: Core Quality Filters - Optimize swing score, FVG size, and minimum RR",
+    "Parameters": [
+      {
+        "Name": "MinimumSwingScore",
+        "Enabled": true,
+        "Start": 0.60,
+        "End": 0.75,
+        "Step": 0.05,
+        "Comment": "Higher = fewer but better swing points (36 combinations with other params)"
+      },
+      {
+        "Name": "MinFVGSizePips",
+        "Enabled": true,
+        "Start": 1.0,
+        "End": 2.0,
+        "Step": 0.5,
+        "Comment": "Higher = only significant gaps"
+      },
+      {
+        "Name": "MinimumRRRatio",
+        "Enabled": true,
+        "Start": 2.5,
+        "End": 4.0,
+        "Step": 0.5,
+        "Comment": "Higher = better reward requirement"
+      },
+      {
+        "Name": "ATRMultiplier",
+        "Enabled": false,
+        "Start": 1.5,
+        "End": 1.5,
+        "Step": 0.25,
+        "Comment": "DISABLED - Optimize in Phase 2"
+      },
+      {
+        "Name": "MinPreZoneScore",
+        "Enabled": false,
+        "Start": 0.50,
+        "End": 0.50,
+        "Step": 0.05,
+        "Comment": "DISABLED - Optimize in Phase 2"
+      }
+    ]
+  }
+}
