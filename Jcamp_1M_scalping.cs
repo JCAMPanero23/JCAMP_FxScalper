@@ -3674,8 +3674,8 @@ namespace cAlgo.Robots
             // Set order expiry
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
-            // Place pending STOP order
-            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, $"BUY_ZONE_{zone.Id}", slPrice, tpPrice, expiry);
+            // Place pending STOP order (without SL/TP - will be set when position opens)
+            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, $"BUY_ZONE_{zone.Id}", null, null, expiry);
 
             if (result.IsSuccessful)
             {
@@ -3742,8 +3742,8 @@ namespace cAlgo.Robots
             // Set order expiry
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
-            // Place pending STOP order
-            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, $"SELL_ZONE_{zone.Id}", slPrice, tpPrice, expiry);
+            // Place pending STOP order (without SL/TP - will be set when position opens)
+            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, $"SELL_ZONE_{zone.Id}", null, null, expiry);
 
             if (result.IsSuccessful)
             {
@@ -4267,7 +4267,17 @@ namespace cAlgo.Robots
 
             if (pendingOrder != null)
             {
-                Print($"[PENDING FILLED] Zone {pendingOrder.ZoneId} | Entry: {args.Position.EntryPrice:F5} | Volume: {args.Position.VolumeInUnits}");
+                // Apply stored SL/TP to the position
+                var result = ModifyPosition(args.Position, pendingOrder.StopLoss, pendingOrder.TakeProfit);
+
+                if (result.IsSuccessful)
+                {
+                    Print($"[PENDING FILLED] Zone {pendingOrder.ZoneId} | Entry: {args.Position.EntryPrice:F5} | SL: {pendingOrder.StopLoss:F5} | TP: {pendingOrder.TakeProfit:F5}");
+                }
+                else
+                {
+                    Print($"[ERROR] Failed to set SL/TP on pending order position: {result.Error}");
+                }
 
                 // Clean up tracking (order is now a position)
                 _zonePendingOrders.Remove(pendingOrder.ZoneId);
