@@ -2328,6 +2328,12 @@ namespace cAlgo.Robots
                 }
                 Print("[PRE-Zone] Replacing existing zone (new score {0:F2} > old {1:F2})",
                     score, activeZone.TotalScore);
+
+                // NEW CODE: Cancel old zone's pending order
+                if (EntryExecution == EntryExecutionMode.PendingStop)
+                {
+                    CancelZonePendingOrder(activeZone.Id, "Replaced by higher-scored zone");
+                }
             }
 
             // Create the zone
@@ -2403,6 +2409,12 @@ namespace cAlgo.Robots
             {
                 if (Server.Time > activeZone.ExpiryTime)
                 {
+                    // NEW CODE: Cancel pending order if exists
+                    if (EntryExecution == EntryExecutionMode.PendingStop)
+                    {
+                        CancelZonePendingOrder(activeZone.Id, "Zone expired");
+                    }
+
                     string previousState = (activeZone.State == ZoneState.Pre) ? "PRE-Zone" : "VALID-Zone";
                     activeZone.State = ZoneState.Expired;
                     Print("[Zone] Expired | No entry triggered | Was: {0} at {1:F5}",
