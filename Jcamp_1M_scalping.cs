@@ -1781,19 +1781,19 @@ namespace cAlgo.Robots
             // Log every 15 M1 bars OR when FVG count changes
             bool shouldLog = (Bars.Count % 15 == 0) || (activeFVGs.Count != previousFVGCount) || (highQualityCount > 0);
 
-            if (shouldLog)
-            {
-                Print("[M1 FVG] Scanned:{0} | Found:{1} | TooSmall:{2} | Filled:{3} | Active:{4} | HQ:{5}",
-                    m1Lookback, fvgsFound, fvgsTooSmall, fvgsFilled, activeFVGs.Count, highQualityCount);
+            // if (shouldLog)
+            // {
+            //     Print("[M1 FVG] Scanned:{0} | Found:{1} | TooSmall:{2} | Filled:{3} | Active:{4} | HQ:{5}",
+            //         m1Lookback, fvgsFound, fvgsTooSmall, fvgsFilled, activeFVGs.Count, highQualityCount);
 
-                // Log details of high-quality FVGs
-                foreach (var fvg in activeFVGs.Where(f => f.IsHighQuality))
-                {
-                    Print("[M1 FVG] {0} gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips | Time: {4:HH:mm}",
-                        fvg.IsBullish ? "Bullish" : "Bearish",
-                        fvg.BottomPrice, fvg.TopPrice, fvg.GapSizeInPips, fvg.Time);
-                }
-            }
+            //     // Log details of high-quality FVGs
+            //     foreach (var fvg in activeFVGs.Where(f => f.IsHighQuality))
+            //     {
+            //         Print("[M1 FVG] {0} gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips | Time: {4:HH:mm}",
+            //             fvg.IsBullish ? "Bullish" : "Bearish",
+            //             fvg.BottomPrice, fvg.TopPrice, fvg.GapSizeInPips, fvg.Time);
+            //     }
+            // }
         }
 
         /// <summary>
@@ -3635,6 +3635,16 @@ namespace cAlgo.Robots
         /// </summary>
         private void PlaceBuyPendingOrder(TradingZone zone)
         {
+            // Check if there's already a pending BUY order (limit 1 per direction)
+            var existingBuyOrder = _zonePendingOrders.Values
+                .FirstOrDefault(x => x.Order != null && x.Order.TradeType == TradeType.Buy);
+
+            if (existingBuyOrder != null)
+            {
+                Print($"[PENDING ORDER] BUY order already exists (Zone {existingBuyOrder.ZoneId}) - skipping new BUY order");
+                return;
+            }
+
             // Check max pending orders limit
             if (_zonePendingOrders.Count >= MAX_PENDING_ORDERS)
             {
@@ -3703,6 +3713,16 @@ namespace cAlgo.Robots
         /// </summary>
         private void PlaceSellPendingOrder(TradingZone zone)
         {
+            // Check if there's already a pending SELL order (limit 1 per direction)
+            var existingSellOrder = _zonePendingOrders.Values
+                .FirstOrDefault(x => x.Order != null && x.Order.TradeType == TradeType.Sell);
+
+            if (existingSellOrder != null)
+            {
+                Print($"[PENDING ORDER] SELL order already exists (Zone {existingSellOrder.ZoneId}) - skipping new SELL order");
+                return;
+            }
+
             // Check max pending orders limit
             if (_zonePendingOrders.Count >= MAX_PENDING_ORDERS)
             {
@@ -4265,19 +4285,20 @@ namespace cAlgo.Robots
             if (args.Position.Label != MagicNumber.ToString())
                 return;
 
-            // Check if this position came from a pending order (match by entry price and label)
+            // Check if this position came from a pending order (match by TradeType, entry price, and label)
             var pendingOrder = _zonePendingOrders.Values
                 .FirstOrDefault(x => x.Order != null
-                    && Math.Abs(x.EntryPrice - args.Position.EntryPrice) < Symbol.PipSize * 5);  // Increased tolerance to 5 pips
+                    && x.Order.TradeType == args.Position.TradeType  // CRITICAL: Match trade direction!
+                    && Math.Abs(x.EntryPrice - args.Position.EntryPrice) < Symbol.PipSize * 5);  // 5 pips tolerance
 
             if (pendingOrder == null)
             {
                 // Log warning if we can't find the matching pending order
-                Print($"[WARNING] Position {args.Position.Id} opened but no matching pending order found. Entry: {args.Position.EntryPrice:F5}");
+                Print($"[WARNING] Position {args.Position.Id} ({args.Position.TradeType}) opened but no matching pending order found. Entry: {args.Position.EntryPrice:F5}");
                 Print($"[WARNING] Active pending orders: {_zonePendingOrders.Count}");
                 foreach (var po in _zonePendingOrders.Values)
                 {
-                    Print($"[WARNING]   - Zone {po.ZoneId} | Entry: {po.EntryPrice:F5} | Diff: {Math.Abs(po.EntryPrice - args.Position.EntryPrice) / Symbol.PipSize:F1} pips");
+                    Print($"[WARNING]   - Zone {po.ZoneId} ({po.Order?.TradeType}) | Entry: {po.EntryPrice:F5} | Diff: {Math.Abs(po.EntryPrice - args.Position.EntryPrice) / Symbol.PipSize:F1} pips");
                 }
                 return;
             }
