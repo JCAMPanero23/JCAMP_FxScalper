@@ -3537,40 +3537,6 @@ namespace cAlgo.Robots
             return commissionInPrice;
         }
 
-        /// <summary>
-        /// Calculates the chandelier stop loss value
-        /// </summary>
-        private double CalculateChandelierSL(TradeType tradeType)
-        {
-            int lookback = Math.Min(ChandelierLookback, Bars.Count - 1);
-            if (lookback < 1) return 0;
-
-            double atrValue = atrM1.Result.LastValue;
-            double atrDistance = atrValue * ATRMultiplier;
-
-            if (tradeType == TradeType.Buy)
-            {
-                // LONG: Highest High - ATR
-                double highestHigh = 0;
-                for (int i = 1; i <= lookback; i++)
-                {
-                    if (Bars.HighPrices.Last(i) > highestHigh)
-                        highestHigh = Bars.HighPrices.Last(i);
-                }
-                return highestHigh - atrDistance;
-            }
-            else
-            {
-                // SHORT: Highest High + ATR (protects against upward reversals)
-                double highestHigh = 0;
-                for (int i = 1; i <= lookback; i++)
-                {
-                    if (Bars.HighPrices.Last(i) > highestHigh)
-                        highestHigh = Bars.HighPrices.Last(i);
-                }
-                return highestHigh + atrDistance;
-            }
-        }
 
         /// <summary>
         /// Processes chandelier trailing stop for all tracked positions
