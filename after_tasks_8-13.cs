@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using cAlgo.API;
 using cAlgo.API.Indicators;
@@ -21,16 +20,13 @@ namespace cAlgo.Robots
         [Parameter("=== TREND DETECTION ===", DefaultValue = "")]
         public string TrendHeader { get; set; }
 
-        // SMA Period: 200 is industry standard, optimize in range 100-300 with step 50
-        [Parameter("SMA Period", DefaultValue = 200, MinValue = 100, MaxValue = 300, Step = 50, Group = "Trend Detection")]
+        [Parameter("SMA Period", DefaultValue = 200, MinValue = 50, MaxValue = 500, Group = "Trend Detection")]
         public int SMAPeriod { get; set; }
 
-        // Swing Lookback: How far back to look for fractals. Step=10 gives 7 combinations (20-80)
-        [Parameter("Swing Lookback Bars (M15)", DefaultValue = 30, MinValue = 20, MaxValue = 80, Step = 10, Group = "Trend Detection")]
+        [Parameter("Swing Lookback Bars (M15)", DefaultValue = 100, MinValue = 10, MaxValue = 200, Group = "Trend Detection")]
         public int SwingLookbackBars { get; set; }
 
-        // Min Swing Score: Quality threshold. Step=0.05 gives 9 combinations (0.40-0.80)
-        [Parameter("Minimum Swing Score", DefaultValue = 0.60, MinValue = 0.40, MaxValue = 0.80, Step = 0.05, Group = "Trend Detection")]
+        [Parameter("Minimum Swing Score", DefaultValue = 0.60, MinValue = 0.0, MaxValue = 1.0, Group = "Trend Detection")]
         public double MinimumSwingScore { get; set; }
 
         #endregion
@@ -59,59 +55,20 @@ namespace cAlgo.Robots
         [Parameter("=== TRADE MANAGEMENT ===", DefaultValue = "")]
         public string TradeHeader { get; set; }
 
-        // Risk %: Keep conservative range 0.5-2.0%. Step=0.25 gives 7 combinations
-        [Parameter("Risk Per Trade %", DefaultValue = 1.0, MinValue = 0.5, MaxValue = 2.0, Step = 0.25, Group = "Trade Management")]
+        [Parameter("Risk Per Trade %", DefaultValue = 1.0, MinValue = 0.1, MaxValue = 5.0, Step = 0.1, Group = "Trade Management")]
         public double RiskPercent { get; set; }
 
-        // SL Buffer: Protection pips beyond zone. Step=0.5 gives 7 combinations (1-4)
-        [Parameter("SL Buffer Pips", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 4.0, Step = 0.5, Group = "Trade Management")]
+        [Parameter("SL Buffer Pips", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 10.0, Step = 0.5, Group = "Trade Management")]
         public double SLBufferPips { get; set; }
 
-        // Min RR: Trade quality filter. Step=0.5 gives 7 combinations (2-5)
-        [Parameter("Minimum RR Ratio", DefaultValue = 3.0, MinValue = 2.0, MaxValue = 5.0, Step = 0.5, Group = "Trade Management")]
+        [Parameter("Minimum RR Ratio", DefaultValue = 3.0, MinValue = 2.0, MaxValue = 10.0, Step = 0.5, Group = "Trade Management")]
         public double MinimumRRRatio { get; set; }
 
-        // Max Positions: Usually 1-3 for scalping. Step=1 gives 3 combinations
-        [Parameter("Max Positions", DefaultValue = 1, MinValue = 1, MaxValue = 3, Step = 1, Group = "Trade Management")]
+        [Parameter("Max Positions", DefaultValue = 1, MinValue = 1, MaxValue = 10, Group = "Trade Management")]
         public int MaxPositions { get; set; }
 
         [Parameter("Magic Number", DefaultValue = 100001, Group = "Trade Management")]
         public int MagicNumber { get; set; }
-
-        #endregion
-
-        #region Parameters - Chandelier Stop Loss
-
-        [Parameter("=== CHANDELIER SL ===", DefaultValue = "")]
-        public string ChandelierHeader { get; set; }
-
-        [Parameter("Enable Chandelier SL", DefaultValue = true, Group = "Chandelier SL")]
-        public bool EnableChandelierSL { get; set; }
-
-        [Parameter("Activation RR Fraction", DefaultValue = 0.75, MinValue = 0.5, MaxValue = 0.85, Step = 0.05, Group = "Chandelier SL")]
-        public double ChandelierActivationRR { get; set; }
-
-        // Trail Increment: How many pips price must move before SL trails. Step=1 gives range (3-30)
-        [Parameter("Trail Increment (pips)", DefaultValue = 10.0, MinValue = 3.0, MaxValue = 30.0, Step = 1.0, Group = "Chandelier SL")]
-        public double TrailIncrementPips { get; set; }
-
-        [Parameter("Trail Mode", DefaultValue = TrailMode.Watermark, Group = "Chandelier SL")]
-        public TrailMode TrailModeSelection { get; set; }
-
-        // Retracement Multiplier: How much SL follows price retracements (0=none, 0.5=half). CurrentPrice mode only.
-        [Parameter("Retracement Multiplier", DefaultValue = 0.0, MinValue = 0.0, MaxValue = 0.5, Step = 0.1, Group = "Chandelier SL")]
-        public double RetracementMultiplier { get; set; }
-
-        // Min Profit Buffer: Minimum pips above BE that SL must maintain during retracements
-        [Parameter("Min Profit Buffer (pips)", DefaultValue = 5.0, MinValue = 2.0, MaxValue = 10.0, Step = 1.0, Group = "Chandelier SL")]
-        public double MinProfitBufferPips { get; set; }
-
-        [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
-        public ChandelierTPMode ChandelierTPModeSelection { get; set; }
-
-        // Minimum distance from price for SL modification. Step=1 gives 6 combinations (3-8)
-        [Parameter("Min SL Distance (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 8.0, Step = 1.0, Group = "Chandelier SL")]
-        public double MinChandelierDistance { get; set; }
 
         #endregion
 
@@ -126,13 +83,8 @@ namespace cAlgo.Robots
         [Parameter("Use M15 Levels for TP", DefaultValue = true, Group = "TP Management")]
         public bool UseM15LevelsForTP { get; set; }
 
-        // H1 Proximity: How close to H1 level to use it. Step=10 gives 6 combinations (30-80)
-        [Parameter("H1 Level Proximity Pips", DefaultValue = 50, MinValue = 30, MaxValue = 80, Step = 10, Group = "TP Management")]
+        [Parameter("H1 Level Proximity Pips", DefaultValue = 50, MinValue = 10, MaxValue = 200, Group = "TP Management")]
         public int H1LevelProximityPips { get; set; }
-
-        // Max Dynamic RR: Cap on dynamic TP adjustment. Step=0.5 gives 5 combinations (3-5)
-        [Parameter("Max Dynamic RR", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 5.0, Step = 0.5, Group = "TP Management")]
-        public double MaxDynamicRR { get; set; }
 
         #endregion
 
@@ -150,8 +102,7 @@ namespace cAlgo.Robots
         [Parameter("Trade on New Swing Only", DefaultValue = true, Group = "Entry Filters")]
         public bool TradeOnNewSwingOnly { get; set; }
 
-        // Max Distance to Arm: How far price can be to arm zone. Step=2 gives 6 combinations (4-14)
-        [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 4.0, MaxValue = 14.0, Step = 2.0, Group = "Entry Filters")]
+        [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 1.0, MaxValue = 50.0, Step = 1.0, Group = "Entry Filters")]
         public double MaxDistanceToArm { get; set; }
 
         #endregion
@@ -163,128 +114,6 @@ namespace cAlgo.Robots
             Breakout,       // DEFAULT: Enter when body closes beyond rectangle
             RetestConfirm   // ALTERNATIVE: Wait for retest after breakout
         }
-
-        #endregion
-
-        #region Chandelier TP Mode Enum
-
-        public enum ChandelierTPMode
-        {
-            KeepOriginal,   // TP stays at original level throughout
-            RemoveTP,       // TP removed on activation; exit via chandelier SL only
-            TrailingTP      // TP trails by same increment as SL
-        }
-
-        public enum TrailMode
-        {
-            Watermark,      // Trail based on highest/lowest price reached (less aggressive)
-            CurrentPrice    // Trail based on current price (more aggressive, adjusts on retracement)
-        }
-
-        #endregion
-
-        #region PRE-Zone Enums and Classes - Phase 4 Implementation
-
-        /// <summary>
-        /// Represents the lifecycle state of a PRE-zone
-        /// Phase 4 Implementation - Zone State Management
-        /// </summary>
-        public enum ZoneState
-        {
-            Pre,          // Created from displacement + FVG, not yet confirmed
-            Valid,        // Confirmed by Williams Fractal
-            Armed,        // Price within proximity, ready for entry
-            Expired,      // Time limit exceeded
-            Invalidated   // Wrong-direction breakout
-        }
-
-        /// <summary>
-        /// Represents a displacement (impulse) candle that initiates zone creation
-        /// Phase 4 Implementation - Displacement Candle Tracking
-        /// </summary>
-        public class DisplacementCandle
-        {
-            public int BarIndex { get; set; }
-            public DateTime Time { get; set; }
-            public double ImpulseSize { get; set; }      // Body size in pips
-            public double ATRMultiple { get; set; }      // How many × ATR
-            public bool IsBullish { get; set; }          // Direction (close > open)
-            public double OriginPrice { get; set; }      // Zone anchor point
-        }
-
-        #region Trading Zone Class
-
-        /// <summary>
-        /// Represents a trading zone with full lifecycle management
-        /// Tracks zone state, price levels, timing, source references, and scoring
-        /// Phase 4 Implementation - Zone Lifecycle Management
-        /// </summary>
-        public class TradingZone
-        {
-            // Identity
-            public string Id { get; set; }
-            public ZoneState State { get; set; }
-
-            // Price Levels
-            public double TopPrice { get; set; }
-            public double BottomPrice { get; set; }
-            public double OriginPrice { get; set; }      // Displacement origin for fractal matching
-
-            // Timing
-            public DateTime CreatedTime { get; set; }
-            public DateTime ExpiryTime { get; set; }
-
-            // Source References
-            public DisplacementCandle Displacement { get; set; }
-            public FairValueGap FVG { get; set; }
-            public int? FractalBarIndex { get; set; }    // Set when upgraded to VALID
-
-            // Scoring
-            public double DisplacementScore { get; set; }
-            public double FVGScore { get; set; }
-            public double SessionScore { get; set; }
-            public double PeriodScore { get; set; }
-            public double TotalScore { get; set; }
-
-            // Direction
-            public string Mode { get; set; }             // "BUY" or "SELL"
-
-            /// <summary>
-            /// Creates a unique ID for this zone
-            /// </summary>
-            public static string GenerateId(DateTime time, string mode)
-            {
-                return $"Zone_{mode}_{time:yyyyMMdd_HHmmssfff}";
-            }
-        }
-
-        #endregion
-
-        #region Chandelier State Class
-
-        /// <summary>
-        /// Tracks chandelier trailing stop state for each position
-        /// </summary>
-        private class ChandelierState
-        {
-            public int PositionId { get; set; }
-            public bool IsActivated { get; set; }
-            public double EntryPrice { get; set; }
-            public double OriginalTP { get; set; }
-            public double OriginalSL { get; set; }
-            public double ActivationPrice { get; set; }
-            public double BreakevenPrice { get; set; }
-            public double CurrentTrailingSL { get; set; }
-            public double CurrentTrailingTP { get; set; }
-            public double HighestTrailingSL { get; set; }
-            public double HighestTrailingTP { get; set; }
-            public bool TPTrailingStarted { get; set; }
-            public TradeType TradeDirection { get; set; }
-            public double PriceWatermark { get; set; }  // Highest (BUY) or Lowest (SELL) price reached
-            public int LastIncrementCount { get; set; }  // Track last increment to only update on boundary changes
-        }
-
-        #endregion
 
         #endregion
 
@@ -365,18 +194,13 @@ namespace cAlgo.Robots
         /// Fair Value Gap (FVG) class for tracking price inefficiencies
         /// Phase 3 Implementation
         /// </summary>
-        public class FairValueGap
+        private class FairValueGap
         {
             public DateTime Time { get; set; }
             public double TopPrice { get; set; }
             public double BottomPrice { get; set; }
             public bool IsBullish { get; set; }
             public bool IsFilled { get; set; }
-
-            // NEW fields for Phase 4
-            public bool IsHighQuality { get; set; }          // Candle B meets displacement criteria
-            public double GapSizeInPips { get; set; }        // For filtering
-            public int DisplacementBarIndex { get; set; }    // Links to impulse candle (-1 if none)
         }
 
         #endregion
@@ -389,53 +213,8 @@ namespace cAlgo.Robots
         [Parameter("Enable FVG Filter", DefaultValue = true, Group = "FVG Detection")]
         public bool EnableFVGFilter { get; set; }
 
-        // FVG Lookback: How many bars to scan for FVGs. Step=10 gives 5 combinations (20-60)
-        [Parameter("FVG Lookback Bars", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
+        [Parameter("FVG Lookback Bars", DefaultValue = 50, MinValue = 20, MaxValue = 100, Group = "FVG Detection")]
         public int FVGLookbackBars { get; set; }
-
-        // Min FVG Size: Filter noise gaps. Step=0.5 gives 5 combinations (0.5-2.5)
-        [Parameter("Min FVG Size (pips)", DefaultValue = 1.5, MinValue = 0.5, MaxValue = 2.5, Step = 0.5, Group = "FVG Detection")]
-        public double MinFVGSizePips { get; set; }
-
-        // FVG Max Age: How old FVG can be. Step=10 gives 5 combinations (20-60)
-        [Parameter("FVG Max Age (bars)", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
-        public int FVGMaxAgeBars { get; set; }
-
-        #endregion
-
-        #region Parameters - PRE-Zone System
-
-        [Parameter("=== PRE-ZONE SYSTEM ===", DefaultValue = "")]
-        public string PreZoneHeader { get; set; }
-
-        [Parameter("Enable PRE-Zone System", DefaultValue = true, Group = "PRE-Zone System")]
-        public bool EnablePreZoneSystem { get; set; }
-
-        // ATR Period: Standard is 14. Step=2 gives 6 combinations (10-20)
-        [Parameter("ATR Period", DefaultValue = 14, MinValue = 10, MaxValue = 20, Step = 2, Group = "PRE-Zone System")]
-        public int ATRPeriod { get; set; }
-
-        // ATR Multiplier: Displacement sensitivity. Step=0.25 gives 5 combinations (1.0-2.0)
-        // KEY OPTIMIZATION PARAMETER
-        [Parameter("ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.0, Step = 0.25, Group = "PRE-Zone System")]
-        public double ATRMultiplier { get; set; }
-
-        // PRE-Zone Expiry: How long zone stays active. Step=15 gives 5 combinations (30-90)
-        [Parameter("PRE-Zone Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "PRE-Zone System")]
-        public int PreZoneExpiryMinutes { get; set; }
-
-        // VALID-Zone Expiry: Extended time after fractal confirms. Step=30 gives 5 combinations (60-180)
-        [Parameter("VALID-Zone Expiry (minutes)", DefaultValue = 120, MinValue = 60, MaxValue = 180, Step = 30, Group = "PRE-Zone System")]
-        public int ValidZoneExpiryMinutes { get; set; }
-
-        // Fractal Tolerance: How close fractal must be to zone. Step=1 gives 5 combinations (3-7)
-        [Parameter("Fractal Zone Tolerance (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 7.0, Step = 1.0, Group = "PRE-Zone System")]
-        public double FractalZoneTolerancePips { get; set; }
-
-        // Min PRE-Zone Score: Quality threshold. Step=0.05 gives 7 combinations (0.40-0.70)
-        // KEY OPTIMIZATION PARAMETER
-        [Parameter("Min PRE-Zone Score", DefaultValue = 0.50, MinValue = 0.40, MaxValue = 0.70, Step = 0.05, Group = "PRE-Zone System")]
-        public double MinPreZoneScore { get; set; }
 
         #endregion
 
@@ -447,8 +226,7 @@ namespace cAlgo.Robots
         [Parameter("Show Rectangles", DefaultValue = true, Group = "Visualization")]
         public bool ShowRectangles { get; set; }
 
-        // Rectangle Width: Trading window duration. Step=15 gives 5 combinations (30-90)
-        [Parameter("Rectangle Width (Minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "Visualization")]
+        [Parameter("Rectangle Width (Minutes)", DefaultValue = 60, MinValue = 10, MaxValue = 200, Group = "Visualization")]
         public int RectangleWidthMinutes { get; set; }
 
         [Parameter("Show Mode Label", DefaultValue = true, Group = "Visualization")]
@@ -463,14 +241,8 @@ namespace cAlgo.Robots
         [Parameter("Rectangle Transparency", DefaultValue = 80, MinValue = 0, MaxValue = 255, Group = "Visualization")]
         public int RectangleTransparency { get; set; }
 
-        [Parameter("PRE-Zone Color", DefaultValue = "Yellow", Group = "Visualization")]
-        public string ColorPreZoneName { get; set; }
-
-        [Parameter("VALID-Zone Color", DefaultValue = "Blue", Group = "Visualization")]
-        public string ColorValidZoneName { get; set; }
-
-        [Parameter("ARMED-Zone Color", DefaultValue = "Green", Group = "Visualization")]
-        public string ColorArmedZoneName { get; set; }
+        [Parameter("Max Rectangles", DefaultValue = 10, MinValue = 1, MaxValue = 50, Group = "Visualization")]
+        public int MaxRectangles { get; set; }
 
         #endregion
 
@@ -515,6 +287,7 @@ namespace cAlgo.Robots
         private double swingBottomPrice = 0;
         private bool hasActiveSwing = false;
         private bool hasValidRectangle = false;  // Rectangle exists (may or may not be armed)
+        private DateTime rectangleCreatedTime = DateTime.MinValue;  // Track when rectangle was created
         private DateTime rectangleExpiryTime = DateTime.MinValue;   // Track when rectangle expires
 
         // Phase 1B: Entry tracking
@@ -550,21 +323,14 @@ namespace cAlgo.Robots
         // Phase 3: FVG tracking
         private System.Collections.Generic.List<FairValueGap> activeFVGs = new System.Collections.Generic.List<FairValueGap>();
 
-        // Phase 4: PRE-Zone System
-        private AverageTrueRange atr;                    // ATR indicator for displacement detection (M15)
-        private AverageTrueRange atrM1;                  // ATR indicator for M1 displacement detection
-        private TradingZone activeZone = null;           // Current active zone (or null)
-        private DisplacementCandle lastDisplacement = null;  // Most recent displacement detected
-
-        // Phase 4: Zone colors
-        private readonly Color ColorPreZone = Color.FromArgb(60, 255, 255, 0);    // Yellow (PRE)
-        private readonly Color ColorValidZone = Color.FromArgb(60, 0, 128, 255);  // Blue (VALID)
-        private readonly Color ColorArmedZone = Color.FromArgb(60, 0, 255, 0);    // Green (ARMED)
-
-        // Chandelier trailing stop tracking
-        private Dictionary<int, ChandelierState> _chandelierStates;
-
         // Visualization tracking
+        private int rectangleCounter = 0;
+        private class RectangleInfo
+        {
+            public string Name { get; set; }
+            public DateTime CreatedAt { get; set; }
+        }
+        private System.Collections.Generic.List<RectangleInfo> drawnRectangles = new System.Collections.Generic.List<RectangleInfo>();
         private ChartStaticText modeLabel;
 
         #endregion
@@ -593,17 +359,6 @@ namespace cAlgo.Robots
             // between M1 and M15 chart runs (same data source = same results)
             m15Bars = MarketData.GetBars(TimeFrame.Minute15);
 
-            // Initialize chandelier state tracking
-            _chandelierStates = new Dictionary<int, ChandelierState>();
-
-            // Phase 4: Initialize ATR indicators for displacement detection
-            if (EnablePreZoneSystem)
-            {
-                atr = Indicators.AverageTrueRange(m15Bars, ATRPeriod, MovingAverageType.Simple);
-                atrM1 = Indicators.AverageTrueRange(Bars, ATRPeriod, MovingAverageType.Simple);
-                Print("[PRE-Zone] ATR indicators initialized | Period: {0} | Multiplier: {1:F1}x | M1+M15 displacement", ATRPeriod, ATRMultiplier);
-            }
-
             if (isM15Chart)
             {
                 Print("Chart: M15 | Analysis: M15 (via MarketData.GetBars)");
@@ -629,8 +384,8 @@ namespace cAlgo.Robots
 
             // Phase 1C: Initialize H1 bars for TP management
             h1Bars = MarketData.GetBars(TimeFrame.Hour);
-            Print("Phase 1C TP Management: H1 Levels={0} | M15 Levels={1} | Proximity={2} pips | Max RR: 1:{3:F1}",
-                UseH1LevelsForTP, UseM15LevelsForTP, H1LevelProximityPips, MaxDynamicRR);
+            Print("Phase 1C TP Management: H1 Levels={0} | M15 Levels={1} | Proximity={2} pips",
+                UseH1LevelsForTP, UseM15LevelsForTP, H1LevelProximityPips);
 
             // Update market structure levels
             UpdateH1Levels();
@@ -666,13 +421,6 @@ namespace cAlgo.Robots
             // Phase 3: FVG Detection
             Print("Phase 3 FVG Detection: Enabled={0} | Lookback={1} bars | FVG Weight={2:F2}",
                 EnableFVGFilter, FVGLookbackBars, WeightFVG);
-
-            // Phase 4: PRE-Zone System
-            Print("PRE-Zone System: {0} | ATR: {1} | Multiplier: {2:F1}x | Min Score: {3:F2}",
-                EnablePreZoneSystem ? "ON" : "OFF",
-                ATRPeriod,
-                ATRMultiplier,
-                MinPreZoneScore);
 
             // Print weight summary
             Print("Score Weights: Validity={0:F2} | Extremity={1:F2} | Fractal={2:F2} | Session={3:F2} | FVG={4:F2} | Candle={5:F2}",
@@ -733,41 +481,6 @@ namespace cAlgo.Robots
             }
 
             // ============================================================
-            // M1 FVG DETECTION: Process on every M1 bar close
-            // ============================================================
-            DetectFVGs();  // Scan M1 bars for Fair Value Gaps
-
-            // ============================================================
-            // M1 DISPLACEMENT DETECTION: Process on every M1 bar close
-            // ============================================================
-            if (EnablePreZoneSystem)
-            {
-                var m1Displacement = DetectM1Displacement();
-
-                if (m1Displacement != null)
-                {
-                    // Use existing M1 FVGs (already detected above)
-                    var matchingFVG = FindMatchingHighQualityFVG(m1Displacement);
-                    if (matchingFVG != null)
-                    {
-                        var newZone = CreatePreZone(m1Displacement, matchingFVG);
-                        if (newZone != null)
-                        {
-                            // Remove previous zone's visualization before replacing
-                            RemoveZoneVisualization();
-                            activeZone = newZone;
-                            SyncZoneToLegacyVariables();
-
-                            if (ShowRectangles)
-                            {
-                                DrawZoneRectangle();
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ============================================================
             // SWING DETECTION: Only process when a NEW M15 bar appears
             // ============================================================
             bool isNewM15Bar = (m15Bars.OpenTimes.LastValue != lastM15BarTime);
@@ -785,8 +498,8 @@ namespace cAlgo.Robots
                 // Phase 2: Update session tracking
                 UpdateSessionTracking();
 
-                // Note: M15 displacement detection removed - now handled on M1 bars above
-                // This allows faster PRE-zone creation (within 1 minute instead of 15)
+                // Phase 3: Detect Fair Value Gaps
+                DetectFVGs();
 
                 // 1. Detect current trend mode
                 string newMode = DetectTrendMode();
@@ -820,40 +533,8 @@ namespace cAlgo.Robots
                         lastSwingTime = swingTime;
                         hasBreakoutOccurred = false;  // Reset breakout tracking for new swing
 
-                        // Phase 4: Check if fractal confirms existing PRE-zone
-                        bool skipFractalZoneCreation = false;
-                        if (EnablePreZoneSystem && activeZone != null && activeZone.State == ZoneState.Pre)
-                        {
-                            double fractalPrice = currentMode == "SELL" ?
-                                m15Bars.HighPrices[swingIndex] :
-                                m15Bars.LowPrices[swingIndex];
-
-                            double distanceToZone = Math.Abs(fractalPrice - activeZone.OriginPrice) / Symbol.PipSize;
-
-                            if (distanceToZone <= FractalZoneTolerancePips)
-                            {
-                                // Fractal confirms PRE-zone - upgrade to VALID
-                                UpgradeToValidZone(activeZone, swingIndex);
-                                SyncZoneToLegacyVariables();
-
-                                if (ShowRectangles)
-                                {
-                                    DrawZoneRectangle();  // Redraw with VALID state color
-                                }
-
-                                // Skip normal fractal zone creation (but continue with other M15 processing)
-                                skipFractalZoneCreation = true;
-                                Print("[FractalConfirm] ✅ Fractal confirms PRE-zone at {0:F5} | Distance: {1:F1} pips | UPGRADED to VALID",
-                                    fractalPrice, distanceToZone);
-                            }
-                        }
-
-                        // Only create fractal zone if not confirmed by PRE-zone
-                        if (!skipFractalZoneCreation)
-                        {
-                            // UpdateSwingZone will set hasActiveSwing based on proximity check
-                            UpdateSwingZone(swingIndex, currentMode);
-                        }
+                        // UpdateSwingZone will set hasActiveSwing based on proximity check
+                        UpdateSwingZone(swingIndex, currentMode);
                     }
                 }
             }
@@ -867,17 +548,6 @@ namespace cAlgo.Robots
             {
                 TryRearmRectangle();
             }
-
-            // Phase 4: Update zone states (expiry, arming, invalidation)
-            if (EnablePreZoneSystem && activeZone != null)
-            {
-                UpdateZoneStates();
-            }
-
-            // ============================================================
-            // CHANDELIER TRAILING STOP: Process on every M1 bar close
-            // ============================================================
-            ProcessChandelierStops();
 
             // Phase 1B: Entry detection on M1 bar close
             // Process breakout entry logic if trading is enabled
@@ -1527,11 +1197,6 @@ namespace cAlgo.Robots
                 periodName,
                 startTime.ToString("yyyyMMddHH"));
 
-            // Check if box already exists (prevents duplicates on bot restart)
-            var existingBox = Chart.FindObject(boxName);
-            if (existingBox != null)
-                return;  // Box already drawn, skip
-
             // Calculate very large price range to ensure full chart coverage
             // Using current price ± large pip buffer (e.g., 10000 pips)
             double priceBuffer = 10000 * Symbol.PipSize;  // ~1.00 for 5-digit pairs like EURUSD
@@ -1609,323 +1274,86 @@ namespace cAlgo.Robots
         #region Phase 3: FVG Detection
 
         /// <summary>
-        /// Detects Fair Value Gaps (FVGs) on M1 timeframe for precise entry detection
-        /// ENHANCED: Scans M1 bars on every bar close for real-time FVG tracking
-        /// Phase 4 Enhancement - Switched from M15 to M1 for better precision
+        /// Detects Fair Value Gaps (FVGs) on M15 timeframe
+        /// FVG Structure:
+        /// Candle A (idx-1) = BEFORE the impulse
+        /// Candle B (idx)   = IMPULSE candle (the big move)
+        /// Candle C (idx+1) = AFTER the impulse
+        ///
+        /// Bullish FVG: Gap between A.High and C.Low (price gapped up)
+        /// Bearish FVG: Gap between A.Low and C.High (price gapped down)
+        /// Phase 3 Implementation
         /// </summary>
         private void DetectFVGs()
         {
-            int previousFVGCount = activeFVGs.Count;
-            activeFVGs.Clear();
+            activeFVGs.Clear(); // Reset each scan
 
-            // M1 lookback: Focus on RECENT FVGs only (last 30 minutes)
-            // Older FVGs are likely already filled or no longer relevant for scalping entries
-            int m1Lookback = Math.Min(30, Bars.Count - 3);  // Max 30 M1 bars (~30 minutes)
+            int lookback = Math.Min(FVGLookbackBars, m15Bars.Count - 3);
 
-            // M1 minimum size: Very small threshold for M1 gaps
-            // M1 FVGs are naturally smaller than M15 FVGs
-            double m1MinFVGSizePips = 0.1;  // 0.1 pips minimum (~1 point on EURUSD)
-
-            int fvgsFound = 0;
-            int fvgsTooSmall = 0;
-            int fvgsFilled = 0;
-
-            // Start at i=2 to ensure all 3 candles (A, B, C) are completed
-            for (int i = 2; i < m1Lookback - 1; i++)
+            // Start at 1 to ensure we have candle before and after
+            for (int i = 1; i < lookback - 1; i++)
             {
-                int idx = Bars.Count - 1 - i;  // Impulse candle index (Candle B)
+                int idx = m15Bars.Count - 1 - i; // Impulse candle index
 
-                if (idx - 1 < 0 || idx + 1 >= Bars.Count)
+                // Bounds check
+                if (idx - 1 < 0 || idx + 1 >= m15Bars.Count)
                     continue;
 
-                double candleA_High = Bars.HighPrices[idx - 1];
-                double candleA_Low = Bars.LowPrices[idx - 1];
-                double candleC_High = Bars.HighPrices[idx + 1];
-                double candleC_Low = Bars.LowPrices[idx + 1];
-
-                // Check if Candle B (impulse) is a strong move (displacement-like on M1)
-                double candleB_Body = Math.Abs(Bars.ClosePrices[idx] - Bars.OpenPrices[idx]);
-                double candleB_Range = Bars.HighPrices[idx] - Bars.LowPrices[idx];
-                bool isStrongMove = candleB_Range > 0 && (candleB_Body / candleB_Range) > 0.6;
+                // Get candle data
+                double candleA_High = m15Bars.HighPrices[idx - 1]; // Before impulse
+                double candleA_Low = m15Bars.LowPrices[idx - 1];
+                double candleC_High = m15Bars.HighPrices[idx + 1]; // After impulse
+                double candleC_Low = m15Bars.LowPrices[idx + 1];
 
                 // BULLISH FVG: Candle A's HIGH is BELOW Candle C's LOW
+                // This means price gapped UP, leaving an unfilled zone
                 if (candleA_High < candleC_Low)
                 {
-                    fvgsFound++;
-                    double gapSize = candleC_Low - candleA_High;
-                    double gapSizePips = gapSize / Symbol.PipSize;
-
-                    // Minimum size filter for M1
-                    if (gapSizePips < m1MinFVGSizePips)
-                    {
-                        fvgsTooSmall++;
-                        continue;
-                    }
-
                     var fvg = new FairValueGap
                     {
-                        Time = Bars.OpenTimes[idx],
-                        BottomPrice = candleA_High,
-                        TopPrice = candleC_Low,
+                        Time = m15Bars.OpenTimes[idx],
+                        BottomPrice = candleA_High,   // Bottom of gap
+                        TopPrice = candleC_Low,       // Top of gap
                         IsBullish = true,
-                        IsFilled = false,
-                        IsHighQuality = isStrongMove && gapSizePips >= (m1MinFVGSizePips * 3),
-                        GapSizeInPips = gapSizePips,
-                        DisplacementBarIndex = isStrongMove ? idx : -1
+                        IsFilled = false
                     };
 
-                    fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
+                    // Check if gap has been filled by subsequent price action
+                    fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
 
-                    if (fvg.IsFilled)
-                    {
-                        fvgsFilled++;
-                    }
-                    else
+                    if (!fvg.IsFilled)
                     {
                         activeFVGs.Add(fvg);
+                        Print("[FVG] Bullish gap detected at {0} | Zone: {1:F5} - {2:F5}",
+                            fvg.Time, fvg.BottomPrice, fvg.TopPrice);
                     }
                 }
 
                 // BEARISH FVG: Candle A's LOW is ABOVE Candle C's HIGH
+                // This means price gapped DOWN, leaving an unfilled zone
                 if (candleA_Low > candleC_High)
                 {
-                    fvgsFound++;
-                    double gapSize = candleA_Low - candleC_High;
-                    double gapSizePips = gapSize / Symbol.PipSize;
-
-                    // Minimum size filter for M1
-                    if (gapSizePips < m1MinFVGSizePips)
-                    {
-                        fvgsTooSmall++;
-                        continue;
-                    }
-
                     var fvg = new FairValueGap
                     {
-                        Time = Bars.OpenTimes[idx],
-                        TopPrice = candleA_Low,
-                        BottomPrice = candleC_High,
+                        Time = m15Bars.OpenTimes[idx],
+                        TopPrice = candleA_Low,       // Top of gap
+                        BottomPrice = candleC_High,   // Bottom of gap
                         IsBullish = false,
-                        IsFilled = false,
-                        IsHighQuality = isStrongMove && gapSizePips >= (m1MinFVGSizePips * 3),
-                        GapSizeInPips = gapSizePips,
-                        DisplacementBarIndex = isStrongMove ? idx : -1
+                        IsFilled = false
                     };
 
-                    fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
+                    fvg.IsFilled = IsFVGFilled(fvg, idx + 1);
 
-                    if (fvg.IsFilled)
-                    {
-                        fvgsFilled++;
-                    }
-                    else
+                    if (!fvg.IsFilled)
                     {
                         activeFVGs.Add(fvg);
+                        Print("[FVG] Bearish gap detected at {0} | Zone: {1:F5} - {2:F5}",
+                            fvg.Time, fvg.TopPrice, fvg.BottomPrice);
                     }
                 }
             }
 
-            int highQualityCount = activeFVGs.Count(f => f.IsHighQuality);
-
-            // Log every 15 M1 bars OR when FVG count changes
-            bool shouldLog = (Bars.Count % 15 == 0) || (activeFVGs.Count != previousFVGCount) || (highQualityCount > 0);
-
-            if (shouldLog)
-            {
-                Print("[M1 FVG] Scanned:{0} | Found:{1} | TooSmall:{2} | Filled:{3} | Active:{4} | HQ:{5}",
-                    m1Lookback, fvgsFound, fvgsTooSmall, fvgsFilled, activeFVGs.Count, highQualityCount);
-
-                // Log details of high-quality FVGs
-                foreach (var fvg in activeFVGs.Where(f => f.IsHighQuality))
-                {
-                    Print("[M1 FVG] {0} gap | Zone: {1:F5} - {2:F5} | Size: {3:F1} pips | Time: {4:HH:mm}",
-                        fvg.IsBullish ? "Bullish" : "Bearish",
-                        fvg.BottomPrice, fvg.TopPrice, fvg.GapSizeInPips, fvg.Time);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Detects Fair Value Gaps (FVGs) on M1 timeframe for PRE-zone system
-        /// Provides better entry precision than M15 FVGs
-        /// Phase 4 Enhancement - M1 FVG Detection
-        /// </summary>
-        private void DetectM1FVGs()
-        {
-            if (!EnablePreZoneSystem)
-                return;
-
-            // Clear old M1 FVGs
-            activeFVGs.Clear();
-
-            // Scan recent M1 bars for FVG patterns
-            int lookback = Math.Min(90, Bars.Count - 3); // Last 90 M1 bars = 1.5 hours
-
-            int fvgsDetected = 0;
-            int fvgsFiltered = 0;
-            int fvgsFilled = 0;
-            int fvgsHighQuality = 0;
-
-            Print("[M1 FVG] Scanning {0} M1 bars | Disp: {1} @ {2}",
-                lookback,
-                lastDisplacement?.IsBullish == true ? "BULL" : (lastDisplacement?.IsBullish == false ? "BEAR" : "NONE"),
-                lastDisplacement?.Time.ToString("HH:mm") ?? "N/A");
-
-            // Start at i=2 to ensure all 3 candles (A, B, C) are completed
-            for (int i = 2; i < lookback; i++)
-            {
-                int idx = Bars.Count - 1 - i;  // Candle B index
-
-                if (idx - 1 < 0 || idx + 1 >= Bars.Count)
-                    continue;
-
-                // Check if this M1 candle falls within a recent M15 displacement window
-                DateTime candleBTime = Bars.OpenTimes[idx];
-                bool isWithinDisplacement = IsWithinDisplacementWindow(candleBTime);
-
-                // Get candle prices
-                double candleA_High = Bars.HighPrices[idx - 1];
-                double candleA_Low = Bars.LowPrices[idx - 1];
-                double candleC_High = Bars.HighPrices[idx + 1];
-                double candleC_Low = Bars.LowPrices[idx + 1];
-
-                // BULLISH FVG: Candle A's HIGH is BELOW Candle C's LOW
-                if (candleA_High < candleC_Low)
-                {
-                    double gapSize = candleC_Low - candleA_High;
-                    double gapSizePips = gapSize / Symbol.PipSize;
-
-                    fvgsDetected++;
-
-                    // Minimum size filter (M1 uses 1/3 of M15 threshold for smaller gaps)
-                    double m1MinSize = MinFVGSizePips / 3.0;  // e.g., 1.5 / 3 = 0.5 pips
-                    if (gapSizePips < m1MinSize)
-                    {
-                        fvgsFiltered++;
-                        continue;
-                    }
-
-                    var fvg = new FairValueGap
-                    {
-                        Time = candleBTime,
-                        BottomPrice = candleA_High,
-                        TopPrice = candleC_Low,
-                        IsBullish = true,
-                        IsFilled = false,
-                        IsHighQuality = isWithinDisplacement,
-                        GapSizeInPips = gapSizePips,
-                        DisplacementBarIndex = isWithinDisplacement ? idx : -1
-                    };
-
-                    if (isWithinDisplacement)
-                        fvgsHighQuality++;
-
-                    // Check if filled
-                    fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
-
-                    if (fvg.IsFilled)
-                    {
-                        fvgsFilled++;
-                    }
-                    else
-                    {
-                        activeFVGs.Add(fvg);
-                    }
-                }
-
-                // BEARISH FVG: Candle A's LOW is ABOVE Candle C's HIGH
-                if (candleA_Low > candleC_High)
-                {
-                    double gapSize = candleA_Low - candleC_High;
-                    double gapSizePips = gapSize / Symbol.PipSize;
-
-                    fvgsDetected++;
-
-                    // Minimum size filter (M1 uses 1/3 of M15 threshold for smaller gaps)
-                    double m1MinSize = MinFVGSizePips / 3.0;  // e.g., 1.5 / 3 = 0.5 pips
-                    if (gapSizePips < m1MinSize)
-                    {
-                        fvgsFiltered++;
-                        continue;
-                    }
-
-                    var fvg = new FairValueGap
-                    {
-                        Time = candleBTime,
-                        TopPrice = candleA_Low,
-                        BottomPrice = candleC_High,
-                        IsBullish = false,
-                        IsFilled = false,
-                        IsHighQuality = isWithinDisplacement,
-                        GapSizeInPips = gapSizePips,
-                        DisplacementBarIndex = isWithinDisplacement ? idx : -1
-                    };
-
-                    if (isWithinDisplacement)
-                        fvgsHighQuality++;
-
-                    fvg.IsFilled = IsFVGFilledM1(fvg, idx + 1);
-
-                    if (fvg.IsFilled)
-                    {
-                        fvgsFilled++;
-                    }
-                    else
-                    {
-                        activeFVGs.Add(fvg);
-                    }
-                }
-            }
-
-            Print("[M1 FVG] Results: Detected={0} | Filtered={1} | Filled={2} | HighQuality={3} | Active={4}",
-                fvgsDetected, fvgsFiltered, fvgsFilled, fvgsHighQuality, activeFVGs.Count);
-        }
-
-        /// <summary>
-        /// Checks if M1 candle time falls within the last M15 displacement window
-        /// Phase 4 Enhancement
-        /// </summary>
-        private bool IsWithinDisplacementWindow(DateTime m1Time)
-        {
-            if (lastDisplacement == null)
-                return false;
-
-            // Get the M15 bar time range for the displacement
-            DateTime dispStart = lastDisplacement.Time;
-            DateTime dispEnd = dispStart.AddMinutes(15);
-
-            // Check if M1 candle falls within this 15-minute window
-            return m1Time >= dispStart && m1Time < dispEnd;
-        }
-
-        /// <summary>
-        /// Checks if M1 FVG has been FULLY filled (invalidated)
-        /// FVG is only considered filled if price passes THROUGH the entire gap
-        /// Partial fills (mitigations) keep the FVG active for trading
-        /// </summary>
-        private bool IsFVGFilledM1(FairValueGap fvg, int startIdx)
-        {
-            // Check bars after FVG creation up to (but not including) current bar
-            int endIdx = Bars.Count - 2;
-
-            for (int i = startIdx; i <= endIdx; i++)
-            {
-                if (fvg.IsBullish)
-                {
-                    // Bullish FVG FULLY filled only if price drops THROUGH entire gap
-                    // (price low goes below the bottom of the gap)
-                    if (Bars.LowPrices[i] <= fvg.BottomPrice)
-                        return true;
-                }
-                else
-                {
-                    // Bearish FVG FULLY filled only if price rises THROUGH entire gap
-                    // (price high goes above the top of the gap)
-                    if (Bars.HighPrices[i] >= fvg.TopPrice)
-                        return true;
-                }
-            }
-            return false;
+            Print("[FVG] Scan complete | Active FVGs: {0}", activeFVGs.Count);
         }
 
         /// <summary>
@@ -1995,505 +1423,6 @@ namespace cAlgo.Robots
             }
 
             return 0.3; // No FVG alignment - lower score
-        }
-
-        #endregion
-
-        #region Phase 4: PRE-Zone System
-
-        /// <summary>
-        /// Detects if the current M15 bar is a displacement (impulse) candle
-        /// Displacement = Body Size >= ATRMultiplier × ATR
-        /// Phase 4 Implementation
-        /// </summary>
-        private DisplacementCandle DetectDisplacement()
-        {
-            if (!EnablePreZoneSystem || atr == null)
-                return null;
-
-            int lastIdx = m15Bars.Count - 2;  // Last completed bar
-            if (lastIdx < 1)
-                return null;
-
-            // Calculate body size
-            double open = m15Bars.OpenPrices[lastIdx];
-            double close = m15Bars.ClosePrices[lastIdx];
-            double high = m15Bars.HighPrices[lastIdx];
-            double low = m15Bars.LowPrices[lastIdx];
-            double bodySize = Math.Abs(close - open);
-
-            // Get ATR value
-            double atrValue = atr.Result[lastIdx];
-            if (atrValue <= 0)
-                return null;
-
-            // Check displacement threshold
-            double atrMultiple = bodySize / atrValue;
-            if (atrMultiple < ATRMultiplier)
-                return null;
-
-            // Displacement detected!
-            bool isBullish = close > open;
-            double originPrice = isBullish ? low : high;  // Where move started
-            double bodySizePips = bodySize / Symbol.PipSize;
-
-            var displacement = new DisplacementCandle
-            {
-                BarIndex = lastIdx,
-                Time = m15Bars.OpenTimes[lastIdx],
-                ImpulseSize = bodySizePips,
-                ATRMultiple = atrMultiple,
-                IsBullish = isBullish,
-                OriginPrice = originPrice
-            };
-
-            Print("[Displacement] {0} impulse at {1} | Size: {2:F1} pips | ATR x {3:F1}",
-                isBullish ? "Bullish" : "Bearish",
-                displacement.Time.ToString("HH:mm"),
-                bodySizePips,
-                atrMultiple);
-
-            return displacement;
-        }
-
-        /// <summary>
-        /// Detects displacement on M1 timeframe for faster PRE-zone creation
-        /// Displacement = Body Size >= ATRMultiplier × ATR (on M1 bars)
-        /// Phase 4 Implementation - M1 Fast Detection
-        /// </summary>
-        private DisplacementCandle DetectM1Displacement()
-        {
-            if (!EnablePreZoneSystem || atrM1 == null)
-                return null;
-
-            int lastIdx = Bars.Count - 2;  // Last completed M1 bar
-            if (lastIdx < 1)
-                return null;
-
-            // Calculate body size on M1 bar
-            double open = Bars.OpenPrices[lastIdx];
-            double close = Bars.ClosePrices[lastIdx];
-            double high = Bars.HighPrices[lastIdx];
-            double low = Bars.LowPrices[lastIdx];
-            double bodySize = Math.Abs(close - open);
-
-            // Get M1 ATR value
-            double atrValue = atrM1.Result[lastIdx];
-            if (atrValue <= 0)
-                return null;
-
-            // Check displacement threshold (same multiplier as M15)
-            double atrMultiple = bodySize / atrValue;
-            if (atrMultiple < ATRMultiplier)
-                return null;
-
-            // M1 Displacement detected!
-            bool isBullish = close > open;
-            double originPrice = isBullish ? low : high;
-            double bodySizePips = bodySize / Symbol.PipSize;
-
-            var displacement = new DisplacementCandle
-            {
-                BarIndex = lastIdx,
-                Time = Bars.OpenTimes[lastIdx],
-                ImpulseSize = bodySizePips,
-                ATRMultiple = atrMultiple,
-                IsBullish = isBullish,
-                OriginPrice = originPrice
-            };
-
-            Print("[M1 Displacement] {0} impulse at {1:HH:mm} | Size: {2:F1} pips | ATR x {3:F1}",
-                isBullish ? "Bullish" : "Bearish",
-                displacement.Time,
-                bodySizePips,
-                atrMultiple);
-
-            return displacement;
-        }
-
-        /// <summary>
-        /// Checks if a specific bar index qualifies as a displacement candle
-        /// Used for FVG quality checking
-        /// Phase 4 Implementation
-        /// </summary>
-        private bool IsDisplacementCandle(int barIndex)
-        {
-            if (!EnablePreZoneSystem || atr == null)
-                return false;
-
-            if (barIndex < 1 || barIndex >= m15Bars.Count)
-                return false;
-
-            double open = m15Bars.OpenPrices[barIndex];
-            double close = m15Bars.ClosePrices[barIndex];
-            double bodySize = Math.Abs(close - open);
-
-            double atrValue = atr.Result[barIndex];
-            if (atrValue <= 0)
-                return false;
-
-            return (bodySize / atrValue) >= ATRMultiplier;
-        }
-
-        /// <summary>
-        /// Calculates displacement strength score (40% of PRE-zone score)
-        /// Based on ATR multiple of the impulse candle
-        /// Phase 4 Implementation
-        /// </summary>
-        private double CalculateDisplacementStrength(double atrMultiple)
-        {
-            if (atrMultiple >= 3.0) return 1.0;   // Exceptional
-            if (atrMultiple >= 2.5) return 0.9;
-            if (atrMultiple >= 2.0) return 0.8;
-            if (atrMultiple >= 1.5) return 0.7;   // Minimum
-            return 0.0;                            // Not a displacement
-        }
-
-        /// <summary>
-        /// Calculates FVG quality score (25% of PRE-zone score)
-        /// Based on gap size in pips
-        /// Phase 4 Implementation
-        /// </summary>
-        private double CalculateFVGQuality(double gapSizePips)
-        {
-            if (gapSizePips >= 5.0) return 1.0;   // Large gap
-            if (gapSizePips >= 3.0) return 0.8;
-            if (gapSizePips >= 2.0) return 0.6;
-            if (gapSizePips >= 1.5) return 0.5;   // Minimum
-            return 0.0;                            // Too small (filtered)
-        }
-
-        /// <summary>
-        /// Calculates session alignment score for PRE-zones (25% of score)
-        /// Checks if zone price aligns with session high/low
-        /// Phase 4 Implementation
-        /// </summary>
-        private double CalculateSessionAlignmentForZone(double zonePrice, DateTime zoneTime, string mode)
-        {
-            SessionLevels session = GetSessionForTime(zoneTime);
-            if (session == null)
-                return 0.5;  // Neutral if no session found
-
-            double targetLevel = mode == "SELL" ? session.High : session.Low;
-            double distancePips = Math.Abs(zonePrice - targetLevel) / Symbol.PipSize;
-
-            if (distancePips <= 0) return 1.0;    // AT session level
-            if (distancePips <= 5) return 0.85;   // NEAR
-            if (distancePips <= 10) return 0.7;   // CLOSE
-            return 0.5;                            // Not aligned
-        }
-
-        /// <summary>
-        /// Calculates optimal period score for PRE-zones (10% of score)
-        /// Uses positive-only values (no negative penalties)
-        /// Phase 4 Implementation
-        /// </summary>
-        private double CalculateOptimalPeriodScore(DateTime time)
-        {
-            OptimalPeriod period = GetOptimalPeriod(time);
-
-            switch (period)
-            {
-                case OptimalPeriod.BestOverlap:
-                    return 1.0;
-                case OptimalPeriod.GoodLondonOpen:
-                    return 0.75;
-                case OptimalPeriod.DangerDeadZone:
-                case OptimalPeriod.DangerLateNY:
-                    return 0.25;
-                default:
-                    return 0.5;  // Neutral times
-            }
-        }
-
-        /// <summary>
-        /// Calculates total PRE-zone score
-        /// Formula: Displacement(40%) + FVG(25%) + Session(25%) + Period(10%)
-        /// Phase 4 Implementation
-        /// </summary>
-        private double CalculatePreZoneScore(DisplacementCandle displacement, FairValueGap fvg, string mode)
-        {
-            double dispScore = CalculateDisplacementStrength(displacement.ATRMultiple);
-            double fvgScore = CalculateFVGQuality(fvg.GapSizeInPips);
-            double sessionScore = CalculateSessionAlignmentForZone(displacement.OriginPrice, displacement.Time, mode);
-            double periodScore = CalculateOptimalPeriodScore(displacement.Time);
-
-            double totalScore =
-                (dispScore * 0.40) +
-                (fvgScore * 0.25) +
-                (sessionScore * 0.25) +
-                (periodScore * 0.10);
-
-            Print("[PRE-Zone] Scoring: Disp={0:F2} FVG={1:F2} Session={2:F2} Period={3:F2} | Total={4:F2}",
-                dispScore, fvgScore, sessionScore, periodScore, totalScore);
-
-            return totalScore;
-        }
-
-        /// <summary>
-        /// Creates a PRE-zone from displacement + high-quality FVG
-        /// Zone is created immediately (15 min faster than fractal)
-        /// Phase 4 Implementation
-        /// </summary>
-        private TradingZone CreatePreZone(DisplacementCandle displacement, FairValueGap fvg)
-        {
-            // Block zone creation during danger zones
-            if (EnableSessionFilter)
-            {
-                OptimalPeriod currentPeriod = GetOptimalPeriod(displacement.Time);
-                if (currentPeriod == OptimalPeriod.DangerDeadZone || currentPeriod == OptimalPeriod.DangerLateNY)
-                {
-                    Print("[PRE-Zone] Blocked | Danger zone ({0}) - no zone creation allowed",
-                        currentPeriod == OptimalPeriod.DangerDeadZone ? "04:00-08:00 UTC" : "20:00-00:00 UTC");
-                    return null;
-                }
-            }
-
-            // Determine mode based on displacement direction
-            // Bearish displacement (price dropped) = SELL zone at high
-            // Bullish displacement (price rose) = BUY zone at low
-            string mode = displacement.IsBullish ? "BUY" : "SELL";
-
-            // Calculate zone boundaries (4 pips total width)
-            double originPrice = displacement.OriginPrice;
-            double topPrice = originPrice + (2 * Symbol.PipSize);
-            double bottomPrice = originPrice - (2 * Symbol.PipSize);
-
-            // Calculate score
-            double score = CalculatePreZoneScore(displacement, fvg, mode);
-
-            // Check minimum score threshold
-            if (score < MinPreZoneScore)
-            {
-                Print("[PRE-Zone] Rejected | Score {0:F2} < Min {1:F2}", score, MinPreZoneScore);
-                return null;
-            }
-
-            // Check if existing zone has higher score
-            if (activeZone != null && activeZone.State != ZoneState.Expired && activeZone.State != ZoneState.Invalidated)
-            {
-                if (activeZone.TotalScore >= score)
-                {
-                    Print("[PRE-Zone] Rejected | Existing zone has higher score ({0:F2} >= {1:F2})",
-                        activeZone.TotalScore, score);
-                    return null;
-                }
-                Print("[PRE-Zone] Replacing existing zone (new score {0:F2} > old {1:F2})",
-                    score, activeZone.TotalScore);
-            }
-
-            // Create the zone
-            var zone = new TradingZone
-            {
-                Id = TradingZone.GenerateId(displacement.Time, mode),
-                State = ZoneState.Pre,
-                TopPrice = topPrice,
-                BottomPrice = bottomPrice,
-                OriginPrice = originPrice,
-                CreatedTime = Server.Time,
-                ExpiryTime = Server.Time.AddMinutes(PreZoneExpiryMinutes),
-                Displacement = displacement,
-                FVG = fvg,
-                FractalBarIndex = null,
-                DisplacementScore = CalculateDisplacementStrength(displacement.ATRMultiple),
-                FVGScore = CalculateFVGQuality(fvg.GapSizeInPips),
-                SessionScore = CalculateSessionAlignmentForZone(originPrice, displacement.Time, mode),
-                PeriodScore = CalculateOptimalPeriodScore(displacement.Time),
-                TotalScore = score,
-                Mode = mode
-            };
-
-            Print("[PRE-Zone] Created {0} zone | Price: {1:F5}-{2:F5} | Score: {3:F2} | Expiry: {4}",
-                mode, bottomPrice, topPrice, score, zone.ExpiryTime.ToString("HH:mm"));
-
-            return zone;
-        }
-
-        /// <summary>
-        /// Upgrades PRE-zone to VALID when Williams Fractal confirms
-        /// Extends expiry time to ValidZoneExpiryMinutes
-        /// Phase 4 Implementation
-        /// </summary>
-        private void UpgradeToValidZone(TradingZone zone, int fractalBarIndex)
-        {
-            if (zone == null || zone.State != ZoneState.Pre)
-                return;
-
-            zone.State = ZoneState.Valid;
-            zone.FractalBarIndex = fractalBarIndex;
-            zone.ExpiryTime = Server.Time.AddMinutes(ValidZoneExpiryMinutes);
-
-            Print("[Zone] Upgraded to VALID | Fractal confirmed at bar {0} | New expiry: {1}",
-                fractalBarIndex, zone.ExpiryTime.ToString("HH:mm"));
-        }
-
-        /// <summary>
-        /// Updates zone states: checks expiry, proximity (arming), invalidation
-        /// Called on every M1 bar
-        /// Phase 4 Implementation
-        /// </summary>
-        private void UpdateZoneStates()
-        {
-            if (activeZone == null)
-                return;
-
-            // Skip if already expired or invalidated
-            if (activeZone.State == ZoneState.Expired || activeZone.State == ZoneState.Invalidated)
-                return;
-
-            // Check invalidation first (applies to all states)
-            if (CheckZoneInvalidation())
-            {
-                activeZone.State = ZoneState.Invalidated;
-                Print("[Zone] Invalidated | Body closed wrong direction");
-                SyncZoneToLegacyVariables();
-                return;
-            }
-
-            // Check expiry (skip if ARMED - armed zones stay until entry or invalidation)
-            if (activeZone.State != ZoneState.Armed)
-            {
-                if (Server.Time > activeZone.ExpiryTime)
-                {
-                    string previousState = (activeZone.State == ZoneState.Pre) ? "PRE-Zone" : "VALID-Zone";
-                    activeZone.State = ZoneState.Expired;
-                    Print("[Zone] Expired | No entry triggered | Was: {0} at {1:F5}",
-                        previousState,
-                        activeZone.OriginPrice);
-                    SyncZoneToLegacyVariables();
-                    return;
-                }
-            }
-
-            // Check proximity for arming (if not already armed)
-            if (activeZone.State == ZoneState.Pre || activeZone.State == ZoneState.Valid)
-            {
-                if (CheckZoneProximity())
-                {
-                    activeZone.State = ZoneState.Armed;
-                    double distancePips = GetDistanceToZone();
-                    Print("[Zone] ARMED | Price within {0:F1} pips of zone", distancePips);
-                    SyncZoneToLegacyVariables();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Checks if current price is within MaxDistanceToArm of the zone
-        /// Phase 4 Implementation
-        /// </summary>
-        private bool CheckZoneProximity()
-        {
-            if (activeZone == null)
-                return false;
-
-            double currentPrice = Symbol.Bid;
-            double distancePips = GetDistanceToZone();
-
-            return distancePips <= MaxDistanceToArm;
-        }
-
-        /// <summary>
-        /// Gets distance from current price to zone in pips
-        /// Phase 4 Implementation
-        /// </summary>
-        private double GetDistanceToZone()
-        {
-            if (activeZone == null)
-                return double.MaxValue;
-
-            double currentPrice = Symbol.Bid;
-
-            if (activeZone.Mode == "SELL")
-            {
-                // For SELL, price should be approaching from below
-                return (activeZone.BottomPrice - currentPrice) / Symbol.PipSize;
-            }
-            else
-            {
-                // For BUY, price should be approaching from above
-                return (currentPrice - activeZone.TopPrice) / Symbol.PipSize;
-            }
-        }
-
-        /// <summary>
-        /// Checks if zone should be invalidated (wrong-direction breakout)
-        /// Phase 4 Implementation
-        /// </summary>
-        private bool CheckZoneInvalidation()
-        {
-            if (activeZone == null)
-                return false;
-
-            // Get last closed M1 candle
-            int lastIdx = Bars.Count - 2;
-            if (lastIdx < 0)
-                return false;
-
-            double open = Bars.OpenPrices[lastIdx];
-            double close = Bars.ClosePrices[lastIdx];
-
-            if (activeZone.Mode == "SELL")
-            {
-                // SELL zone invalidated if body closes ABOVE zone top
-                return (close > activeZone.TopPrice && open > activeZone.TopPrice);
-            }
-            else
-            {
-                // BUY zone invalidated if body closes BELOW zone bottom
-                return (close < activeZone.BottomPrice && open < activeZone.BottomPrice);
-            }
-        }
-
-        /// <summary>
-        /// Syncs activeZone to legacy variables for backward compatibility
-        /// Entry logic reads these variables unchanged
-        /// Phase 4 Implementation
-        /// </summary>
-        private void SyncZoneToLegacyVariables()
-        {
-            if (activeZone != null && activeZone.State != ZoneState.Expired
-                && activeZone.State != ZoneState.Invalidated)
-            {
-                swingTopPrice = activeZone.TopPrice;
-                swingBottomPrice = activeZone.BottomPrice;
-                hasValidRectangle = true;
-                hasActiveSwing = (activeZone.State == ZoneState.Armed);
-                currentMode = activeZone.Mode;
-                rectangleExpiryTime = activeZone.ExpiryTime;
-            }
-            else
-            {
-                hasValidRectangle = false;
-                hasActiveSwing = false;
-            }
-        }
-
-        /// <summary>
-        /// Finds a high-quality FVG that matches the displacement direction
-        /// For M1 displacement, looks for FVGs within last 5 minutes
-        /// Returns the largest gap by pip size
-        /// Phase 4 Implementation - Updated for M1 timing
-        /// </summary>
-        private FairValueGap FindMatchingHighQualityFVG(DisplacementCandle displacement)
-        {
-            // For M1 displacement, look for FVGs within last 5 minutes
-            DateTime cutoffTime = displacement.Time.AddMinutes(-5);
-
-            var matchingFVGs = activeFVGs
-                .Where(f => f.IsBullish == displacement.IsBullish)
-                .Where(f => f.IsHighQuality || f.Time >= cutoffTime)  // Recent or high-quality
-                .OrderByDescending(f => f.GapSizeInPips)
-                .ToList();
-
-            if (matchingFVGs.Count == 0)
-            {
-                Print("[PRE-Zone] No matching FVG for {0} M1 displacement",
-                    displacement.IsBullish ? "Bullish" : "Bearish");
-                return null;
-            }
-
-            return matchingFVGs[0];  // Return largest gap
         }
 
         #endregion
@@ -2589,14 +1518,13 @@ namespace cAlgo.Robots
         /// <summary>
         /// Adjusts TP based on market structure levels
         /// Priority: H1 levels > M15 levels > Default 3R
-        /// Always maintains minimum RR ratio and respects maximum RR cap
+        /// Always maintains minimum RR ratio
         /// Phase 1C Implementation
         /// </summary>
         private double AdjustTPForMarketStructure(double entryPrice, double initialTP, double slPrice, string mode)
         {
             double minTPDistance = Math.Abs(initialTP - entryPrice); // Minimum 3R distance
             double riskDistance = Math.Abs(entryPrice - slPrice);
-            double maxTPDistance = riskDistance * MaxDynamicRR; // Maximum allowed TP distance
 
             if (mode == "SELL")
             {
@@ -2613,15 +1541,6 @@ namespace cAlgo.Robots
                         // Only use H1 level if it gives at least minimum RR
                         if (h1TPDistance >= minTPDistance)
                         {
-                            // Cap RR at maximum if exceeded
-                            if (h1RR > MaxDynamicRR)
-                            {
-                                double cappedTP = entryPrice - maxTPDistance;
-                                Print("[TP-H1] H1 support at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
-                                    bestH1Support, h1RR, MaxDynamicRR, cappedTP);
-                                return cappedTP;
-                            }
-
                             Print("[TP-H1] Using H1 support at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 bestH1Support, h1TPDistance / Symbol.PipSize, h1RR);
                             return bestH1Support;
@@ -2646,15 +1565,6 @@ namespace cAlgo.Robots
 
                         if (m15TPDistance >= minTPDistance)
                         {
-                            // Cap RR at maximum if exceeded
-                            if (m15RR > MaxDynamicRR)
-                            {
-                                double cappedTP = entryPrice - maxTPDistance;
-                                Print("[TP-M15] M15 support at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
-                                    m15Support, m15RR, MaxDynamicRR, cappedTP);
-                                return cappedTP;
-                            }
-
                             Print("[TP-M15] Using M15 support at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 m15Support, m15TPDistance / Symbol.PipSize, m15RR);
                             return m15Support;
@@ -2680,15 +1590,6 @@ namespace cAlgo.Robots
 
                         if (h1TPDistance >= minTPDistance)
                         {
-                            // Cap RR at maximum if exceeded
-                            if (h1RR > MaxDynamicRR)
-                            {
-                                double cappedTP = entryPrice + maxTPDistance;
-                                Print("[TP-H1] H1 resistance at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
-                                    bestH1Resistance, h1RR, MaxDynamicRR, cappedTP);
-                                return cappedTP;
-                            }
-
                             Print("[TP-H1] Using H1 resistance at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 bestH1Resistance, h1TPDistance / Symbol.PipSize, h1RR);
                             return bestH1Resistance;
@@ -2713,15 +1614,6 @@ namespace cAlgo.Robots
 
                         if (m15TPDistance >= minTPDistance)
                         {
-                            // Cap RR at maximum if exceeded
-                            if (m15RR > MaxDynamicRR)
-                            {
-                                double cappedTP = entryPrice + maxTPDistance;
-                                Print("[TP-M15] M15 resistance at {0:F5} (RR: 1:{1:F1}) capped to max RR 1:{2:F1} | TP: {3:F5}",
-                                    m15Resistance, m15RR, MaxDynamicRR, cappedTP);
-                                return cappedTP;
-                            }
-
                             Print("[TP-M15] Using M15 resistance at {0:F5} | Distance: {1:F1} pips | RR: 1:{2:F1}",
                                 m15Resistance, m15TPDistance / Symbol.PipSize, m15RR);
                             return m15Resistance;
@@ -2846,8 +1738,6 @@ namespace cAlgo.Robots
         /// </summary>
         private OptimalPeriod GetOptimalPeriod(DateTime time)
         {
-            // Robot is configured with TimeZone = TimeZones.UTC, so bar times are already in UTC
-            // No conversion needed - use the hour directly
             int hourUTC = time.Hour;
 
             // BEST: Overlap period (13:00-17:00 UTC) - London + NY
@@ -3017,20 +1907,6 @@ namespace cAlgo.Robots
         /// </summary>
         private void UpdateSwingZone(int swingIndex, string mode)
         {
-            // Block zone creation during danger zones (check CURRENT time, not swing time)
-            if (EnableSessionFilter)
-            {
-                DateTime currentTime = m15Bars.OpenTimes.LastValue;
-                OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
-                if (currentPeriod == OptimalPeriod.DangerDeadZone || currentPeriod == OptimalPeriod.DangerLateNY)
-                {
-                    Print("[SwingZone] Blocked | Danger zone ({0}) at {1:HH:mm} - no zone creation allowed",
-                        currentPeriod == OptimalPeriod.DangerDeadZone ? "04:00-08:00 UTC" : "20:00-00:00 UTC",
-                        currentTime);
-                    return;
-                }
-            }
-
             if (mode == "SELL")
             {
                 // SELL Mode: Rectangle from Close to High
@@ -3047,30 +1923,13 @@ namespace cAlgo.Robots
             double heightPips = (swingTopPrice - swingBottomPrice) / Symbol.PipSize;
 
             // Set rectangle timing (for entry expiry logic - Issue 3 Fix)
-            DateTime zoneCreatedTime = m15Bars.OpenTimes.LastValue;
-            rectangleExpiryTime = zoneCreatedTime.AddMinutes(RectangleWidthMinutes);
+            rectangleCreatedTime = m15Bars.OpenTimes.LastValue;
+            rectangleExpiryTime = rectangleCreatedTime.AddMinutes(RectangleWidthMinutes);
 
             Print("[SwingZone] {0} Mode | Top: {1:F5} | Bottom: {2:F5} | Height: {3:F1} pips",
                 mode, swingTopPrice, swingBottomPrice, heightPips);
             Print("[SwingZone] Created: {0} | Expires: {1} ({2} min window)",
-                zoneCreatedTime, rectangleExpiryTime, RectangleWidthMinutes);
-
-            // Remove previous zone's visualization before creating new one
-            RemoveZoneVisualization();
-
-            // Create activeZone for visualization (fractal-based zone)
-            activeZone = new TradingZone
-            {
-                Id = TradingZone.GenerateId(zoneCreatedTime, mode),
-                State = ZoneState.Valid,  // Fractal-based zones start as VALID
-                TopPrice = swingTopPrice,
-                BottomPrice = swingBottomPrice,
-                OriginPrice = mode == "SELL" ? swingTopPrice : swingBottomPrice,
-                CreatedTime = zoneCreatedTime,
-                ExpiryTime = rectangleExpiryTime,
-                Mode = mode,
-                FractalBarIndex = swingIndex
-            };
+                rectangleCreatedTime, rectangleExpiryTime, RectangleWidthMinutes);
 
             // Issue 1 Fix: Check if current price is close enough to rectangle to "arm" it
             double currentPrice = Symbol.Bid;
@@ -3107,10 +1966,10 @@ namespace cAlgo.Robots
                 hasActiveSwing = true;  // Arm the rectangle for trading
             }
 
-            // Draw rectangle on chart using zone system
+            // Draw rectangle on chart
             if (ShowRectangles)
             {
-                DrawZoneRectangle();
+                DrawSwingRectangle(swingIndex, mode);
             }
 
             // Update mode label
@@ -3135,19 +1994,8 @@ namespace cAlgo.Robots
             if (positions.Length >= MaxPositions)
                 return;
 
-            // Check if we're in a danger zone - NO TRADING during these periods
-            DateTime currentTime = Bars.OpenTimes.LastValue;
-            if (EnableSessionFilter)
-            {
-                OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
-                if (currentPeriod == OptimalPeriod.DangerDeadZone || currentPeriod == OptimalPeriod.DangerLateNY)
-                {
-                    // Don't log every bar - only log once when entering danger zone
-                    return;
-                }
-            }
-
             // FIX Issue 3: Check if rectangle has expired (time-based cutoff)
+            DateTime currentTime = Bars.OpenTimes.LastValue;
             if (currentTime > rectangleExpiryTime)
             {
                 Print("[RectangleExpired] Rectangle expired at {0} | Current time: {1} | Disabling swing",
@@ -3401,33 +2249,6 @@ namespace cAlgo.Robots
                 Print("   Position ID: {0} | Risk Amount: ${1:F2}",
                     result.Position.Id, Account.Balance * (RiskPercent / 100.0));
 
-                // Initialize chandelier state tracking
-                if (EnableChandelierSL)
-                {
-                    var state = new ChandelierState
-                    {
-                        PositionId = result.Position.Id,
-                        IsActivated = false,
-                        EntryPrice = entryPrice,
-                        OriginalTP = takeProfit,
-                        OriginalSL = stopLoss,
-                        ActivationPrice = entryPrice - ((entryPrice - takeProfit) * ChandelierActivationRR),
-                        BreakevenPrice = entryPrice - GetCommissionInPrice(result.Position),
-                        CurrentTrailingSL = stopLoss,
-                        CurrentTrailingTP = takeProfit,
-                        HighestTrailingSL = double.MaxValue,  // For SHORT, lower is better
-                        HighestTrailingTP = 0,
-                        TPTrailingStarted = false,
-                        TradeDirection = TradeType.Sell,
-                        PriceWatermark = 0,  // Will be initialized on first trail
-                        LastIncrementCount = 0  // Start at 0 increments
-                    };
-                    _chandelierStates[result.Position.Id] = state;
-
-                    Print("[CHANDELIER] Tracking SELL position {0}, activation at {1:F5}",
-                        result.Position.Id, state.ActivationPrice);
-                }
-
                 // Disable active swing if trading on new swing only
                 if (TradeOnNewSwingOnly)
                 {
@@ -3493,33 +2314,6 @@ namespace cAlgo.Robots
                 Print("   Position ID: {0} | Risk Amount: ${1:F2}",
                     result.Position.Id, Account.Balance * (RiskPercent / 100.0));
 
-                // Initialize chandelier state tracking
-                if (EnableChandelierSL)
-                {
-                    var state = new ChandelierState
-                    {
-                        PositionId = result.Position.Id,
-                        IsActivated = false,
-                        EntryPrice = entryPrice,
-                        OriginalTP = takeProfit,
-                        OriginalSL = stopLoss,
-                        ActivationPrice = entryPrice + ((takeProfit - entryPrice) * ChandelierActivationRR),
-                        BreakevenPrice = entryPrice + GetCommissionInPrice(result.Position),
-                        CurrentTrailingSL = stopLoss,
-                        CurrentTrailingTP = takeProfit,
-                        HighestTrailingSL = 0,  // For LONG, higher is better
-                        HighestTrailingTP = 0,
-                        TPTrailingStarted = false,
-                        TradeDirection = TradeType.Buy,
-                        PriceWatermark = 0,  // Will be initialized on first trail
-                        LastIncrementCount = 0  // Start at 0 increments
-                    };
-                    _chandelierStates[result.Position.Id] = state;
-
-                    Print("[CHANDELIER] Tracking BUY position {0}, activation at {1:F5}",
-                        result.Position.Id, state.ActivationPrice);
-                }
-
                 // Disable active swing if trading on new swing only
                 if (TradeOnNewSwingOnly)
                 {
@@ -3536,331 +2330,54 @@ namespace cAlgo.Robots
 
         #endregion
 
-        #region Chandelier Trailing Stop Methods
-
-        /// <summary>
-        /// Gets commission cost in price terms for breakeven calculation
-        /// </summary>
-        private double GetCommissionInPrice(Position position)
-        {
-            // Symbol.Commission is per-lot per-side in account currency
-            double commissionPerLot = Symbol.Commission * 2;  // Round trip
-            if (commissionPerLot <= 0) return 0;
-
-            // Convert commission from account currency to price movement
-            // commissionPerLot / VolumeInUnits = commission per unit in account currency
-            // Divide by PipValue to get commission in pips, multiply by PipSize to get price
-            double commissionInPrice = (commissionPerLot / position.VolumeInUnits) / Symbol.PipValue * Symbol.PipSize;
-            return commissionInPrice;
-        }
-
-
-        /// <summary>
-        /// Processes chandelier trailing stop for all tracked positions
-        /// Called from OnBar()
-        /// </summary>
-        private void ProcessChandelierStops()
-        {
-            if (!EnableChandelierSL) return;
-
-            // Get positions opened by this bot
-            var myPositions = Positions.Where(p => p.Label == MagicNumber.ToString()).ToList();
-
-            // Clean up states for closed positions
-            var closedIds = _chandelierStates.Keys.Where(id => !myPositions.Any(p => p.Id == id)).ToList();
-            foreach (var id in closedIds)
-            {
-                _chandelierStates.Remove(id);
-            }
-
-            // Process each open position
-            foreach (var position in myPositions)
-            {
-                if (!_chandelierStates.TryGetValue(position.Id, out var state))
-                    continue;  // Position not tracked (opened before bot start)
-
-                ProcessSinglePosition(position, state);
-            }
-        }
-
-        /// <summary>
-        /// Processes chandelier logic for a single position
-        /// </summary>
-        private void ProcessSinglePosition(Position position, ChandelierState state)
-        {
-            double currentPrice = position.TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask;
-
-            // Phase 1: Check for activation
-            if (!state.IsActivated)
-            {
-                bool shouldActivate = position.TradeType == TradeType.Buy
-                    ? currentPrice >= state.ActivationPrice
-                    : currentPrice <= state.ActivationPrice;
-
-                if (shouldActivate)
-                {
-                    ActivateChandelier(position, state);
-                }
-                return;  // Don't trail until activated
-            }
-
-            // Phase 2 & 3: Trail the stop
-            TrailChandelierStop(position, state);
-        }
-
-        /// <summary>
-        /// Validates that SL is at minimum distance from current price
-        /// Returns true if valid, false if too close
-        /// </summary>
-        private bool ValidateSLDistance(Position position, double proposedSL, out string reason)
-        {
-            double currentPrice = position.TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask;
-            double minDistance = MinChandelierDistance * Symbol.PipSize;
-
-            if (position.TradeType == TradeType.Buy)
-            {
-                // BUY: SL must be below current price by at least minimum distance
-                double distance = currentPrice - proposedSL;
-                if (distance < minDistance)
-                {
-                    reason = string.Format("SL {0:F5} too close to Bid {1:F5} (distance: {2:F1} pips, min: {3:F1} pips)",
-                        proposedSL, currentPrice, distance / Symbol.PipSize, MinChandelierDistance);
-                    return false;
-                }
-            }
-            else
-            {
-                // SELL: SL must be above current price by at least minimum distance
-                double distance = proposedSL - currentPrice;
-                if (distance < minDistance)
-                {
-                    reason = string.Format("SL {0:F5} too close to Ask {1:F5} (distance: {2:F1} pips, min: {3:F1} pips)",
-                        proposedSL, currentPrice, distance / Symbol.PipSize, MinChandelierDistance);
-                    return false;
-                }
-            }
-
-            reason = null;
-            return true;
-        }
-
-        /// <summary>
-        /// Activates chandelier mode - moves SL to BE+commission
-        /// </summary>
-        private void ActivateChandelier(Position position, ChandelierState state)
-        {
-            // Validate minimum distance before activation
-            if (!ValidateSLDistance(position, state.BreakevenPrice, out string reason))
-            {
-                Print("[CHANDELIER] Position {0} activation delayed - {1}", position.Id, reason);
-                return;  // Don't activate yet, will retry on next bar
-            }
-
-            state.IsActivated = true;
-            state.CurrentTrailingSL = state.BreakevenPrice;
-            state.HighestTrailingSL = state.BreakevenPrice;
-
-            // Determine new TP based on mode
-            double? newTP = null;
-            if (ChandelierTPModeSelection == ChandelierTPMode.RemoveTP)
-            {
-                newTP = null;  // Remove TP
-            }
-            else
-            {
-                newTP = state.OriginalTP;  // Keep original for now
-            }
-
-            // Modify position
-            ModifyPosition(position, state.CurrentTrailingSL, newTP, ProtectionType.Absolute);
-
-            Print("[CHANDELIER] Position {0} activated at {1:F5}, SL moved to BE+comm: {2:F5}",
-                position.Id, position.TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask, state.CurrentTrailingSL);
-        }
-
-        /// <summary>
-        /// Trails the stop loss using simple incremental logic
-        /// Trails SL by same amount price moves, in configurable increments
-        /// </summary>
-        private void TrailChandelierStop(Position position, ChandelierState state)
-        {
-            bool isBuy = position.TradeType == TradeType.Buy;
-            double currentPrice = isBuy ? Symbol.Bid : Symbol.Ask;
-            double newSL = state.CurrentTrailingSL;
-            double? newTP = position.TakeProfit;
-
-            // Determine price to use for trailing calculation based on mode
-            double priceForTrailing;
-
-            if (TrailModeSelection == TrailMode.Watermark)
-            {
-                // Watermark Mode: Track highest/lowest price reached
-                if (state.PriceWatermark == 0)
-                {
-                    state.PriceWatermark = state.ActivationPrice;
-                }
-
-                // Update price watermark (highest for BUY, lowest for SELL)
-                bool newWatermark = isBuy
-                    ? currentPrice > state.PriceWatermark
-                    : currentPrice < state.PriceWatermark;
-
-                if (newWatermark)
-                {
-                    state.PriceWatermark = currentPrice;
-                }
-
-                priceForTrailing = state.PriceWatermark;
-            }
-            else
-            {
-                // CurrentPrice Mode: Use current price (more aggressive)
-                priceForTrailing = currentPrice;
-            }
-
-            // Calculate how much price has moved from activation in pips
-            double priceMovementPips = isBuy
-                ? (priceForTrailing - state.ActivationPrice) / Symbol.PipSize
-                : (state.ActivationPrice - priceForTrailing) / Symbol.PipSize;
-
-            // Calculate current increment count and trail distance
-            int currentIncrementCount = (int)Math.Floor(priceMovementPips / TrailIncrementPips);
-            double trailDistance = currentIncrementCount * TrailIncrementPips * Symbol.PipSize;
-
-            // Check if we should update the SL
-            bool shouldUpdate;
-            double proposedSL = state.CurrentTrailingSL;
-
-            if (TrailModeSelection == TrailMode.Watermark)
-            {
-                // Watermark mode: Only trail if SL improves (one direction only)
-                proposedSL = isBuy
-                    ? state.BreakevenPrice + trailDistance
-                    : state.BreakevenPrice - trailDistance;
-
-                shouldUpdate = isBuy
-                    ? proposedSL > state.HighestTrailingSL
-                    : proposedSL < state.HighestTrailingSL;
-            }
-            else
-            {
-                // CurrentPrice mode: Only update on increment boundary changes
-                if (currentIncrementCount == state.LastIncrementCount)
-                {
-                    // No increment change, skip update
-                    shouldUpdate = false;
-                }
-                else if (currentIncrementCount > state.LastIncrementCount)
-                {
-                    // Forward movement - full increment(s)
-                    int incrementChange = currentIncrementCount - state.LastIncrementCount;
-                    double moveDistance = incrementChange * TrailIncrementPips * Symbol.PipSize;
-
-                    proposedSL = isBuy
-                        ? state.CurrentTrailingSL + moveDistance
-                        : state.CurrentTrailingSL - moveDistance;
-
-                    shouldUpdate = true;
-                }
-                else
-                {
-                    // Retracement - apply multiplier to increment change
-                    int incrementChange = state.LastIncrementCount - currentIncrementCount;
-                    double fullMoveDistance = incrementChange * TrailIncrementPips * Symbol.PipSize;
-                    double adjustedMoveDistance = fullMoveDistance * RetracementMultiplier;
-
-                    proposedSL = isBuy
-                        ? state.CurrentTrailingSL - adjustedMoveDistance
-                        : state.CurrentTrailingSL + adjustedMoveDistance;
-
-                    // Ensure SL respects minimum floor (BE + profit buffer)
-                    double profitBuffer = MinProfitBufferPips * Symbol.PipSize;
-                    double minimumSL = isBuy
-                        ? state.BreakevenPrice + profitBuffer
-                        : state.BreakevenPrice - profitBuffer;
-
-                    bool respectsFloor = isBuy
-                        ? proposedSL >= minimumSL
-                        : proposedSL <= minimumSL;
-
-                    shouldUpdate = respectsFloor;
-                }
-            }
-
-            if (shouldUpdate)
-            {
-                // Validate minimum distance from current price
-                if (!ValidateSLDistance(position, proposedSL, out string reason))
-                {
-                    Print("[CHANDELIER] Position {0} SL trail skipped - {1}", position.Id, reason);
-                    return;  // Skip this update, will retry on next bar
-                }
-
-                double oldSL = state.CurrentTrailingSL;
-                state.CurrentTrailingSL = proposedSL;
-
-                // Update increment count tracker (for CurrentPrice mode)
-                state.LastIncrementCount = currentIncrementCount;
-
-                // Update highest only in watermark mode
-                if (TrailModeSelection == TrailMode.Watermark)
-                {
-                    state.HighestTrailingSL = proposedSL;
-                }
-
-                newSL = proposedSL;
-
-                string modeLabel = TrailModeSelection == TrailMode.Watermark ? "Watermark" : "CurrentPrice";
-                Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5} | Mode: {3} | Price: {4:F1} pips | Inc: {5}",
-                    position.Id, oldSL, newSL, modeLabel, priceMovementPips, currentIncrementCount);
-
-                // Start TP trailing if mode is TrailingTP and SL moved beyond BE
-                if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
-                {
-                    bool beyondBE = isBuy
-                        ? proposedSL > state.BreakevenPrice
-                        : proposedSL < state.BreakevenPrice;
-
-                    if (beyondBE)
-                    {
-                        state.TPTrailingStarted = true;
-                        Print("[CHANDELIER] Position {0} TP trailing started", position.Id);
-                    }
-                }
-
-                // Trail TP if enabled and started - moves by same increment as SL
-                if (state.TPTrailingStarted && ChandelierTPModeSelection == ChandelierTPMode.TrailingTP)
-                {
-                    // Trail TP by the same distance as SL (maintains original RR ratio)
-                    double trailingTP = isBuy
-                        ? state.OriginalTP + trailDistance
-                        : state.OriginalTP - trailDistance;
-
-                    // TP only moves in favorable direction
-                    bool tpBetter = isBuy
-                        ? trailingTP > state.HighestTrailingTP
-                        : trailingTP < state.HighestTrailingTP;
-
-                    if (tpBetter || state.HighestTrailingTP == 0)
-                    {
-                        double oldTP = state.CurrentTrailingTP;
-                        state.CurrentTrailingTP = trailingTP;
-                        state.HighestTrailingTP = trailingTP;
-                        newTP = trailingTP;
-
-                        Print("[CHANDELIER] Position {0} TP trailed: {1:F5} → {2:F5} (same increment as SL)",
-                            position.Id, oldTP, newTP);
-                    }
-                }
-
-                // Apply modifications
-                ModifyPosition(position, newSL, newTP, ProtectionType.Absolute);
-            }
-        }
-
-        #endregion
-
         #region Visualization Methods
+
+        /// <summary>
+        /// Draws rectangle on chart at swing point
+        /// Rectangle spans from swing bar time to current time + RectangleWidthMinutes
+        /// This ensures the rectangle extends forward from NOW, not from swing detection
+        /// </summary>
+        private void DrawSwingRectangle(int swingIndex, string mode)
+        {
+            rectangleCounter++;
+            string rectName = string.Format("SwingRect_{0}_{1}", mode, rectangleCounter);
+
+            // Start time: The swing bar's open time (where the fractal formed)
+            DateTime startTime = m15Bars.OpenTimes[swingIndex];
+
+            // End time: Use M15 bar time + width (more reliable than Server.Time in backtesting)
+            DateTime currentM15Time = m15Bars.OpenTimes.LastValue;
+            DateTime endTime = currentM15Time.AddMinutes(RectangleWidthMinutes);
+
+            // Debug: Show all time references
+            Print("[RectangleDebug] SwingIndex: {0} | SwingBarTime: {1}", swingIndex, startTime);
+            Print("[RectangleDebug] Server.Time: {0} | M15 LastBar: {1} | EndTime: {2}",
+                Server.Time, currentM15Time, endTime);
+
+            // Parse color and add transparency
+            Color baseColor = mode == "BUY" ? ParseColor(BuyColorName) : ParseColor(SellColorName);
+            Color rectColor = Color.FromArgb(RectangleTransparency, baseColor);
+
+            // Draw rectangle using native API
+            var rectangle = Chart.DrawRectangle(rectName, startTime, swingTopPrice, endTime, swingBottomPrice, rectColor);
+            rectangle.IsFilled = true;
+            rectangle.IsInteractive = true;
+
+            // Track for cleanup
+            drawnRectangles.Add(new RectangleInfo
+            {
+                Name = rectName,
+                CreatedAt = Server.Time
+            });
+
+            double heightPips = (swingTopPrice - swingBottomPrice) / Symbol.PipSize;
+
+            Print("[RectangleDraw] ✅ {0} Mode Rectangle #{1}", mode, rectangleCounter);
+            Print("   Start: {0} | End: {1} | Height: {2:F1} pips", startTime, endTime, heightPips);
+
+            // Cleanup old rectangles
+            CleanupOldRectangles();
+        }
 
         /// <summary>
         /// Updates mode display label on chart
@@ -3884,79 +2401,32 @@ namespace cAlgo.Robots
             modeLabel = Chart.DrawStaticText("ModeLabel", modeText,
                 VerticalAlignment.Top, HorizontalAlignment.Right, labelColor);
 
-            //Print("[ModeDisplay] Updated to: {0}", modeText);
+            Print("[ModeDisplay] Updated to: {0}", modeText);
         }
 
         /// <summary>
-        /// Removes the current zone's rectangle and label from the chart
-        /// Call this before replacing activeZone with a new zone
+        /// Removes oldest rectangles to keep chart clean
         /// </summary>
-        private void RemoveZoneVisualization()
+        private void CleanupOldRectangles()
         {
-            if (activeZone == null)
+            if (drawnRectangles.Count <= MaxRectangles)
                 return;
 
-            string rectName = $"ZoneRect_{activeZone.Id}";
-            string labelName = $"ZoneLabel_{activeZone.Id}";
+            // Sort by creation time (oldest first)
+            var sortedRects = drawnRectangles.OrderBy(r => r.CreatedAt).ToList();
 
-            if (Chart.FindObject(rectName) != null)
-                Chart.RemoveObject(rectName);
-            if (Chart.FindObject(labelName) != null)
-                Chart.RemoveObject(labelName);
-        }
+            // Remove oldest rectangles
+            int toRemove = drawnRectangles.Count - MaxRectangles;
 
-        /// <summary>
-        /// Draws zone rectangle with state-based coloring (PRE=Yellow, VALID=Blue, ARMED=Green)
-        /// </summary>
-        private void DrawZoneRectangle()
-        {
-            if (activeZone == null || !ShowRectangles)
-                return;
-
-            // Remove current zone's rectangle if it exists (for redrawing with new state)
-            string oldRectName = $"ZoneRect_{activeZone.Id}";
-            if (Chart.FindObject(oldRectName) != null)
+            for (int i = 0; i < toRemove; i++)
             {
-                Chart.RemoveObject(oldRectName);
-            }
-            string oldLabelName = $"ZoneLabel_{activeZone.Id}";
-            if (Chart.FindObject(oldLabelName) != null)
-            {
-                Chart.RemoveObject(oldLabelName);
+                var rect = sortedRects[i];
+                Chart.RemoveObject(rect.Name);
+                drawnRectangles.Remove(rect);
             }
 
-            // Select color based on state
-            Color rectColor;
-            switch (activeZone.State)
-            {
-                case ZoneState.Pre:
-                    rectColor = ColorPreZone;      // Yellow
-                    break;
-                case ZoneState.Valid:
-                    rectColor = ColorValidZone;    // Blue
-                    break;
-                case ZoneState.Armed:
-                    rectColor = ColorArmedZone;    // Green
-                    break;
-                default:
-                    return;  // Don't draw expired/invalidated
-            }
-
-            // Calculate rectangle times
-            DateTime startTime = activeZone.CreatedTime;
-            DateTime endTime = activeZone.ExpiryTime;
-
-            // Draw rectangle
-            string rectName = $"ZoneRect_{activeZone.Id}";
-            var rect = Chart.DrawRectangle(rectName, startTime, activeZone.TopPrice,
-                endTime, activeZone.BottomPrice, rectColor);
-            rect.IsFilled = true;
-
-            // Add label
-            string stateLabel = activeZone.State.ToString().ToUpper();
-            string labelName = $"ZoneLabel_{activeZone.Id}";
-            Chart.DrawText(labelName, $"{activeZone.Mode} {stateLabel} ({activeZone.TotalScore:F2})",
-                startTime, activeZone.TopPrice + (5 * Symbol.PipSize), rectColor);
+            Print("[Cleanup] Removed {0} old rectangles | Remaining: {1}",
+                toRemove, drawnRectangles.Count);
         }
 
         /// <summary>
