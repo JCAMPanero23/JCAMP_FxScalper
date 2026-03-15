@@ -2422,6 +2422,19 @@ namespace cAlgo.Robots
                     double distancePips = GetDistanceToZone();
                     Print("[Zone] ARMED | Price within {0:F1} pips of zone", distancePips);
                     SyncZoneToLegacyVariables();
+
+                    // Place pending order if in PendingStop mode
+                    if (EntryExecution == EntryExecutionMode.PendingStop && EnableTrading)
+                    {
+                        if (activeZone.Mode == "BUY")
+                        {
+                            PlaceBuyPendingOrder(activeZone);
+                        }
+                        else if (activeZone.Mode == "SELL")
+                        {
+                            PlaceSellPendingOrder(activeZone);
+                        }
+                    }
                 }
             }
         }
