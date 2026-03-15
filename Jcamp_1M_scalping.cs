@@ -95,6 +95,9 @@ namespace cAlgo.Robots
         [Parameter("Trail Increment (pips)", DefaultValue = 10.0, MinValue = 3.0, MaxValue = 30.0, Step = 1.0, Group = "Chandelier SL")]
         public double TrailIncrementPips { get; set; }
 
+        [Parameter("Trail Mode", DefaultValue = TrailMode.Watermark, Group = "Chandelier SL")]
+        public TrailMode TrailModeSelection { get; set; }
+
         [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
         public ChandelierTPMode ChandelierTPModeSelection { get; set; }
 
@@ -161,7 +164,13 @@ namespace cAlgo.Robots
         {
             KeepOriginal,   // TP stays at original level throughout
             RemoveTP,       // TP removed on activation; exit via chandelier SL only
-            TrailingTP      // TP trails ahead of chandelier SL by offset
+            TrailingTP      // TP trails by same increment as SL
+        }
+
+        public enum TrailMode
+        {
+            Watermark,      // Trail based on highest/lowest price reached (less aggressive)
+            CurrentPrice    // Trail based on current price (more aggressive, adjusts on retracement)
         }
 
         #endregion
@@ -3669,26 +3678,39 @@ namespace cAlgo.Robots
             double newSL = state.CurrentTrailingSL;
             double? newTP = position.TakeProfit;
 
-            // Initialize watermark on first call after activation
-            if (state.PriceWatermark == 0)
+            // Determine price to use for trailing calculation based on mode
+            double priceForTrailing;
+
+            if (TrailModeSelection == TrailMode.Watermark)
             {
-                state.PriceWatermark = state.ActivationPrice;
+                // Watermark Mode: Track highest/lowest price reached
+                if (state.PriceWatermark == 0)
+                {
+                    state.PriceWatermark = state.ActivationPrice;
+                }
+
+                // Update price watermark (highest for BUY, lowest for SELL)
+                bool newWatermark = isBuy
+                    ? currentPrice > state.PriceWatermark
+                    : currentPrice < state.PriceWatermark;
+
+                if (newWatermark)
+                {
+                    state.PriceWatermark = currentPrice;
+                }
+
+                priceForTrailing = state.PriceWatermark;
             }
-
-            // Update price watermark (highest for BUY, lowest for SELL)
-            bool newWatermark = isBuy
-                ? currentPrice > state.PriceWatermark
-                : currentPrice < state.PriceWatermark;
-
-            if (newWatermark)
+            else
             {
-                state.PriceWatermark = currentPrice;
+                // CurrentPrice Mode: Use current price (more aggressive)
+                priceForTrailing = currentPrice;
             }
 
             // Calculate how much price has moved from activation in pips
             double priceMovementPips = isBuy
-                ? (state.PriceWatermark - state.ActivationPrice) / Symbol.PipSize
-                : (state.ActivationPrice - state.PriceWatermark) / Symbol.PipSize;
+                ? (priceForTrailing - state.ActivationPrice) / Symbol.PipSize
+                : (state.ActivationPrice - priceForTrailing) / Symbol.PipSize;
 
             // Calculate how much to trail SL based on completed increments
             double incrementsCompleted = Math.Floor(priceMovementPips / TrailIncrementPips);
@@ -3699,12 +3721,29 @@ namespace cAlgo.Robots
                 ? state.BreakevenPrice + trailDistance
                 : state.BreakevenPrice - trailDistance;
 
-            // Check if proposed SL is better than current
-            bool slBetter = isBuy
-                ? proposedSL > state.HighestTrailingSL
-                : proposedSL < state.HighestTrailingSL;
+            // Check if we should update the SL
+            bool shouldUpdate;
 
-            if (slBetter)
+            if (TrailModeSelection == TrailMode.Watermark)
+            {
+                // Watermark mode: Only trail if SL improves (one direction only)
+                shouldUpdate = isBuy
+                    ? proposedSL > state.HighestTrailingSL
+                    : proposedSL < state.HighestTrailingSL;
+            }
+            else
+            {
+                // CurrentPrice mode: Trail with price movement (can move both directions)
+                // But still respect minimum floor (never worse than BE)
+                bool respectsFloor = isBuy
+                    ? proposedSL >= state.BreakevenPrice
+                    : proposedSL <= state.BreakevenPrice;
+
+                // Update if different from current AND respects floor
+                shouldUpdate = respectsFloor && (Math.Abs(proposedSL - state.CurrentTrailingSL) > Symbol.PipSize * 0.1);
+            }
+
+            if (shouldUpdate)
             {
                 // Validate minimum distance from current price
                 if (!ValidateSLDistance(position, proposedSL, out string reason))
@@ -3715,11 +3754,18 @@ namespace cAlgo.Robots
 
                 double oldSL = state.CurrentTrailingSL;
                 state.CurrentTrailingSL = proposedSL;
-                state.HighestTrailingSL = proposedSL;
+
+                // Update highest only in watermark mode
+                if (TrailModeSelection == TrailMode.Watermark)
+                {
+                    state.HighestTrailingSL = proposedSL;
+                }
+
                 newSL = proposedSL;
 
-                Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5} | Price moved: {3:F1} pips | Increments: {4}",
-                    position.Id, oldSL, newSL, priceMovementPips, incrementsCompleted);
+                string modeLabel = TrailModeSelection == TrailMode.Watermark ? "Watermark" : "CurrentPrice";
+                Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5} | Mode: {3} | Price: {4:F1} pips | Inc: {5}",
+                    position.Id, oldSL, newSL, modeLabel, priceMovementPips, incrementsCompleted);
 
                 // Start TP trailing if mode is TrailingTP and SL moved beyond BE
                 if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
