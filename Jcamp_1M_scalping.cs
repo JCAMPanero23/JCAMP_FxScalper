@@ -3675,7 +3675,7 @@ namespace cAlgo.Robots
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
             // Place pending STOP order (without SL/TP - will be set when position opens)
-            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, $"BUY_ZONE_{zone.Id}", null, null, expiry);
+            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, MagicNumber.ToString(), null, null, expiry);
 
             if (result.IsSuccessful)
             {
@@ -3743,7 +3743,7 @@ namespace cAlgo.Robots
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
             // Place pending STOP order (without SL/TP - will be set when position opens)
-            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, $"SELL_ZONE_{zone.Id}", null, null, expiry);
+            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, MagicNumber.ToString(), null, null, expiry);
 
             if (result.IsSuccessful)
             {
@@ -4261,9 +4261,11 @@ namespace cAlgo.Robots
         /// </summary>
         private void OnPositionOpenedHandler(PositionOpenedEventArgs args)
         {
-            // Check if this position came from a pending order
+            // Check if this position came from a pending order (match by entry price and label)
             var pendingOrder = _zonePendingOrders.Values
-                .FirstOrDefault(x => x.Order != null && x.Order.Label == args.Position.Label);
+                .FirstOrDefault(x => x.Order != null
+                    && x.Order.Label == args.Position.Label
+                    && Math.Abs(x.EntryPrice - args.Position.EntryPrice) < Symbol.PipSize * 2);
 
             if (pendingOrder != null)
             {
