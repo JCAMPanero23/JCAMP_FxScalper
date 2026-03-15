@@ -4261,11 +4261,26 @@ namespace cAlgo.Robots
         /// </summary>
         private void OnPositionOpenedHandler(PositionOpenedEventArgs args)
         {
+            // Only process positions with our magic number label
+            if (args.Position.Label != MagicNumber.ToString())
+                return;
+
             // Check if this position came from a pending order (match by entry price and label)
             var pendingOrder = _zonePendingOrders.Values
                 .FirstOrDefault(x => x.Order != null
-                    && x.Order.Label == args.Position.Label
-                    && Math.Abs(x.EntryPrice - args.Position.EntryPrice) < Symbol.PipSize * 2);
+                    && Math.Abs(x.EntryPrice - args.Position.EntryPrice) < Symbol.PipSize * 5);  // Increased tolerance to 5 pips
+
+            if (pendingOrder == null)
+            {
+                // Log warning if we can't find the matching pending order
+                Print($"[WARNING] Position {args.Position.Id} opened but no matching pending order found. Entry: {args.Position.EntryPrice:F5}");
+                Print($"[WARNING] Active pending orders: {_zonePendingOrders.Count}");
+                foreach (var po in _zonePendingOrders.Values)
+                {
+                    Print($"[WARNING]   - Zone {po.ZoneId} | Entry: {po.EntryPrice:F5} | Diff: {Math.Abs(po.EntryPrice - args.Position.EntryPrice) / Symbol.PipSize:F1} pips");
+                }
+                return;
+            }
 
             if (pendingOrder != null)
             {
