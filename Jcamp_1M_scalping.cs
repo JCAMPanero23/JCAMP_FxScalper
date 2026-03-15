@@ -306,6 +306,24 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Pending Order Tracking Class
+
+        /// <summary>
+        /// Tracks pending orders associated with zones
+        /// </summary>
+        private class ZonePendingOrder
+        {
+            public string ZoneId { get; set; }
+            public PendingOrder Order { get; set; }
+            public DateTime PlacedAt { get; set; }
+            public DateTime ExpiresAt { get; set; }
+            public double EntryPrice { get; set; }
+            public double StopLoss { get; set; }
+            public double TakeProfit { get; set; }
+        }
+
+        #endregion
+
         #endregion
 
         #region Session Enums and Classes
@@ -575,6 +593,10 @@ namespace cAlgo.Robots
         private AverageTrueRange atrM1;                  // ATR indicator for M1 displacement detection
         private TradingZone activeZone = null;           // Current active zone (or null)
         private DisplacementCandle lastDisplacement = null;  // Most recent displacement detected
+
+        // Pending Order Tracking
+        private readonly Dictionary<string, ZonePendingOrder> _zonePendingOrders = new Dictionary<string, ZonePendingOrder>();
+        private const int MAX_PENDING_ORDERS = 2;         // Limit concurrent pending orders
 
         // Phase 4: Zone colors
         private readonly Color ColorPreZone = Color.FromArgb(60, 255, 255, 0);    // Yellow (PRE)
