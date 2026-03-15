@@ -1,0 +1,161 @@
+================================================================================
+JCAMP FxScalper - Manual Optimization Setup for cAlgo
+================================================================================
+
+cAlgo doesn't support importing .optset files. Follow these steps to set up
+optimization manually in the cAlgo interface.
+
+================================================================================
+QUICK TEST - 12 Combinations (~5-10 minutes)
+================================================================================
+
+1. Open cAlgo → Load bot → Click "Optimize"
+2. In the optimizer, enable and configure these parameters:
+
+   ☑ MinimumSwingScore
+      Start: 0.60  |  End: 0.70  |  Step: 0.05
+      (3 values: 0.60, 0.65, 0.70)
+
+   ☑ MinFVGSizePips
+      Start: 1.0   |  End: 2.0   |  Step: 1.0
+      (2 values: 1.0, 2.0)
+
+   ☑ MinimumRRRatio
+      Start: 2.5   |  End: 3.5   |  Step: 1.0
+      (2 values: 2.5, 3.5)
+
+3. Leave ALL other parameters at their default values
+4. Total combinations: 3 × 2 × 2 = 12
+5. Set date range: 1-2 months
+6. Click START
+
+================================================================================
+PHASE 1: CORE QUALITY - 36 Combinations (~20-40 minutes)
+================================================================================
+
+Enable these parameters in the optimizer:
+
+   ☑ MinimumSwingScore
+      Start: 0.60  |  End: 0.75  |  Step: 0.05
+      (4 values: 0.60, 0.65, 0.70, 0.75)
+
+   ☑ MinFVGSizePips
+      Start: 1.0   |  End: 2.0   |  Step: 0.5
+      (3 values: 1.0, 1.5, 2.0)
+
+   ☑ MinimumRRRatio
+      Start: 2.5   |  End: 4.0   |  Step: 0.5
+      (4 values: 2.5, 3.0, 3.5, 4.0)
+
+Leave all other parameters DISABLED.
+
+Total combinations: 4 × 3 × 4 = 48 combinations
+Set date range: 3 months
+Click START
+
+After completion:
+- Note the top 3 performing combinations
+- Write down the best values for: MinimumSwingScore, MinFVGSizePips, MinimumRRRatio
+
+================================================================================
+PHASE 2: IMPULSE STRENGTH - 16 Combinations (~10-20 minutes)
+================================================================================
+
+1. Set the Phase 1 winners as FIXED values:
+
+   MinimumSwingScore = [your Phase 1 winner value]
+   MinFVGSizePips = [your Phase 1 winner value]
+   MinimumRRRatio = [your Phase 1 winner value]
+
+2. Enable these parameters for optimization:
+
+   ☑ ATRMultiplier
+      Start: 1.25  |  End: 2.0   |  Step: 0.25
+      (4 values: 1.25, 1.50, 1.75, 2.0)
+
+   ☑ MinPreZoneScore
+      Start: 0.45  |  End: 0.60  |  Step: 0.05
+      (4 values: 0.45, 0.50, 0.55, 0.60)
+
+Total combinations: 4 × 4 = 16
+Set date range: 3 months
+Click START
+
+================================================================================
+PHASE 3: FINE TUNING (Optional) - 12 Combinations
+================================================================================
+
+Use your best values from Phase 1 & 2 as FIXED, then optimize:
+
+   ☑ MaxDistanceToArm
+      Start: 8     |  End: 12    |  Step: 2
+      (3 values: 8, 10, 12)
+
+   ☑ SessionWeight
+      Start: 0.20  |  End: 0.35  |  Step: 0.05
+      (4 values: 0.20, 0.25, 0.30, 0.35)
+
+Total combinations: 3 × 4 = 12
+
+================================================================================
+COMPREHENSIVE OPTIMIZATION (Advanced) - Many Combinations
+================================================================================
+
+If you want to optimize everything at once (not recommended for beginners):
+
+   ☑ MinimumSwingScore:    0.60 → 0.75  (Step: 0.05)
+   ☑ MinFVGSizePips:       1.0  → 2.0   (Step: 0.5)
+   ☑ MinimumRRRatio:       2.5  → 4.0   (Step: 0.5)
+   ☑ ATRMultiplier:        1.25 → 2.0   (Step: 0.25)
+   ☑ MinPreZoneScore:      0.45 → 0.60  (Step: 0.05)
+
+Total: 4×3×4×4×4 = 768 combinations (WILL TAKE HOURS)
+
+Only use this if you have a powerful computer and can leave it running overnight.
+
+================================================================================
+USING THE .cbotset PRESET FILES INSTEAD
+================================================================================
+
+If you don't want to optimize and just want to test pre-configured settings:
+
+1. In cAlgo, click "Import Parameters"
+2. Navigate to: D:\JCAMP_FxScalper\optimization_sets\
+3. Choose one:
+   - entry_quality_high.cbotset (conservative, fewer trades)
+   - entry_balanced.cbotset (moderate, recommended)
+   - entry_frequency_high.cbotset (aggressive, more trades)
+4. Run backtest with those parameters
+5. Compare results
+
+================================================================================
+OPTIMIZATION TIPS
+================================================================================
+
+1. Start date range: Use 3 months minimum for statistical validity
+2. Validation: After finding best parameters, test on DIFFERENT 3 months
+3. Optimization criteria: Usually "Max Net Profit" or "Max Sharpe Ratio"
+4. Genetic algorithm: Can speed up large optimizations (enable in settings)
+5. Don't over-optimize: Results that are "too perfect" won't work forward
+
+================================================================================
+PARAMETERS TO KEEP FIXED (Don't Optimize These)
+================================================================================
+
+Risk Management:
+- RiskPercent: 1.0 (keep constant)
+- SLBufferPips: 2.0
+- MaxPositions: 1
+
+Chandelier Settings (already optimized):
+- TrailIncrementPips: 5
+- TrailModeSelection: 1 (CurrentPrice)
+- RetracementMultiplier: 0.5
+- MinProfitBufferPips: 5
+- ChandelierActivationRR: 0.75
+
+Timeframes:
+- SMAPeriod: 200
+- SwingLookbackBars: 30
+
+================================================================================

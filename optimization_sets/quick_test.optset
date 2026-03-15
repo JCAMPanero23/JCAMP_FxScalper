@@ -1,48 +1,80 @@
 {
+  "Chart": {
+    "Symbol": "EURUSD",
+    "Period": "m1"
+  },
+  "Parameters": {
+    "TrendHeader": "",
+    "SMAPeriod": "200",
+    "SwingLookbackBars": "30",
+    "MinimumSwingScore": "0.6",
+    "SessionHeader": "",
+    "EnableSessionFilter": "True",
+    "ShowSessionBoxes": "False",
+    "SessionBoxDisplayMode": "1",
+    "SessionWeight": "0.2",
+    "TradeHeader": "",
+    "RiskPercent": "1",
+    "SLBufferPips": "2",
+    "MinimumRRRatio": "3",
+    "MaxPositions": "1",
+    "MagicNumber": "100001",
+    "ChandelierHeader": "",
+    "EnableChandelierSL": "True",
+    "ChandelierActivationRR": "0.75",
+    "TrailIncrementPips": "5",
+    "TrailModeSelection": "1",
+    "RetracementMultiplier": "0.5",
+    "MinProfitBufferPips": "5",
+    "ChandelierTPModeSelection": "1",
+    "MinChandelierDistance": "5",
+    "TPHeader": "",
+    "UseH1LevelsForTP": "True",
+    "UseM15LevelsForTP": "True",
+    "H1LevelProximityPips": "50",
+    "MaxDynamicRR": "5",
+    "EntryHeader": "",
+    "EnableTrading": "True",
+    "EntryModeSelection": "0",
+    "TradeOnNewSwingOnly": "True",
+    "MaxDistanceToArm": "10",
+    "FVGHeader": "",
+    "EnableFVGFilter": "True",
+    "FVGLookbackBars": "50",
+    "MinFVGSizePips": "1.5",
+    "FVGMaxAgeBars": "30",
+    "PreZoneHeader": "",
+    "EnablePreZoneSystem": "True",
+    "ATRPeriod": "14",
+    "ATRMultiplier": "1.5",
+    "PreZoneExpiryMinutes": "60",
+    "ValidZoneExpiryMinutes": "120",
+    "FractalZoneTolerancePips": "5",
+    "MinPreZoneScore": "0.5",
+    "VisualHeader": "",
+    "ShowRectangles": "False",
+    "RectangleWidthMinutes": "60",
+    "ShowModeLabel": "False",
+    "BuyColorName": "Green",
+    "SellColorName": "Red",
+    "RectangleTransparency": "80",
+    "ColorPreZoneName": "Yellow",
+    "ColorValidZoneName": "Blue",
+    "ColorArmedZoneName": "Green",
+    "WeightsHeader": "",
+    "WeightValidity": "0.2",
+    "WeightExtremity": "0.25",
+    "WeightFractal": "0.15",
+    "WeightSession": "0.2",
+    "WeightFVG": "0.15",
+    "WeightCandle": "0.05"
+  },
   "OptimizationSettings": {
-    "OptimizationCriteria": "MaxNetProfit",
-    "Description": "Quick Test - Fast optimization with limited combinations (3x2x2 = 12 tests)",
-    "Parameters": [
-      {
-        "Name": "MinimumSwingScore",
-        "Enabled": true,
-        "Start": 0.60,
-        "End": 0.70,
-        "Step": 0.05,
-        "Comment": "3 values: 0.60, 0.65, 0.70"
-      },
-      {
-        "Name": "MinFVGSizePips",
-        "Enabled": true,
-        "Start": 1.0,
-        "End": 2.0,
-        "Step": 1.0,
-        "Comment": "2 values: 1.0, 2.0"
-      },
-      {
-        "Name": "MinimumRRRatio",
-        "Enabled": true,
-        "Start": 2.5,
-        "End": 3.5,
-        "Step": 1.0,
-        "Comment": "2 values: 2.5, 3.5"
-      },
-      {
-        "Name": "ATRMultiplier",
-        "Enabled": false,
-        "Start": 1.5,
-        "End": 1.5,
-        "Step": 0.25,
-        "Comment": "DISABLED for quick test"
-      },
-      {
-        "Name": "MinPreZoneScore",
-        "Enabled": false,
-        "Start": 0.50,
-        "End": 0.50,
-        "Step": 0.05,
-        "Comment": "DISABLED for quick test"
-      }
+    "Comment": "Quick Test - Optimize 3 key parameters: MinimumSwingScore (0.60-0.70), MinFVGSizePips (1.0-2.0), MinimumRRRatio (2.5-3.5)",
+    "OptimizeParameters": [
+      "MinimumSwingScore",
+      "MinFVGSizePips",
+      "MinimumRRRatio"
     ]
   }
 }
