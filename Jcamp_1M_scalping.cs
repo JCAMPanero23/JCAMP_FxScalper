@@ -277,6 +277,7 @@ namespace cAlgo.Robots
             public bool TPTrailingStarted { get; set; }
             public TradeType TradeDirection { get; set; }
             public double PriceWatermark { get; set; }  // Highest (BUY) or Lowest (SELL) price reached
+            public int LastIncrementCount { get; set; }  // Track last increment to only update on boundary changes
         }
 
         #endregion
@@ -3414,7 +3415,8 @@ namespace cAlgo.Robots
                         HighestTrailingTP = 0,
                         TPTrailingStarted = false,
                         TradeDirection = TradeType.Sell,
-                        PriceWatermark = 0  // Will be initialized on first trail
+                        PriceWatermark = 0,  // Will be initialized on first trail
+                        LastIncrementCount = 0  // Start at 0 increments
                     };
                     _chandelierStates[result.Position.Id] = state;
 
@@ -3505,7 +3507,8 @@ namespace cAlgo.Robots
                         HighestTrailingTP = 0,
                         TPTrailingStarted = false,
                         TradeDirection = TradeType.Buy,
-                        PriceWatermark = 0  // Will be initialized on first trail
+                        PriceWatermark = 0,  // Will be initialized on first trail
+                        LastIncrementCount = 0  // Start at 0 increments
                     };
                     _chandelierStates[result.Position.Id] = state;
 
@@ -3716,51 +3719,63 @@ namespace cAlgo.Robots
                 ? (priceForTrailing - state.ActivationPrice) / Symbol.PipSize
                 : (state.ActivationPrice - priceForTrailing) / Symbol.PipSize;
 
-            // Calculate how much to trail SL based on completed increments
-            double incrementsCompleted = Math.Floor(priceMovementPips / TrailIncrementPips);
-            double trailDistance = incrementsCompleted * TrailIncrementPips * Symbol.PipSize;
-
-            // Calculate new SL position
-            double proposedSL = isBuy
-                ? state.BreakevenPrice + trailDistance
-                : state.BreakevenPrice - trailDistance;
+            // Calculate current increment count
+            int currentIncrementCount = (int)Math.Floor(priceMovementPips / TrailIncrementPips);
 
             // Check if we should update the SL
             bool shouldUpdate;
+            double proposedSL = state.CurrentTrailingSL;
 
             if (TrailModeSelection == TrailMode.Watermark)
             {
                 // Watermark mode: Only trail if SL improves (one direction only)
+                double trailDistance = currentIncrementCount * TrailIncrementPips * Symbol.PipSize;
+                proposedSL = isBuy
+                    ? state.BreakevenPrice + trailDistance
+                    : state.BreakevenPrice - trailDistance;
+
                 shouldUpdate = isBuy
                     ? proposedSL > state.HighestTrailingSL
                     : proposedSL < state.HighestTrailingSL;
             }
             else
             {
-                // CurrentPrice mode: Trail with price movement
-                // Check if this is a retracement (backward movement)
-                bool isRetracement = isBuy
-                    ? proposedSL < state.CurrentTrailingSL
-                    : proposedSL > state.CurrentTrailingSL;
-
-                if (isRetracement && RetracementMultiplier < 1.0)
+                // CurrentPrice mode: Only update on increment boundary changes
+                if (currentIncrementCount == state.LastIncrementCount)
                 {
-                    // Apply retracement multiplier to reduce backward movement
-                    double backwardDistance = Math.Abs(proposedSL - state.CurrentTrailingSL);
-                    double adjustedDistance = backwardDistance * RetracementMultiplier;
+                    // No increment change, skip update
+                    shouldUpdate = false;
+                }
+                else if (currentIncrementCount > state.LastIncrementCount)
+                {
+                    // Forward movement - full increment(s)
+                    int incrementChange = currentIncrementCount - state.LastIncrementCount;
+                    double moveDistance = incrementChange * TrailIncrementPips * Symbol.PipSize;
 
                     proposedSL = isBuy
-                        ? state.CurrentTrailingSL - adjustedDistance
-                        : state.CurrentTrailingSL + adjustedDistance;
+                        ? state.CurrentTrailingSL + moveDistance
+                        : state.CurrentTrailingSL - moveDistance;
+
+                    shouldUpdate = true;
                 }
+                else
+                {
+                    // Retracement - apply multiplier to increment change
+                    int incrementChange = state.LastIncrementCount - currentIncrementCount;
+                    double fullMoveDistance = incrementChange * TrailIncrementPips * Symbol.PipSize;
+                    double adjustedMoveDistance = fullMoveDistance * RetracementMultiplier;
 
-                // Ensure SL respects minimum floor (never worse than BE)
-                bool respectsFloor = isBuy
-                    ? proposedSL >= state.BreakevenPrice
-                    : proposedSL <= state.BreakevenPrice;
+                    proposedSL = isBuy
+                        ? state.CurrentTrailingSL - adjustedMoveDistance
+                        : state.CurrentTrailingSL + adjustedMoveDistance;
 
-                // Update if different from current AND respects floor
-                shouldUpdate = respectsFloor && (Math.Abs(proposedSL - state.CurrentTrailingSL) > Symbol.PipSize * 0.1);
+                    // Ensure SL respects minimum floor (never worse than BE)
+                    bool respectsFloor = isBuy
+                        ? proposedSL >= state.BreakevenPrice
+                        : proposedSL <= state.BreakevenPrice;
+
+                    shouldUpdate = respectsFloor;
+                }
             }
 
             if (shouldUpdate)
@@ -3775,6 +3790,9 @@ namespace cAlgo.Robots
                 double oldSL = state.CurrentTrailingSL;
                 state.CurrentTrailingSL = proposedSL;
 
+                // Update increment count tracker (for CurrentPrice mode)
+                state.LastIncrementCount = currentIncrementCount;
+
                 // Update highest only in watermark mode
                 if (TrailModeSelection == TrailMode.Watermark)
                 {
@@ -3785,7 +3803,7 @@ namespace cAlgo.Robots
 
                 string modeLabel = TrailModeSelection == TrailMode.Watermark ? "Watermark" : "CurrentPrice";
                 Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5} | Mode: {3} | Price: {4:F1} pips | Inc: {5}",
-                    position.Id, oldSL, newSL, modeLabel, priceMovementPips, incrementsCompleted);
+                    position.Id, oldSL, newSL, modeLabel, priceMovementPips, currentIncrementCount);
 
                 // Start TP trailing if mode is TrailingTP and SL moved beyond BE
                 if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
