@@ -3595,7 +3595,7 @@ namespace cAlgo.Robots
             }
 
             // Modify position
-            ModifyPosition(position, state.CurrentTrailingSL, newTP);
+            ModifyPosition(position, state.CurrentTrailingSL, newTP, ProtectionType.Absolute);
 
             Print("[CHANDELIER] Position {0} activated at {1:F5}, SL moved to BE+comm: {2:F5}",
                 position.Id, position.TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask, state.CurrentTrailingSL);
@@ -3671,7 +3671,7 @@ namespace cAlgo.Robots
                     }
 
                     // Apply modifications
-                    ModifyPosition(position, newSL, newTP);
+                    ModifyPosition(position, newSL, newTP, ProtectionType.Absolute);
                 }
             }
         }
