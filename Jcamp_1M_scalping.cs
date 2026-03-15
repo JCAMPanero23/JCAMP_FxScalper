@@ -163,6 +163,16 @@ namespace cAlgo.Robots
 
         [Parameter("Pending Order Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 240, Step = 30, Group = "Entry System")]
         public int PendingOrderExpiryMinutes { get; set; }
+
+        // Daily Loss Limit Parameters
+        [Parameter("Enable Daily Loss Limit", DefaultValue = false, Group = "Risk Management")]
+        public bool EnableDailyLossLimit { get; set; }
+
+        [Parameter("Max Daily R Loss", DefaultValue = -3.0, MinValue = -10.0, MaxValue = -1.0, Step = 0.5, Group = "Risk Management")]
+        public double MaxDailyRLoss { get; set; }
+
+        [Parameter("Max Daily Losing Trades", DefaultValue = 5, MinValue = 1, MaxValue = 20, Step = 1, Group = "Risk Management")]
+        public int MaxDailyLosingTrades { get; set; }
         // NEW PARAMETERS END
 
         #endregion
@@ -598,6 +608,12 @@ namespace cAlgo.Robots
         private readonly Dictionary<string, ZonePendingOrder> _zonePendingOrders = new Dictionary<string, ZonePendingOrder>();
         private const int MAX_PENDING_ORDERS = 2;         // Limit concurrent pending orders
 
+        // Daily Loss Limit Tracking
+        private double _dailyRLoss = 0.0;                  // Cumulative R loss for current day
+        private int _dailyLosingTrades = 0;                // Count of losing trades for current day
+        private DateTime _lastTradingDay = DateTime.MinValue;  // Track when to reset daily counters
+        private bool _dailyLimitReached = false;           // Flag to stop trading for the day
+
         // Phase 4: Zone colors
         private readonly Color ColorPreZone = Color.FromArgb(60, 255, 255, 0);    // Yellow (PRE)
         private readonly Color ColorValidZone = Color.FromArgb(60, 0, 128, 255);  // Blue (VALID)
@@ -770,6 +786,9 @@ namespace cAlgo.Robots
                     SMAPeriod + 5, m15Bars.Count);
                 return;
             }
+
+            // Check and reset daily loss limit counters if new trading day
+            CheckDailyReset();
 
             // Always update mode display on M1 bars (keeps label visible on M1 chart)
             if (!isM15Chart && ShowModeLabel && !string.IsNullOrEmpty(currentMode))
@@ -3453,6 +3472,13 @@ namespace cAlgo.Robots
         /// </summary>
         private void ExecuteSellTrade()
         {
+            // Check daily loss limit
+            if (IsDailyLimitReached())
+            {
+                Print("[SELL] Daily loss limit reached - skipping trade");
+                return;
+            }
+
             double entryPrice = Symbol.Bid;
 
             // SL = rectangle top + buffer (above the zone)
@@ -3545,6 +3571,13 @@ namespace cAlgo.Robots
         /// </summary>
         private void ExecuteBuyTrade()
         {
+            // Check daily loss limit
+            if (IsDailyLimitReached())
+            {
+                Print("[BUY] Daily loss limit reached - skipping trade");
+                return;
+            }
+
             double entryPrice = Symbol.Ask;
 
             // SL = rectangle bottom - buffer (below the zone)
@@ -3635,6 +3668,13 @@ namespace cAlgo.Robots
         /// </summary>
         private void PlaceBuyPendingOrder(TradingZone zone)
         {
+            // Check daily loss limit
+            if (IsDailyLimitReached())
+            {
+                Print("[PENDING ORDER] Daily loss limit reached - skipping BUY order");
+                return;
+            }
+
             // Check if there's already a pending BUY order (limit 1 per direction)
             var existingBuyOrder = _zonePendingOrders.Values
                 .FirstOrDefault(x => x.Order != null && x.Order.TradeType == TradeType.Buy);
@@ -3713,6 +3753,13 @@ namespace cAlgo.Robots
         /// </summary>
         private void PlaceSellPendingOrder(TradingZone zone)
         {
+            // Check daily loss limit
+            if (IsDailyLimitReached())
+            {
+                Print("[PENDING ORDER] Daily loss limit reached - skipping SELL order");
+                return;
+            }
+
             // Check if there's already a pending SELL order (limit 1 per direction)
             var existingSellOrder = _zonePendingOrders.Values
                 .FirstOrDefault(x => x.Order != null && x.Order.TradeType == TradeType.Sell);
@@ -3822,6 +3869,103 @@ namespace cAlgo.Robots
             foreach (var pendingOrder in expired)
             {
                 CancelZonePendingOrder(pendingOrder.ZoneId, "Order expiry time reached");
+            }
+        }
+
+        #endregion
+
+        #region Daily Loss Limit Methods
+
+        /// <summary>
+        /// Check if it's a new trading day and reset counters if needed
+        /// </summary>
+        private void CheckDailyReset()
+        {
+            if (!EnableDailyLossLimit)
+                return;
+
+            var currentDay = Server.Time.Date;
+
+            // Reset counters at the start of a new day
+            if (_lastTradingDay != currentDay)
+            {
+                if (_dailyRLoss < 0 || _dailyLosingTrades > 0)
+                {
+                    Print($"[DAILY RESET] New trading day. Previous day: R Loss = {_dailyRLoss:F2}R, Losing trades = {_dailyLosingTrades}");
+                }
+
+                _dailyRLoss = 0.0;
+                _dailyLosingTrades = 0;
+                _dailyLimitReached = false;
+                _lastTradingDay = currentDay;
+            }
+        }
+
+        /// <summary>
+        /// Check if daily loss limit has been reached
+        /// </summary>
+        private bool IsDailyLimitReached()
+        {
+            if (!EnableDailyLossLimit)
+                return false;
+
+            // Check if already flagged as limit reached
+            if (_dailyLimitReached)
+                return true;
+
+            // Check R loss limit
+            if (_dailyRLoss <= MaxDailyRLoss)
+            {
+                _dailyLimitReached = true;
+                Print($"[DAILY LIMIT] Max R loss reached! Current: {_dailyRLoss:F2}R <= Limit: {MaxDailyRLoss:F2}R. NO MORE TRADES TODAY.");
+                return true;
+            }
+
+            // Check losing trades limit
+            if (_dailyLosingTrades >= MaxDailyLosingTrades)
+            {
+                _dailyLimitReached = true;
+                Print($"[DAILY LIMIT] Max losing trades reached! Current: {_dailyLosingTrades} >= Limit: {MaxDailyLosingTrades}. NO MORE TRADES TODAY.");
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Track position result for daily loss limit
+        /// </summary>
+        private void TrackPositionResult(Position position)
+        {
+            if (!EnableDailyLossLimit)
+                return;
+
+            double profitLoss = position.NetProfit;
+
+            // Only track losses
+            if (profitLoss < 0)
+            {
+                // Calculate initial risk (SL distance * position size * pip value)
+                double slDistance = position.StopLoss.HasValue
+                    ? Math.Abs(position.EntryPrice - position.StopLoss.Value)
+                    : 0;
+
+                if (slDistance > 0)
+                {
+                    // Calculate theoretical risk amount (what would have been lost at SL)
+                    double riskAmount = (RiskPercent / 100.0) * Account.Balance;
+
+                    // Calculate R value (actual loss / risk amount)
+                    double rValue = profitLoss / riskAmount;
+
+                    _dailyRLoss += rValue;
+                    _dailyLosingTrades++;
+
+                    Print($"[DAILY LOSS] Losing trade #{_dailyLosingTrades} | Loss: ${profitLoss:F2} ({rValue:F2}R) | Total today: {_dailyRLoss:F2}R from {_dailyLosingTrades} losses");
+
+                    // Check if limit reached after this loss
+                    IsDailyLimitReached();
+                }
             }
         }
 
@@ -4377,6 +4521,18 @@ namespace cAlgo.Robots
                 // Clean up tracking (order is now a position)
                 _zonePendingOrders.Remove(pendingOrder.ZoneId);
             }
+        }
+
+        #endregion
+
+        #region OnPositionClosed
+
+        protected override void OnPositionClosed(PositionClosedEventArgs args)
+        {
+            base.OnPositionClosed(args);
+
+            // Track position result for daily loss limit
+            TrackPositionResult(args.Position);
         }
 
         #endregion
