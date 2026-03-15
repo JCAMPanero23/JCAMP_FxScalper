@@ -215,6 +215,15 @@ namespace cAlgo.Robots
         #region Trading Zone Class
 
         /// <summary>
+        /// Entry execution modes for zone breakout
+        /// </summary>
+        public enum EntryExecutionMode
+        {
+            Market,         // Execute market order immediately on breakout
+            PendingStop     // Place pending STOP order at zone boundary
+        }
+
+        /// <summary>
         /// Represents a trading zone with full lifecycle management
         /// Tracks zone state, price levels, timing, source references, and scoring
         /// Phase 4 Implementation - Zone Lifecycle Management
