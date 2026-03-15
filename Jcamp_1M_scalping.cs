@@ -98,9 +98,6 @@ namespace cAlgo.Robots
         [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
         public ChandelierTPMode ChandelierTPModeSelection { get; set; }
 
-        [Parameter("Trailing TP Offset (pips)", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 1.0, Group = "Chandelier SL")]
-        public double TrailingTPOffset { get; set; }
-
         // Minimum distance from price for SL modification. Step=1 gives 6 combinations (3-8)
         [Parameter("Min SL Distance (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 8.0, Step = 1.0, Group = "Chandelier SL")]
         public double MinChandelierDistance { get; set; }
@@ -3738,12 +3735,13 @@ namespace cAlgo.Robots
                     }
                 }
 
-                // Trail TP if enabled and started
+                // Trail TP if enabled and started - moves by same increment as SL
                 if (state.TPTrailingStarted && ChandelierTPModeSelection == ChandelierTPMode.TrailingTP)
                 {
+                    // Trail TP by the same distance as SL (maintains original RR ratio)
                     double trailingTP = isBuy
-                        ? proposedSL + (TrailingTPOffset * Symbol.PipSize)
-                        : proposedSL - (TrailingTPOffset * Symbol.PipSize);
+                        ? state.OriginalTP + trailDistance
+                        : state.OriginalTP - trailDistance;
 
                     // TP only moves in favorable direction
                     bool tpBetter = isBuy
@@ -3757,7 +3755,7 @@ namespace cAlgo.Robots
                         state.HighestTrailingTP = trailingTP;
                         newTP = trailingTP;
 
-                        Print("[CHANDELIER] Position {0} TP trailed: {1:F5} → {2:F5}",
+                        Print("[CHANDELIER] Position {0} TP trailed: {1:F5} → {2:F5} (same increment as SL)",
                             position.Id, oldTP, newTP);
                     }
                 }
