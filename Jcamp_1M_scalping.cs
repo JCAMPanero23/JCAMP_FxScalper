@@ -3557,14 +3557,14 @@ namespace cAlgo.Robots
             }
             else
             {
-                // SHORT: Lowest Low + ATR
-                double lowestLow = double.MaxValue;
+                // SHORT: Highest High + ATR (protects against upward reversals)
+                double highestHigh = 0;
                 for (int i = 1; i <= lookback; i++)
                 {
-                    if (Bars.LowPrices.Last(i) < lowestLow)
-                        lowestLow = Bars.LowPrices.Last(i);
+                    if (Bars.HighPrices.Last(i) > highestHigh)
+                        highestHigh = Bars.HighPrices.Last(i);
                 }
-                return lowestLow + atrDistance;
+                return highestHigh + atrDistance;
             }
         }
 
