@@ -154,6 +154,17 @@ namespace cAlgo.Robots
         [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 4.0, MaxValue = 14.0, Step = 2.0, Group = "Entry Filters")]
         public double MaxDistanceToArm { get; set; }
 
+        // NEW PARAMETERS START
+        [Parameter("Entry Execution Mode", DefaultValue = EntryExecutionMode.Market, Group = "Entry System")]
+        public EntryExecutionMode EntryExecution { get; set; }
+
+        [Parameter("Pending Entry Offset (pips)", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 5.0, Step = 0.5, Group = "Entry System")]
+        public double PendingEntryOffsetPips { get; set; }
+
+        [Parameter("Pending Order Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 240, Step = 30, Group = "Entry System")]
+        public int PendingOrderExpiryMinutes { get; set; }
+        // NEW PARAMETERS END
+
         #endregion
 
         #region Entry Mode Enum
