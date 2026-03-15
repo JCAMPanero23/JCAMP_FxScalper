@@ -3719,8 +3719,9 @@ namespace cAlgo.Robots
                 ? (priceForTrailing - state.ActivationPrice) / Symbol.PipSize
                 : (state.ActivationPrice - priceForTrailing) / Symbol.PipSize;
 
-            // Calculate current increment count
+            // Calculate current increment count and trail distance
             int currentIncrementCount = (int)Math.Floor(priceMovementPips / TrailIncrementPips);
+            double trailDistance = currentIncrementCount * TrailIncrementPips * Symbol.PipSize;
 
             // Check if we should update the SL
             bool shouldUpdate;
@@ -3729,7 +3730,6 @@ namespace cAlgo.Robots
             if (TrailModeSelection == TrailMode.Watermark)
             {
                 // Watermark mode: Only trail if SL improves (one direction only)
-                double trailDistance = currentIncrementCount * TrailIncrementPips * Symbol.PipSize;
                 proposedSL = isBuy
                     ? state.BreakevenPrice + trailDistance
                     : state.BreakevenPrice - trailDistance;
