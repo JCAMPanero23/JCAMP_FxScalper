@@ -98,6 +98,10 @@ namespace cAlgo.Robots
         [Parameter("Trail Mode", DefaultValue = TrailMode.Watermark, Group = "Chandelier SL")]
         public TrailMode TrailModeSelection { get; set; }
 
+        // Retracement Multiplier: How much SL follows price retracements (0=none, 0.5=half). CurrentPrice mode only.
+        [Parameter("Retracement Multiplier", DefaultValue = 0.0, MinValue = 0.0, MaxValue = 0.5, Step = 0.1, Group = "Chandelier SL")]
+        public double RetracementMultiplier { get; set; }
+
         [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
         public ChandelierTPMode ChandelierTPModeSelection { get; set; }
 
@@ -3733,8 +3737,24 @@ namespace cAlgo.Robots
             }
             else
             {
-                // CurrentPrice mode: Trail with price movement (can move both directions)
-                // But still respect minimum floor (never worse than BE)
+                // CurrentPrice mode: Trail with price movement
+                // Check if this is a retracement (backward movement)
+                bool isRetracement = isBuy
+                    ? proposedSL < state.CurrentTrailingSL
+                    : proposedSL > state.CurrentTrailingSL;
+
+                if (isRetracement && RetracementMultiplier < 1.0)
+                {
+                    // Apply retracement multiplier to reduce backward movement
+                    double backwardDistance = Math.Abs(proposedSL - state.CurrentTrailingSL);
+                    double adjustedDistance = backwardDistance * RetracementMultiplier;
+
+                    proposedSL = isBuy
+                        ? state.CurrentTrailingSL - adjustedDistance
+                        : state.CurrentTrailingSL + adjustedDistance;
+                }
+
+                // Ensure SL respects minimum floor (never worse than BE)
                 bool respectsFloor = isBuy
                     ? proposedSL >= state.BreakevenPrice
                     : proposedSL <= state.BreakevenPrice;
