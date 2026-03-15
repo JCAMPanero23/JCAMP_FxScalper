@@ -1,6 +1,26 @@
 # JCAMP FxScalper - Claude Context
 
-## Backtest Logs Location
+## File Locations
+
+### Main Bot Code (EDIT THIS LOCATION)
+**Primary file to edit:**
+```
+C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs
+```
+This is the cAlgo working copy that gets built and executed. Always edit this file first.
+
+**Repository copy:**
+```
+D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs
+```
+After editing the cAlgo file, copy it here and commit to git.
+
+**Workflow:**
+1. Edit: `C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs`
+2. Copy to: `D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs`
+3. Commit to git repository
+
+### Backtest Logs Location
 
 The most recent backtest logs are located at:
 ```

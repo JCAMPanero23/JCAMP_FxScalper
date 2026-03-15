@@ -4273,6 +4273,63 @@ namespace cAlgo.Robots
                 if (result.IsSuccessful)
                 {
                     Print($"[PENDING FILLED] Zone {pendingOrder.ZoneId} | Entry: {args.Position.EntryPrice:F5} | SL: {pendingOrder.StopLoss:F5} | TP: {pendingOrder.TakeProfit:F5}");
+
+                    // Initialize chandelier state tracking for pending order positions
+                    if (EnableChandelierSL)
+                    {
+                        double entryPrice = args.Position.EntryPrice;
+                        double stopLoss = pendingOrder.StopLoss;
+                        double takeProfit = pendingOrder.TakeProfit;
+
+                        if (args.Position.TradeType == TradeType.Buy)
+                        {
+                            var state = new ChandelierState
+                            {
+                                PositionId = args.Position.Id,
+                                IsActivated = false,
+                                EntryPrice = entryPrice,
+                                OriginalTP = takeProfit,
+                                OriginalSL = stopLoss,
+                                ActivationPrice = entryPrice + ((takeProfit - entryPrice) * ChandelierActivationRR),
+                                BreakevenPrice = entryPrice + GetCommissionInPrice(args.Position),
+                                CurrentTrailingSL = stopLoss,
+                                CurrentTrailingTP = takeProfit,
+                                HighestTrailingSL = 0,  // For LONG, higher is better
+                                HighestTrailingTP = 0,
+                                TPTrailingStarted = false,
+                                TradeDirection = TradeType.Buy,
+                                PriceWatermark = 0,  // Will be initialized on first trail
+                                LastIncrementCount = 0  // Start at 0 increments
+                            };
+                            _chandelierStates[args.Position.Id] = state;
+
+                            Print($"[CHANDELIER] Tracking BUY position {args.Position.Id}, activation at {state.ActivationPrice:F5}");
+                        }
+                        else // TradeType.Sell
+                        {
+                            var state = new ChandelierState
+                            {
+                                PositionId = args.Position.Id,
+                                IsActivated = false,
+                                EntryPrice = entryPrice,
+                                OriginalTP = takeProfit,
+                                OriginalSL = stopLoss,
+                                ActivationPrice = entryPrice - ((entryPrice - takeProfit) * ChandelierActivationRR),
+                                BreakevenPrice = entryPrice - GetCommissionInPrice(args.Position),
+                                CurrentTrailingSL = stopLoss,
+                                CurrentTrailingTP = takeProfit,
+                                HighestTrailingSL = double.MaxValue,  // For SHORT, lower is better
+                                HighestTrailingTP = 0,
+                                TPTrailingStarted = false,
+                                TradeDirection = TradeType.Sell,
+                                PriceWatermark = 0,  // Will be initialized on first trail
+                                LastIncrementCount = 0  // Start at 0 increments
+                            };
+                            _chandelierStates[args.Position.Id] = state;
+
+                            Print($"[CHANDELIER] Tracking SELL position {args.Position.Id}, activation at {state.ActivationPrice:F5}");
+                        }
+                    }
                 }
                 else
                 {
