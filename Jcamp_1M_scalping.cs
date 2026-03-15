@@ -3791,7 +3791,7 @@ namespace cAlgo.Robots
         {
             if (_zonePendingOrders.TryGetValue(zoneId, out var pendingOrder))
             {
-                if (pendingOrder.Order != null && pendingOrder.Order.IsActive)
+                if (pendingOrder.Order != null)
                 {
                     var result = CancelPendingOrder(pendingOrder.Order);
                     if (result.IsSuccessful)
@@ -3814,7 +3814,7 @@ namespace cAlgo.Robots
         private void CheckExpiredPendingOrders()
         {
             var expired = _zonePendingOrders.Values
-                .Where(x => x.Order != null && x.Order.IsActive && Server.Time >= x.ExpiresAt)
+                .Where(x => x.Order != null && Server.Time >= x.ExpiresAt)
                 .ToList();
 
             foreach (var pendingOrder in expired)
