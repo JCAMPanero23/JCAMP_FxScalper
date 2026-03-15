@@ -3481,8 +3481,10 @@ namespace cAlgo.Robots
             double commissionPerLot = Symbol.Commission * 2;  // Round trip
             if (commissionPerLot <= 0) return 0;
 
-            // Convert to price movement
-            double commissionInPrice = (commissionPerLot / position.VolumeInUnits) * Symbol.LotSize;
+            // Convert commission from account currency to price movement
+            // commissionPerLot / VolumeInUnits = commission per unit in account currency
+            // Divide by PipValue to get commission in pips, multiply by PipSize to get price
+            double commissionInPrice = (commissionPerLot / position.VolumeInUnits) / Symbol.PipValue * Symbol.PipSize;
             return commissionInPrice;
         }
 
