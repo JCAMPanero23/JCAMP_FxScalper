@@ -3730,6 +3730,29 @@ namespace cAlgo.Robots
             }
         }
 
+        /// <summary>
+        /// Cancels a pending order associated with a zone
+        /// </summary>
+        private void CancelZonePendingOrder(string zoneId, string reason)
+        {
+            if (_zonePendingOrders.TryGetValue(zoneId, out var pendingOrder))
+            {
+                if (pendingOrder.Order != null && pendingOrder.Order.IsActive)
+                {
+                    var result = CancelPendingOrder(pendingOrder.Order);
+                    if (result.IsSuccessful)
+                    {
+                        Print($"[PENDING CANCEL] Zone {zoneId} | Reason: {reason}");
+                    }
+                    else
+                    {
+                        Print($"[ERROR] Failed to cancel pending order for zone {zoneId}: {result.Error}");
+                    }
+                }
+                _zonePendingOrders.Remove(zoneId);
+            }
+        }
+
         #endregion
 
         #region Chandelier Trailing Stop Methods
