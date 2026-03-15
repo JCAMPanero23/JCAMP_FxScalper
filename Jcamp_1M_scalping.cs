@@ -3284,7 +3284,17 @@ namespace cAlgo.Robots
                 {
                     Print("[BreakoutEntry] SELL trigger | Close: {0:F5} < Bottom: {1:F5} | Bearish: YES",
                         close, swingBottomPrice);
-                    ExecuteSellTrade();
+
+                    // NEW CODE: Only execute market order in Market mode
+                    if (EntryExecution == EntryExecutionMode.Market)
+                    {
+                        ExecuteSellTrade();
+                    }
+                    else
+                    {
+                        // In PendingStop mode, order already placed when zone armed
+                        Print("[BreakoutEntry] SELL breakout confirmed (pending order mode - order already placed)");
+                    }
                 }
                 else if (closesBelowRectangle)
                 {
@@ -3318,7 +3328,17 @@ namespace cAlgo.Robots
                 {
                     Print("[BreakoutEntry] BUY trigger | Close: {0:F5} > Top: {1:F5} | Bullish: YES",
                         close, swingTopPrice);
-                    ExecuteBuyTrade();
+
+                    // NEW CODE: Only execute market order in Market mode
+                    if (EntryExecution == EntryExecutionMode.Market)
+                    {
+                        ExecuteBuyTrade();
+                    }
+                    else
+                    {
+                        // In PendingStop mode, order already placed when zone armed
+                        Print("[BreakoutEntry] BUY breakout confirmed (pending order mode - order already placed)");
+                    }
                 }
                 else if (closesAboveRectangle)
                 {
