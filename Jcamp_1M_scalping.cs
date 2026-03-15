@@ -91,8 +91,9 @@ namespace cAlgo.Robots
         [Parameter("Activation RR Fraction", DefaultValue = 0.75, MinValue = 0.5, MaxValue = 0.85, Step = 0.05, Group = "Chandelier SL")]
         public double ChandelierActivationRR { get; set; }
 
-        [Parameter("Chandelier Lookback Bars", DefaultValue = 22, MinValue = 10, MaxValue = 30, Step = 2, Group = "Chandelier SL")]
-        public int ChandelierLookback { get; set; }
+        // Trail Increment: How many pips price must move before SL trails. Step=5 gives 5 combinations (10-30)
+        [Parameter("Trail Increment (pips)", DefaultValue = 10.0, MinValue = 10.0, MaxValue = 30.0, Step = 5.0, Group = "Chandelier SL")]
+        public double TrailIncrementPips { get; set; }
 
         [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
         public ChandelierTPMode ChandelierTPModeSelection { get; set; }
@@ -265,6 +266,7 @@ namespace cAlgo.Robots
             public double HighestTrailingTP { get; set; }
             public bool TPTrailingStarted { get; set; }
             public TradeType TradeDirection { get; set; }
+            public double PriceWatermark { get; set; }  // Highest (BUY) or Lowest (SELL) price reached
         }
 
         #endregion
@@ -3401,7 +3403,8 @@ namespace cAlgo.Robots
                         HighestTrailingSL = double.MaxValue,  // For SHORT, lower is better
                         HighestTrailingTP = 0,
                         TPTrailingStarted = false,
-                        TradeDirection = TradeType.Sell
+                        TradeDirection = TradeType.Sell,
+                        PriceWatermark = 0  // Will be initialized on first trail
                     };
                     _chandelierStates[result.Position.Id] = state;
 
@@ -3491,7 +3494,8 @@ namespace cAlgo.Robots
                         HighestTrailingSL = 0,  // For LONG, higher is better
                         HighestTrailingTP = 0,
                         TPTrailingStarted = false,
-                        TradeDirection = TradeType.Buy
+                        TradeDirection = TradeType.Buy,
+                        PriceWatermark = 0  // Will be initialized on first trail
                     };
                     _chandelierStates[result.Position.Id] = state;
 
@@ -3692,84 +3696,108 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Trails the chandelier stop loss (and optionally TP)
+        /// Trails the stop loss using simple incremental logic
+        /// Trails SL by same amount price moves, in configurable increments
         /// </summary>
         private void TrailChandelierStop(Position position, ChandelierState state)
         {
-            double chandelierSL = CalculateChandelierSL(position.TradeType);
-            if (chandelierSL <= 0) return;
-
             bool isBuy = position.TradeType == TradeType.Buy;
+            double currentPrice = isBuy ? Symbol.Bid : Symbol.Ask;
             double newSL = state.CurrentTrailingSL;
             double? newTP = position.TakeProfit;
 
-            // Check if chandelier provides a better SL
-            bool chandelierBetter = isBuy
-                ? chandelierSL > state.HighestTrailingSL
-                : chandelierSL < state.HighestTrailingSL;
-
-            if (chandelierBetter)
+            // Initialize watermark on first call after activation
+            if (state.PriceWatermark == 0)
             {
-                // Check minimum movement threshold (0.5 pips)
-                double movement = Math.Abs(chandelierSL - state.CurrentTrailingSL) / Symbol.PipSize;
-                if (movement >= 0.5)
+                state.PriceWatermark = state.ActivationPrice;
+            }
+
+            // Update price watermark (highest for BUY, lowest for SELL)
+            bool newWatermark = isBuy
+                ? currentPrice > state.PriceWatermark
+                : currentPrice < state.PriceWatermark;
+
+            if (newWatermark)
+            {
+                state.PriceWatermark = currentPrice;
+            }
+
+            // Calculate how much price has moved from activation in pips
+            double priceMovementPips = isBuy
+                ? (state.PriceWatermark - state.ActivationPrice) / Symbol.PipSize
+                : (state.ActivationPrice - state.PriceWatermark) / Symbol.PipSize;
+
+            // Calculate how much to trail SL based on completed increments
+            double incrementsCompleted = Math.Floor(priceMovementPips / TrailIncrementPips);
+            double trailDistance = incrementsCompleted * TrailIncrementPips * Symbol.PipSize;
+
+            // Calculate new SL position
+            double proposedSL = isBuy
+                ? state.BreakevenPrice + trailDistance
+                : state.BreakevenPrice - trailDistance;
+
+            // Check if proposed SL is better than current
+            bool slBetter = isBuy
+                ? proposedSL > state.HighestTrailingSL
+                : proposedSL < state.HighestTrailingSL;
+
+            if (slBetter)
+            {
+                // Validate minimum distance from current price
+                if (!ValidateSLDistance(position, proposedSL, out string reason))
                 {
-                    // Validate minimum distance from current price
-                    if (!ValidateSLDistance(position, chandelierSL, out string reason))
-                    {
-                        Print("[CHANDELIER] Position {0} SL trail skipped - {1}", position.Id, reason);
-                        return;  // Skip this update, will retry on next bar
-                    }
-
-                    double oldSL = state.CurrentTrailingSL;
-                    state.CurrentTrailingSL = chandelierSL;
-                    state.HighestTrailingSL = chandelierSL;
-                    newSL = chandelierSL;
-
-                    Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5}",
-                        position.Id, oldSL, newSL);
-
-                    // Start TP trailing if mode is TrailingTP and SL moved beyond BE
-                    if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
-                    {
-                        bool beyondBE = isBuy
-                            ? chandelierSL > state.BreakevenPrice
-                            : chandelierSL < state.BreakevenPrice;
-
-                        if (beyondBE)
-                        {
-                            state.TPTrailingStarted = true;
-                            Print("[CHANDELIER] Position {0} TP trailing started", position.Id);
-                        }
-                    }
-
-                    // Trail TP if enabled and started
-                    if (state.TPTrailingStarted && ChandelierTPModeSelection == ChandelierTPMode.TrailingTP)
-                    {
-                        double trailingTP = isBuy
-                            ? chandelierSL + (TrailingTPOffset * Symbol.PipSize)
-                            : chandelierSL - (TrailingTPOffset * Symbol.PipSize);
-
-                        // TP only moves in favorable direction
-                        bool tpBetter = isBuy
-                            ? trailingTP > state.HighestTrailingTP
-                            : trailingTP < state.HighestTrailingTP;
-
-                        if (tpBetter || state.HighestTrailingTP == 0)
-                        {
-                            double oldTP = state.CurrentTrailingTP;
-                            state.CurrentTrailingTP = trailingTP;
-                            state.HighestTrailingTP = trailingTP;
-                            newTP = trailingTP;
-
-                            Print("[CHANDELIER] Position {0} TP trailed: {1:F5} → {2:F5}",
-                                position.Id, oldTP, newTP);
-                        }
-                    }
-
-                    // Apply modifications
-                    ModifyPosition(position, newSL, newTP, ProtectionType.Absolute);
+                    Print("[CHANDELIER] Position {0} SL trail skipped - {1}", position.Id, reason);
+                    return;  // Skip this update, will retry on next bar
                 }
+
+                double oldSL = state.CurrentTrailingSL;
+                state.CurrentTrailingSL = proposedSL;
+                state.HighestTrailingSL = proposedSL;
+                newSL = proposedSL;
+
+                Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5} | Price moved: {3:F1} pips | Increments: {4}",
+                    position.Id, oldSL, newSL, priceMovementPips, incrementsCompleted);
+
+                // Start TP trailing if mode is TrailingTP and SL moved beyond BE
+                if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
+                {
+                    bool beyondBE = isBuy
+                        ? proposedSL > state.BreakevenPrice
+                        : proposedSL < state.BreakevenPrice;
+
+                    if (beyondBE)
+                    {
+                        state.TPTrailingStarted = true;
+                        Print("[CHANDELIER] Position {0} TP trailing started", position.Id);
+                    }
+                }
+
+                // Trail TP if enabled and started
+                if (state.TPTrailingStarted && ChandelierTPModeSelection == ChandelierTPMode.TrailingTP)
+                {
+                    double trailingTP = isBuy
+                        ? proposedSL + (TrailingTPOffset * Symbol.PipSize)
+                        : proposedSL - (TrailingTPOffset * Symbol.PipSize);
+
+                    // TP only moves in favorable direction
+                    bool tpBetter = isBuy
+                        ? trailingTP > state.HighestTrailingTP
+                        : trailingTP < state.HighestTrailingTP;
+
+                    if (tpBetter || state.HighestTrailingTP == 0)
+                    {
+                        double oldTP = state.CurrentTrailingTP;
+                        state.CurrentTrailingTP = trailingTP;
+                        state.HighestTrailingTP = trailingTP;
+                        newTP = trailingTP;
+
+                        Print("[CHANDELIER] Position {0} TP trailed: {1:F5} → {2:F5}",
+                            position.Id, oldTP, newTP);
+                    }
+                }
+
+                // Apply modifications
+                ModifyPosition(position, newSL, newTP, ProtectionType.Absolute);
             }
         }
 
