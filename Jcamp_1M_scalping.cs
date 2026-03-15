@@ -3576,6 +3576,83 @@ namespace cAlgo.Robots
             }
         }
 
+        /// <summary>
+        /// Places a pending BUY STOP order at zone boundary + offset
+        /// </summary>
+        private void PlaceBuyPendingOrder(TradingZone zone)
+        {
+            // Check max pending orders limit
+            if (_zonePendingOrders.Count >= MAX_PENDING_ORDERS)
+            {
+                Print("[PENDING ORDER] Max pending orders reached - skipping BUY order");
+                return;
+            }
+
+            // Check max positions
+            if (Positions.Count >= MaxPositions)
+            {
+                Print("[PENDING ORDER] Max positions reached - skipping BUY order");
+                return;
+            }
+
+            // Calculate entry price at zone top + offset
+            double entryPrice = zone.TopPrice + (PendingEntryOffsetPips * Symbol.PipSize);
+
+            // Calculate SL at zone bottom - buffer
+            double slPrice = zone.BottomPrice - (SLBufferPips * Symbol.PipSize);
+            double slPips = (entryPrice - slPrice) / Symbol.PipSize;
+
+            // Calculate TP using existing TP logic
+            double initialTP = entryPrice + (slPips * MinimumRRRatio * Symbol.PipSize);
+            double tpPrice = AdjustTPForMarketStructure(entryPrice, initialTP, slPrice, "BUY");
+
+            if (tpPrice == 0)
+            {
+                Print($"[PENDING BUY] No valid TP found - skipping order");
+                return;
+            }
+
+            double tpPips = (tpPrice - entryPrice) / Symbol.PipSize;
+
+            // Calculate position size
+            double volume = CalculatePositionSize(slPips);
+
+            // Set order expiry
+            DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
+
+            // Place pending STOP order
+            var result = PlaceStopOrder(
+                tradeType: TradeType.Buy,
+                symbolName: SymbolName,
+                volumeInUnits: volume,
+                targetPrice: entryPrice,
+                label: $"BUY_ZONE_{zone.Id}",
+                stopLossPips: slPips,
+                takeProfitPips: tpPips,
+                expiration: expiry
+            );
+
+            if (result.IsSuccessful)
+            {
+                _zonePendingOrders[zone.Id] = new ZonePendingOrder
+                {
+                    ZoneId = zone.Id,
+                    Order = result.PendingOrder,
+                    PlacedAt = Server.Time,
+                    ExpiresAt = expiry,
+                    EntryPrice = entryPrice,
+                    StopLoss = slPrice,
+                    TakeProfit = tpPrice
+                };
+
+                Print($"[PENDING BUY] Zone {zone.Id} | Entry: {entryPrice:F5} | SL: {slPrice:F5} ({slPips:F1} pips) | TP: {tpPrice:F5} ({tpPips:F1} pips) | Expiry: {expiry:HH:mm}");
+            }
+            else
+            {
+                Print($"[ERROR] Failed to place pending BUY order: {result.Error}");
+            }
+        }
+
         #endregion
 
         #region Chandelier Trailing Stop Methods
