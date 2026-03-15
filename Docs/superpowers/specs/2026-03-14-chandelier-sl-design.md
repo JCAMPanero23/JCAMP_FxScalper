@@ -64,7 +64,7 @@ Using M1 timeframe with existing ATR indicator instance (`_atr`):
 
 ```
 LONG:  Chandelier SL = Highest High (lookback bars) - (ATR × ATRMultiplier)
-SHORT: Chandelier SL = Lowest Low (lookback bars) + (ATR × ATRMultiplier)
+SHORT: Chandelier SL = Highest High (lookback bars) + (ATR × ATRMultiplier)
 ```
 
 - **ATR Source:** Reuse existing `_atr` indicator instance (Wilder's ATR on M1)
