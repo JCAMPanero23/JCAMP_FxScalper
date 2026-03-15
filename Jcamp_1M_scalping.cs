@@ -771,6 +771,9 @@ namespace cAlgo.Robots
 
             // Subscribe to position opened event for pending order tracking
             Positions.Opened += OnPositionOpenedHandler;
+
+            // Subscribe to position closed event for daily loss limit tracking
+            Positions.Closed += OnPositionClosedHandler;
         }
 
         #endregion
@@ -4525,12 +4528,10 @@ namespace cAlgo.Robots
 
         #endregion
 
-        #region OnPositionClosed
+        #region Position Closed Handler
 
-        protected override void OnPositionClosed(PositionClosedEventArgs args)
+        private void OnPositionClosedHandler(PositionClosedEventArgs args)
         {
-            base.OnPositionClosed(args);
-
             // Track position result for daily loss limit
             TrackPositionResult(args.Position);
         }
