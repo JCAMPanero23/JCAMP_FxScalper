@@ -3675,7 +3675,7 @@ namespace cAlgo.Robots
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
             // Place pending STOP order
-            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, $"BUY_ZONE_{zone.Id}", slPips, tpPips, expiry);
+            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, $"BUY_ZONE_{zone.Id}", slPrice, tpPrice, expiry);
 
             if (result.IsSuccessful)
             {
@@ -3743,7 +3743,7 @@ namespace cAlgo.Robots
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
             // Place pending STOP order
-            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, $"SELL_ZONE_{zone.Id}", slPips, tpPips, expiry);
+            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, $"SELL_ZONE_{zone.Id}", slPrice, tpPrice, expiry);
 
             if (result.IsSuccessful)
             {
