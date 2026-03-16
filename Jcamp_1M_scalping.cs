@@ -2446,7 +2446,7 @@ namespace cAlgo.Robots
                 return true;
 
             double currentPrice = Symbol.Bid;
-            double sma200Value = sma.Result.LastValue;
+            double sma200Value = CalculateSMA(SMAPeriod);
             double smaFastValue = smaFast.Result.LastValue;
 
             if (mode == "BUY")
@@ -2799,8 +2799,8 @@ namespace cAlgo.Robots
             string mode = displacement.IsBullish ? "BUY" : "SELL";
 
             // v2.0: Calculate zone boundaries from FVG with configurable size percentage
-            double fvgHeight = fvg.HighPrice - fvg.LowPrice;
-            double zoneCenter = (fvg.HighPrice + fvg.LowPrice) / 2;
+            double fvgHeight = fvg.TopPrice - fvg.BottomPrice;
+            double zoneCenter = (fvg.TopPrice + fvg.BottomPrice) / 2;
             double adjustedHeight = fvgHeight * (FVGZoneSizePercent / 100.0);
 
             double topPrice = zoneCenter + (adjustedHeight / 2);
@@ -2808,7 +2808,7 @@ namespace cAlgo.Robots
             double originPrice = zoneCenter;  // Use center as reference
 
             Print("[v2.0] FVG Zone | FVG: {0:F5}-{1:F5} ({2:F1} pips) | Size: {3}% | Zone: {4:F5}-{5:F5}",
-                fvg.LowPrice, fvg.HighPrice, fvgHeight / Symbol.PipSize, FVGZoneSizePercent, bottomPrice, topPrice);
+                fvg.BottomPrice, fvg.TopPrice, fvgHeight / Symbol.PipSize, FVGZoneSizePercent, bottomPrice, topPrice);
 
             // Calculate score
             double score = CalculatePreZoneScore(displacement, fvg, mode);
@@ -2851,8 +2851,8 @@ namespace cAlgo.Robots
                 ExpiryTime = Server.Time.AddMinutes(PreZoneExpiryMinutes),
                 Displacement = displacement,
                 FVG = fvg,
-                FVGTopPrice = fvg.HighPrice,
-                FVGBottomPrice = fvg.LowPrice,
+                FVGTopPrice = fvg.TopPrice,
+                FVGBottomPrice = fvg.BottomPrice,
                 FractalBarIndex = null,
                 DisplacementScore = CalculateDisplacementStrength(displacement.ATRMultiple),
                 FVGScore = CalculateFVGQuality(fvg.GapSizeInPips),
