@@ -146,6 +146,57 @@ Zone Armed → Place pending order → Each bar:
 └── Filters invalid? → Cancel
 ```
 
+### 8. False Positive Filters
+
+**Problem:** Rejection patterns and displacement can trigger on insignificant candles (noise).
+
+**Solution:** Add ATR-based minimum thresholds for candle significance.
+
+#### 8.1 Minimum Rejection Candle Range Filter
+
+Reject candles must have meaningful range relative to current volatility:
+
+```csharp
+private bool IsSignificantCandle(int barIdx)
+{
+    double high = Bars.HighPrices[barIdx];
+    double low = Bars.LowPrices[barIdx];
+    double range = high - low;
+    double atr = atrM1.Result[barIdx];
+
+    return range >= atr * MinRejectionATRRatio;  // Default 0.5
+}
+```
+
+| MinRejectionATRRatio | Effect |
+|---------------------|--------|
+| 0.3 | Very permissive (small candles OK) |
+| 0.5 | Default (reject < half ATR) |
+| 1.0 | Strict (require full ATR range) |
+
+**Integration:** Call `IsSignificantCandle()` before accepting any rejection pattern.
+
+#### 8.2 Displacement Momentum Filter
+
+Displacement candles must show strong momentum (range-based, not just body):
+
+```csharp
+// In displacement detection
+double range = high - low;
+double atr = atrM1.Result[barIdx];
+
+if (range < atr * DisplacementRangeATR)  // Default 1.5
+    return null;  // Not a valid displacement
+```
+
+| DisplacementRangeATR | Effect |
+|---------------------|--------|
+| 1.0 | Permissive (normal candles OK) |
+| 1.5 | Default (require 1.5x ATR range) |
+| 2.5 | Strict (only large displacement candles) |
+
+**Rationale:** Using range instead of body size catches wicks that show momentum even if body is small.
+
 ---
 
 ## New Parameters
@@ -189,6 +240,12 @@ Zone Armed → Place pending order → Each bar:
 | EnableDualSMA | bool | true | - | - | - |
 | FastSMAPeriod | int | 50 | 20 | 100 | 10 |
 
+### False Positive Filters
+| Parameter | Type | Default | Min | Max | Step |
+|-----------|------|---------|-----|-----|------|
+| MinRejectionATRRatio | double | 0.5 | 0.3 | 1.0 | 0.1 |
+| DisplacementRangeATR | double | 1.5 | 1.0 | 2.5 | 0.25 |
+
 ---
 
 ## Implementation Approach
@@ -204,9 +261,9 @@ Zone Armed → Place pending order → Each bar:
 
 **Estimated Changes:**
 - ~15-20 method modifications
-- ~18 new parameters
+- ~20 new parameters
 - 3 new indicator initializations (RSI, Fast SMA, tracking)
-- 5 new helper methods (rejection detection, RSI compression, validation)
+- 7 new helper methods (rejection detection, RSI compression, validation, candle significance, displacement filter)
 
 ---
 
@@ -229,7 +286,8 @@ Zone Armed → Place pending order → Each bar:
 | Over-filtering reduces trades too much | Low trade count | All filters configurable, can disable |
 | RSI compression too strict | Missed opportunities | Adjustable lookback and min bars |
 | ATR SL too wide | Poor RR ratio | Multiplier configurable (1.0-2.5) |
-| Rejection detection false positives | Bad entries | Multiple patterns, configurable |
+| Rejection detection false positives | Bad entries | MinRejectionATRRatio filter + multiple patterns |
+| Displacement on noise candles | Invalid zones | DisplacementRangeATR filter (default 1.5x ATR) |
 
 ---
 
@@ -248,6 +306,7 @@ Zone Armed → Place pending order → Each bar:
 ```
 STEP 1: ZONE CREATION
 ├── Displacement detected (M15 or M1)
+│   └── Displacement range >= ATR × DisplacementRangeATR? ✓
 ├── FVG found matching displacement
 ├── Zone = FVG boundaries × FVGZoneSizePercent
 └── Zone scored and validated
@@ -260,6 +319,7 @@ STEP 2: ZONE ARMED
 
 STEP 3: PENDING ORDER VALIDATION (Each bar)
 ├── Check rejection candle (Wick/Engulfing/PinBar)
+│   └── Candle range >= ATR × MinRejectionATRRatio? ✓
 ├── Re-validate filters
 ├── Cancel if no rejection in 5 bars
 └── Cancel if filters invalid
