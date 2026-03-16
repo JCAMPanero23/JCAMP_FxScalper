@@ -2868,6 +2868,19 @@ namespace cAlgo.Robots
             {
                 if (CheckZoneProximity())
                 {
+                    // v2.0: Check filters before arming
+                    if (!CheckDualSMAFilter(activeZone.Mode))
+                    {
+                        Print("[v2.0] Zone not armed | Dual SMA filter failed");
+                        return;
+                    }
+
+                    if (!CheckRSICompressionExpansion(activeZone.Mode))
+                    {
+                        Print("[v2.0] Zone not armed | RSI compression-expansion failed");
+                        return;
+                    }
+
                     activeZone.State = ZoneState.Armed;
                     double distancePips = GetDistanceToZone();
                     Print("[Zone] ARMED | Price within {0:F1} pips of zone", distancePips);
