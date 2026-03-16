@@ -265,6 +265,8 @@ namespace cAlgo.Robots
             public double TopPrice { get; set; }
             public double BottomPrice { get; set; }
             public double OriginPrice { get; set; }      // Displacement origin for fractal matching
+            public double FVGTopPrice { get; set; }       // Original FVG top for SL calculation
+            public double FVGBottomPrice { get; set; }    // Original FVG bottom for SL calculation
 
             // Timing
             public DateTime CreatedTime { get; set; }
@@ -2729,10 +2731,17 @@ namespace cAlgo.Robots
             // Bullish displacement (price rose) = BUY zone at low
             string mode = displacement.IsBullish ? "BUY" : "SELL";
 
-            // Calculate zone boundaries (4 pips total width)
-            double originPrice = displacement.OriginPrice;
-            double topPrice = originPrice + (2 * Symbol.PipSize);
-            double bottomPrice = originPrice - (2 * Symbol.PipSize);
+            // v2.0: Calculate zone boundaries from FVG with configurable size percentage
+            double fvgHeight = fvg.HighPrice - fvg.LowPrice;
+            double zoneCenter = (fvg.HighPrice + fvg.LowPrice) / 2;
+            double adjustedHeight = fvgHeight * (FVGZoneSizePercent / 100.0);
+
+            double topPrice = zoneCenter + (adjustedHeight / 2);
+            double bottomPrice = zoneCenter - (adjustedHeight / 2);
+            double originPrice = zoneCenter;  // Use center as reference
+
+            Print("[v2.0] FVG Zone | FVG: {0:F5}-{1:F5} ({2:F1} pips) | Size: {3}% | Zone: {4:F5}-{5:F5}",
+                fvg.LowPrice, fvg.HighPrice, fvgHeight / Symbol.PipSize, FVGZoneSizePercent, bottomPrice, topPrice);
 
             // Calculate score
             double score = CalculatePreZoneScore(displacement, fvg, mode);
@@ -2775,6 +2784,8 @@ namespace cAlgo.Robots
                 ExpiryTime = Server.Time.AddMinutes(PreZoneExpiryMinutes),
                 Displacement = displacement,
                 FVG = fvg,
+                FVGTopPrice = fvg.HighPrice,
+                FVGBottomPrice = fvg.LowPrice,
                 FractalBarIndex = null,
                 DisplacementScore = CalculateDisplacementStrength(displacement.ATRMultiple),
                 FVGScore = CalculateFVGQuality(fvg.GapSizeInPips),
