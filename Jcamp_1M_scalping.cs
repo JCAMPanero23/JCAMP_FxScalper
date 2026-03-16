@@ -3662,7 +3662,10 @@ namespace cAlgo.Robots
                 CreatedTime = zoneCreatedTime,
                 ExpiryTime = rectangleExpiryTime,
                 Mode = mode,
-                FractalBarIndex = swingIndex
+                FractalBarIndex = swingIndex,
+                // v2.0: Use swing boundaries as fallback for SL calculation
+                FVGTopPrice = swingTopPrice,
+                FVGBottomPrice = swingBottomPrice
             };
 
             // Issue 1 Fix: Check if current price is close enough to rectangle to "arm" it
