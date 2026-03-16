@@ -16,6 +16,12 @@ namespace cAlgo.Robots
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class Jcamp_1M_scalping : Robot
     {
+        #region Version Info
+        private const string BOT_VERSION = "2.0.0";
+        private const string VERSION_DATE = "2026-03-16";
+        private const string VERSION_NOTES = "FVG zones, rejection confirmation, RSI compression-expansion, ATR SL";
+        #endregion
+
         #region Parameters - Trend Detection
 
         [Parameter("=== TREND DETECTION ===", DefaultValue = "")]
@@ -631,6 +637,12 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
+            // Log version info
+            Print("========================================");
+            Print($"Jcamp 1M Scalping v{BOT_VERSION} ({VERSION_DATE})");
+            Print($"Notes: {VERSION_NOTES}");
+            Print("========================================");
+
             // Validate chart timeframe - accept M1 or M15
             if (TimeFrame != TimeFrame.Minute && TimeFrame != TimeFrame.Minute15)
             {
@@ -3727,8 +3739,8 @@ namespace cAlgo.Robots
             // Set order expiry
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
-            // Place pending STOP order (without SL/TP - will be set when position opens)
-            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, MagicNumber.ToString(), null, null, expiry);
+            // Place pending STOP order with SL/TP included
+            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
 
             if (result.IsSuccessful)
             {
@@ -3812,8 +3824,8 @@ namespace cAlgo.Robots
             // Set order expiry
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
-            // Place pending STOP order (without SL/TP - will be set when position opens)
-            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, MagicNumber.ToString(), null, null, expiry);
+            // Place pending STOP order with SL/TP included
+            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
 
             if (result.IsSuccessful)
             {
