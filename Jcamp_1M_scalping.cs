@@ -19,7 +19,7 @@ namespace cAlgo.Robots
         #region Version Info
         private const string BOT_VERSION = "2.0.0";
         private const string VERSION_DATE = "2026-03-16";
-        private const string VERSION_NOTES = "FVG zones, rejection confirmation, RSI compression-expansion, ATR SL";
+        private const string VERSION_NOTES = "FVG zones, rejection confirmation, RSI compression-expansion, ATR SL, dual SMA";
         #endregion
 
         #region Parameters - Trend Detection
