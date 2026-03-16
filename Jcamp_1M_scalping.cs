@@ -2553,6 +2553,15 @@ namespace cAlgo.Robots
             if (atrMultiple < ATRMultiplier)
                 return null;
 
+            // v2.0: Check displacement range (catches wicks showing momentum)
+            double candleRange = high - low;
+            if (candleRange < atrValue * DisplacementRangeATR)
+            {
+                Print("[v2.0] M1 Displacement rejected | Range: {0:F1} pips < {1:F1}x ATR ({2:F1} pips)",
+                    candleRange / Symbol.PipSize, DisplacementRangeATR, atrValue * DisplacementRangeATR / Symbol.PipSize);
+                return null;
+            }
+
             // M1 Displacement detected!
             bool isBullish = close > open;
             double originPrice = isBullish ? low : high;
