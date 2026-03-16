@@ -457,6 +457,82 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Enhanced Entry v2.0
+
+        [Parameter("=== ENHANCED ENTRY v2.0 ===", DefaultValue = "")]
+        public string EnhancedEntryHeader { get; set; }
+
+        // Zone Configuration
+        [Parameter("FVG Zone Size %", DefaultValue = 100, MinValue = 50, MaxValue = 150, Step = 25, Group = "Enhanced Entry")]
+        public int FVGZoneSizePercent { get; set; }
+
+        // Rejection Pattern Configuration
+        [Parameter("Enable Wick Rejection", DefaultValue = true, Group = "Enhanced Entry")]
+        public bool EnableWickRejection { get; set; }
+
+        [Parameter("Enable Engulfing Pattern", DefaultValue = true, Group = "Enhanced Entry")]
+        public bool EnableEngulfingPattern { get; set; }
+
+        [Parameter("Enable Pin Bar", DefaultValue = true, Group = "Enhanced Entry")]
+        public bool EnablePinBar { get; set; }
+
+        [Parameter("Min Wick Ratio", DefaultValue = 2.0, MinValue = 1.5, MaxValue = 3.0, Step = 0.5, Group = "Enhanced Entry")]
+        public double MinWickRatio { get; set; }
+
+        [Parameter("Max Bars Without Rejection", DefaultValue = 5, MinValue = 3, MaxValue = 10, Step = 1, Group = "Enhanced Entry")]
+        public int MaxBarsWithoutRejection { get; set; }
+
+        // ATR Stop Loss Configuration
+        [Parameter("SL ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
+        public double SLATRMultiplier { get; set; }
+
+        // RSI Compression-Expansion Configuration
+        [Parameter("Enable RSI Compression", DefaultValue = true, Group = "Enhanced Entry")]
+        public bool EnableRSICompression { get; set; }
+
+        [Parameter("RSI Period", DefaultValue = 7, MinValue = 5, MaxValue = 14, Step = 1, Group = "Enhanced Entry")]
+        public int RSIPeriod { get; set; }
+
+        [Parameter("RSI Compression Low", DefaultValue = 40, MinValue = 35, MaxValue = 45, Step = 5, Group = "Enhanced Entry")]
+        public int RSICompressionLow { get; set; }
+
+        [Parameter("RSI Compression High", DefaultValue = 60, MinValue = 55, MaxValue = 65, Step = 5, Group = "Enhanced Entry")]
+        public int RSICompressionHigh { get; set; }
+
+        [Parameter("RSI Compression Min Bars", DefaultValue = 6, MinValue = 4, MaxValue = 10, Step = 2, Group = "Enhanced Entry")]
+        public int RSICompressionMinBars { get; set; }
+
+        [Parameter("RSI Compression Lookback", DefaultValue = 15, MinValue = 10, MaxValue = 25, Step = 5, Group = "Enhanced Entry")]
+        public int RSICompressionLookback { get; set; }
+
+        [Parameter("RSI Expansion Buy Min", DefaultValue = 60, Group = "Enhanced Entry")]
+        public int RSIExpansionBuyMin { get; set; }
+
+        [Parameter("RSI Expansion Buy Max", DefaultValue = 80, Group = "Enhanced Entry")]
+        public int RSIExpansionBuyMax { get; set; }
+
+        [Parameter("RSI Expansion Sell Min", DefaultValue = 20, Group = "Enhanced Entry")]
+        public int RSIExpansionSellMin { get; set; }
+
+        [Parameter("RSI Expansion Sell Max", DefaultValue = 40, Group = "Enhanced Entry")]
+        public int RSIExpansionSellMax { get; set; }
+
+        // Dual SMA Configuration
+        [Parameter("Enable Dual SMA", DefaultValue = true, Group = "Enhanced Entry")]
+        public bool EnableDualSMA { get; set; }
+
+        [Parameter("Fast SMA Period", DefaultValue = 50, MinValue = 20, MaxValue = 100, Step = 10, Group = "Enhanced Entry")]
+        public int FastSMAPeriod { get; set; }
+
+        // False Positive Filters
+        [Parameter("Min Rejection ATR Ratio", DefaultValue = 0.5, MinValue = 0.3, MaxValue = 1.0, Step = 0.1, Group = "Enhanced Entry")]
+        public double MinRejectionATRRatio { get; set; }
+
+        [Parameter("Displacement Range ATR", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
+        public double DisplacementRangeATR { get; set; }
+
+        #endregion
+
         #region Parameters - PRE-Zone System
 
         [Parameter("=== PRE-ZONE SYSTEM ===", DefaultValue = "")]
