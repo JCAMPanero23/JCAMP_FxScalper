@@ -1,0 +1,164 @@
+===============================================
+JCAMP FxScalper - Optimization Settings
+Date Range: 01/04/2024 - 30/06/2024
+Symbol: EURUSD m1
+===============================================
+
+PARAMETERS TO OPTIMIZE:
+-----------------------------------------------
+
+1. MinimumSwingScore
+   Min: 0.6
+   Max: 0.7
+   Step: 0.05
+   → Values: 0.6, 0.65, 0.7 (3 values)
+
+2. MinimumRRRatio
+   Min: 2.5
+   Max: 3.5
+   Step: 0.5
+   → Values: 2.5, 3.0, 3.5 (3 values)
+
+3. MinFVGSizePips
+   Min: 1
+   Max: 2
+   Step: 1
+   → Values: 1, 2 (2 values)
+
+TOTAL PASSES: 3 × 3 × 2 = 18 optimization runs
+
+
+FIXED PARAMETERS (Value only):
+-----------------------------------------------
+
+=== TREND DETECTION ===
+SMAPeriod = 200
+SwingLookbackBars = 30
+
+=== SESSION MANAGEMENT ===
+EnableSessionFilter = True
+ShowSessionBoxes = True
+SessionBoxDisplayMode = 1
+SessionWeight = 0.2
+
+=== TRADE MANAGEMENT ===
+RiskPercent = 1
+SLBufferPips = 2
+MaxPositions = 1
+MagicNumber = 100001
+
+=== CHANDELIER SL ===
+EnableChandelierSL = True
+ChandelierActivationRR = 0.75
+TrailIncrementPips = 5
+TrailModeSelection = 1
+RetracementMultiplier = 0.5
+MinProfitBufferPips = 5
+ChandelierTPModeSelection = 1
+MinChandelierDistance = 5
+
+=== TP MANAGEMENT ===
+UseH1LevelsForTP = True
+UseM15LevelsForTP = True
+H1LevelProximityPips = 50
+MaxDynamicRR = 5
+
+=== ENTRY FILTERS ===
+EnableTrading = True
+EntryModeSelection = 0
+TradeOnNewSwingOnly = True
+MaxDistanceToArm = 10
+
+=== ENTRY SYSTEM ===
+EntryExecution = 1 *** MUST BE 1 (PendingStop) ***
+PendingEntryOffsetPips = 2
+PendingOrderExpiryMinutes = 60
+
+=== RISK MANAGEMENT ===
+EnableDailyLossLimit = False
+MaxDailyRLoss = -3
+MaxDailyLosingTrades = 5
+
+=== FVG DETECTION ===
+EnableFVGFilter = True
+FVGLookbackBars = 50
+FVGMaxAgeBars = 30
+
+=== PRE-ZONE SYSTEM ===
+EnablePreZoneSystem = True
+ATRPeriod = 14
+ATRMultiplier = 1.5
+PreZoneExpiryMinutes = 60
+ValidZoneExpiryMinutes = 120
+FractalZoneTolerancePips = 5
+MinPreZoneScore = 0.5
+
+=== VISUALIZATION ===
+ShowRectangles = True
+RectangleWidthMinutes = 50
+ShowModeLabel = True
+BuyColorName = Green
+SellColorName = Red
+RectangleTransparency = 80
+ColorPreZoneName = Yellow
+ColorValidZoneName = Blue
+ColorArmedZoneName = Green
+
+=== SCORE WEIGHTS ===
+WeightValidity = 0.25
+WeightExtremity = 0.3
+WeightFractal = 0.2
+WeightSession = 0.2
+WeightFVG = 0.15
+WeightCandle = 0.05
+
+
+===============================================
+QUICK SETUP GUIDE:
+===============================================
+
+STEP 1: Rebuild bot in cTrader (to apply SL/TP fix)
+
+STEP 2: Open Optimization tab
+- Symbol: EURUSD
+- Timeframe: m1
+- Date: 01/04/2024 - 30/06/2024
+
+STEP 3: Enable optimization for these 3 parameters:
+
+┌─────────────────────────────────────┐
+│ MinimumSwingScore                   │
+│ ☑ Optimize                          │
+│ Min:  0.6                           │
+│ Max:  0.7                           │
+│ Step: 0.05                          │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ MinimumRRRatio                      │
+│ ☑ Optimize                          │
+│ Min:  2.5                           │
+│ Max:  3.5                           │
+│ Step: 0.5                           │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ MinFVGSizePips                      │
+│ ☑ Optimize                          │
+│ Min:  1                             │
+│ Max:  2                             │
+│ Step: 1                             │
+└─────────────────────────────────────┘
+
+STEP 4: For ALL other parameters
+- ☐ Leave optimize UNCHECKED
+- Set the value shown in "Fixed Parameters" section
+
+STEP 5: Double-check these critical settings:
+✓ EntryExecution = 1 (PendingStop)
+✓ EnableTrading = True
+✓ Bot has been rebuilt with SL/TP fix
+
+STEP 6: Start optimization → 18 passes
+
+===============================================

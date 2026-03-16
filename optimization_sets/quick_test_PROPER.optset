@@ -1,0 +1,1264 @@
+﻿{
+  "parameters": [
+    {
+      "name": "c02b25309272471b89a4de3831c473c5",
+      "value": "m1",
+      "parameterType": "TimeFrame",
+      "metadata": null,
+      "optimize": false,
+      "values": [
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6",
+        "m7",
+        "m8",
+        "m9",
+        "m10",
+        "m15",
+        "m20",
+        "m30",
+        "m45",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h6",
+        "h8",
+        "h12",
+        "D1",
+        "D2",
+        "D3",
+        "W1",
+        "Month1"
+      ]
+    },
+    {
+      "name": "TrendHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "TrendHeader",
+        "friendlyName": "=== TREND DETECTION ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "SMAPeriod",
+      "value": "200",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 100,
+        "maxValue": 300,
+        "step": 50,
+        "defaultValue": 200,
+        "parameterType": "Integer",
+        "propertyName": "SMAPeriod",
+        "friendlyName": "SMA Period",
+        "groupName": "Trend Detection",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "100",
+      "max": "300",
+      "step": "1"
+    },
+    {
+      "name": "SwingLookbackBars",
+      "value": "30",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 20,
+        "maxValue": 80,
+        "step": 10,
+        "defaultValue": 30,
+        "parameterType": "Integer",
+        "propertyName": "SwingLookbackBars",
+        "friendlyName": "Swing Lookback Bars (M15)",
+        "groupName": "Trend Detection",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "20",
+      "max": "80",
+      "step": "1"
+    },
+    {
+      "name": "MinimumSwingScore",
+      "value": "0.6",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.4,
+        "maxValue": 0.8,
+        "step": 0.05,
+        "defaultValue": 0.6,
+        "parameterType": "Double",
+        "propertyName": "MinimumSwingScore",
+        "friendlyName": "Minimum Swing Score",
+        "groupName": "Trend Detection",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "min": "0.6",
+      "max": "0.7",
+      "step": "0.05"
+    },
+    {
+      "name": "SessionHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "SessionHeader",
+        "friendlyName": "=== SESSION MANAGEMENT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableSessionFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableSessionFilter",
+        "friendlyName": "Enable Session Filter",
+        "groupName": "Session Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ShowSessionBoxes",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "ShowSessionBoxes",
+        "friendlyName": "Show Session Boxes",
+        "groupName": "Session Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "SessionBoxDisplayMode",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Basic"
+          },
+          {
+            "value": 1,
+            "name": "Advanced"
+          }
+        ],
+        "defaultValue": 1,
+        "parameterType": "Enum",
+        "propertyName": "SessionBoxDisplayMode",
+        "friendlyName": "Session Box Mode",
+        "groupName": "Session Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "SessionWeight",
+      "value": "0.2",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.2,
+        "parameterType": "Double",
+        "propertyName": "SessionWeight",
+        "friendlyName": "Session Weight",
+        "groupName": "Session Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1",
+      "step": "0.05"
+    },
+    {
+      "name": "TradeHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "TradeHeader",
+        "friendlyName": "=== TRADE MANAGEMENT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "RiskPercent",
+      "value": "1",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.5,
+        "maxValue": 2.0,
+        "step": 0.25,
+        "defaultValue": 1.0,
+        "parameterType": "Double",
+        "propertyName": "RiskPercent",
+        "friendlyName": "Risk Per Trade %",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0.5",
+      "max": "2",
+      "step": "0.1"
+    },
+    {
+      "name": "SLBufferPips",
+      "value": "2",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 1.0,
+        "maxValue": 4.0,
+        "step": 0.5,
+        "defaultValue": 2.0,
+        "parameterType": "Double",
+        "propertyName": "SLBufferPips",
+        "friendlyName": "SL Buffer Pips",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "4",
+      "step": "0.5"
+    },
+    {
+      "name": "MinimumRRRatio",
+      "value": "3",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 2.0,
+        "maxValue": 5.0,
+        "step": 0.5,
+        "defaultValue": 3.0,
+        "parameterType": "Double",
+        "propertyName": "MinimumRRRatio",
+        "friendlyName": "Minimum RR Ratio",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "min": "2.5",
+      "max": "3.5",
+      "step": "1"
+    },
+    {
+      "name": "MaxPositions",
+      "value": "1",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 3,
+        "step": 1,
+        "defaultValue": 1,
+        "parameterType": "Integer",
+        "propertyName": "MaxPositions",
+        "friendlyName": "Max Positions",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "3",
+      "step": "1"
+    },
+    {
+      "name": "MagicNumber",
+      "value": "100001",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": -2147483648,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 100001,
+        "parameterType": "Integer",
+        "propertyName": "MagicNumber",
+        "friendlyName": "Magic Number",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "99996",
+      "max": "100006",
+      "step": "1"
+    },
+    {
+      "name": "ChandelierHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "ChandelierHeader",
+        "friendlyName": "=== CHANDELIER SL ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableChandelierSL",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableChandelierSL",
+        "friendlyName": "Enable Chandelier SL",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ChandelierActivationRR",
+      "value": "0.75",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.5,
+        "maxValue": 0.85,
+        "step": 0.05,
+        "defaultValue": 0.75,
+        "parameterType": "Double",
+        "propertyName": "ChandelierActivationRR",
+        "friendlyName": "Activation RR Fraction",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0.5",
+      "max": "0.85",
+      "step": "0.05"
+    },
+    {
+      "name": "TrailIncrementPips",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3.0,
+        "maxValue": 30.0,
+        "step": 1.0,
+        "defaultValue": 10.0,
+        "parameterType": "Double",
+        "propertyName": "TrailIncrementPips",
+        "friendlyName": "Trail Increment (pips)",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "7",
+      "step": "1"
+    },
+    {
+      "name": "TrailModeSelection",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Watermark"
+          },
+          {
+            "value": 1,
+            "name": "CurrentPrice"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "TrailModeSelection",
+        "friendlyName": "Trail Mode",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "RetracementMultiplier",
+      "value": "0",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 0.5,
+        "step": 0.1,
+        "defaultValue": 0.0,
+        "parameterType": "Double",
+        "propertyName": "RetracementMultiplier",
+        "friendlyName": "Retracement Multiplier",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "0.5",
+      "step": "0.1"
+    },
+    {
+      "name": "MinProfitBufferPips",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 2.0,
+        "maxValue": 10.0,
+        "step": 1.0,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "MinProfitBufferPips",
+        "friendlyName": "Min Profit Buffer (pips)",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "2",
+      "max": "10",
+      "step": "1"
+    },
+    {
+      "name": "ChandelierTPModeSelection",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "KeepOriginal"
+          },
+          {
+            "value": 1,
+            "name": "RemoveTP"
+          },
+          {
+            "value": 2,
+            "name": "TrailingTP"
+          }
+        ],
+        "defaultValue": 2,
+        "parameterType": "Enum",
+        "propertyName": "ChandelierTPModeSelection",
+        "friendlyName": "TP Mode",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2"
+      ]
+    },
+    {
+      "name": "MinChandelierDistance",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3.0,
+        "maxValue": 8.0,
+        "step": 1.0,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "MinChandelierDistance",
+        "friendlyName": "Min SL Distance (pips)",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "8",
+      "step": "1"
+    },
+    {
+      "name": "TPHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "TPHeader",
+        "friendlyName": "=== TP MANAGEMENT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "UseH1LevelsForTP",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "UseH1LevelsForTP",
+        "friendlyName": "Use H1 Levels for TP",
+        "groupName": "TP Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "UseM15LevelsForTP",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "UseM15LevelsForTP",
+        "friendlyName": "Use M15 Levels for TP",
+        "groupName": "TP Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "H1LevelProximityPips",
+      "value": "50",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 30,
+        "maxValue": 80,
+        "step": 10,
+        "defaultValue": 50,
+        "parameterType": "Integer",
+        "propertyName": "H1LevelProximityPips",
+        "friendlyName": "H1 Level Proximity Pips",
+        "groupName": "TP Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "30",
+      "max": "80",
+      "step": "1"
+    },
+    {
+      "name": "MaxDynamicRR",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3.0,
+        "maxValue": 5.0,
+        "step": 0.5,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "MaxDynamicRR",
+        "friendlyName": "Max Dynamic RR",
+        "groupName": "TP Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "5",
+      "step": "0.5"
+    },
+    {
+      "name": "EntryHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "EntryHeader",
+        "friendlyName": "=== ENTRY FILTERS ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableTrading",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "EnableTrading",
+        "friendlyName": "Enable Trading",
+        "groupName": "Entry Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EntryModeSelection",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Breakout"
+          },
+          {
+            "value": 1,
+            "name": "RetestConfirm"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "EntryModeSelection",
+        "friendlyName": "Entry Mode",
+        "groupName": "Entry Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "TradeOnNewSwingOnly",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "TradeOnNewSwingOnly",
+        "friendlyName": "Trade on New Swing Only",
+        "groupName": "Entry Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MaxDistanceToArm",
+      "value": "10",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 4.0,
+        "maxValue": 14.0,
+        "step": 2.0,
+        "defaultValue": 10.0,
+        "parameterType": "Double",
+        "propertyName": "MaxDistanceToArm",
+        "friendlyName": "Max Distance to Arm (pips)",
+        "groupName": "Entry Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "4",
+      "max": "14",
+      "step": "1"
+    },
+    {
+      "name": "FVGHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "FVGHeader",
+        "friendlyName": "=== FVG DETECTION ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableFVGFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableFVGFilter",
+        "friendlyName": "Enable FVG Filter",
+        "groupName": "FVG Detection",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "FVGLookbackBars",
+      "value": "50",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 20,
+        "maxValue": 60,
+        "step": 10,
+        "defaultValue": 30,
+        "parameterType": "Integer",
+        "propertyName": "FVGLookbackBars",
+        "friendlyName": "FVG Lookback Bars",
+        "groupName": "FVG Detection",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "20",
+      "max": "60",
+      "step": "1"
+    },
+    {
+      "name": "MinFVGSizePips",
+      "value": "1.5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.5,
+        "maxValue": 2.5,
+        "step": 0.5,
+        "defaultValue": 1.5,
+        "parameterType": "Double",
+        "propertyName": "MinFVGSizePips",
+        "friendlyName": "Min FVG Size (pips)",
+        "groupName": "FVG Detection",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "min": "1",
+      "max": "2",
+      "step": "1"
+    },
+    {
+      "name": "FVGMaxAgeBars",
+      "value": "30",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 20,
+        "maxValue": 60,
+        "step": 10,
+        "defaultValue": 30,
+        "parameterType": "Integer",
+        "propertyName": "FVGMaxAgeBars",
+        "friendlyName": "FVG Max Age (bars)",
+        "groupName": "FVG Detection",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "20",
+      "max": "60",
+      "step": "1"
+    },
+    {
+      "name": "PreZoneHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "PreZoneHeader",
+        "friendlyName": "=== PRE-ZONE SYSTEM ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnablePreZoneSystem",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnablePreZoneSystem",
+        "friendlyName": "Enable PRE-Zone System",
+        "groupName": "PRE-Zone System",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ATRPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 10,
+        "maxValue": 20,
+        "step": 2,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ATRPeriod",
+        "friendlyName": "ATR Period",
+        "groupName": "PRE-Zone System",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "10",
+      "max": "20",
+      "step": "1"
+    },
+    {
+      "name": "ATRMultiplier",
+      "value": "1.5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 1.0,
+        "maxValue": 2.0,
+        "step": 0.25,
+        "defaultValue": 1.5,
+        "parameterType": "Double",
+        "propertyName": "ATRMultiplier",
+        "friendlyName": "ATR Multiplier",
+        "groupName": "PRE-Zone System",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "2",
+      "step": "0.25"
+    },
+    {
+      "name": "PreZoneExpiryMinutes",
+      "value": "60",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 30,
+        "maxValue": 90,
+        "step": 15,
+        "defaultValue": 60,
+        "parameterType": "Integer",
+        "propertyName": "PreZoneExpiryMinutes",
+        "friendlyName": "PRE-Zone Expiry (minutes)",
+        "groupName": "PRE-Zone System",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "40",
+      "max": "70",
+      "step": "1"
+    },
+    {
+      "name": "ValidZoneExpiryMinutes",
+      "value": "120",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 60,
+        "maxValue": 180,
+        "step": 30,
+        "defaultValue": 120,
+        "parameterType": "Integer",
+        "propertyName": "ValidZoneExpiryMinutes",
+        "friendlyName": "VALID-Zone Expiry (minutes)",
+        "groupName": "PRE-Zone System",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "60",
+      "max": "180",
+      "step": "1"
+    },
+    {
+      "name": "FractalZoneTolerancePips",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3.0,
+        "maxValue": 7.0,
+        "step": 1.0,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "FractalZoneTolerancePips",
+        "friendlyName": "Fractal Zone Tolerance (pips)",
+        "groupName": "PRE-Zone System",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "7",
+      "step": "0.5"
+    },
+    {
+      "name": "MinPreZoneScore",
+      "value": "0.5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.4,
+        "maxValue": 0.7,
+        "step": 0.05,
+        "defaultValue": 0.5,
+        "parameterType": "Double",
+        "propertyName": "MinPreZoneScore",
+        "friendlyName": "Min PRE-Zone Score",
+        "groupName": "PRE-Zone System",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0.4",
+      "max": "0.7",
+      "step": "0.05"
+    },
+    {
+      "name": "VisualHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "VisualHeader",
+        "friendlyName": "=== VISUALIZATION ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ShowRectangles",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "ShowRectangles",
+        "friendlyName": "Show Rectangles",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "RectangleWidthMinutes",
+      "value": "50",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 30,
+        "maxValue": 90,
+        "step": 15,
+        "defaultValue": 60,
+        "parameterType": "Integer",
+        "propertyName": "RectangleWidthMinutes",
+        "friendlyName": "Rectangle Width (Minutes)",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "30",
+      "max": "90",
+      "step": "1"
+    },
+    {
+      "name": "ShowModeLabel",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "ShowModeLabel",
+        "friendlyName": "Show Mode Label",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "BuyColorName",
+      "value": "Green",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "Green",
+        "parameterType": "String",
+        "propertyName": "BuyColorName",
+        "friendlyName": "BUY Color",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "SellColorName",
+      "value": "Red",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "Red",
+        "parameterType": "String",
+        "propertyName": "SellColorName",
+        "friendlyName": "SELL Color",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "RectangleTransparency",
+      "value": "80",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 255,
+        "step": 1,
+        "defaultValue": 80,
+        "parameterType": "Integer",
+        "propertyName": "RectangleTransparency",
+        "friendlyName": "Rectangle Transparency",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "255",
+      "step": "1"
+    },
+    {
+      "name": "ColorPreZoneName",
+      "value": "Yellow",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "Yellow",
+        "parameterType": "String",
+        "propertyName": "ColorPreZoneName",
+        "friendlyName": "PRE-Zone Color",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ColorValidZoneName",
+      "value": "Blue",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "Blue",
+        "parameterType": "String",
+        "propertyName": "ColorValidZoneName",
+        "friendlyName": "VALID-Zone Color",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ColorArmedZoneName",
+      "value": "Green",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "Green",
+        "parameterType": "String",
+        "propertyName": "ColorArmedZoneName",
+        "friendlyName": "ARMED-Zone Color",
+        "groupName": "Visualization",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "WeightsHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "WeightsHeader",
+        "friendlyName": "=== SCORE WEIGHTS ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "WeightValidity",
+      "value": "0.25",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.2,
+        "parameterType": "Double",
+        "propertyName": "WeightValidity",
+        "friendlyName": "Weight: Validity",
+        "groupName": "Score Weights",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1",
+      "step": "0.05"
+    },
+    {
+      "name": "WeightExtremity",
+      "value": "0.3",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.25,
+        "parameterType": "Double",
+        "propertyName": "WeightExtremity",
+        "friendlyName": "Weight: Extremity",
+        "groupName": "Score Weights",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1",
+      "step": "0.05"
+    },
+    {
+      "name": "WeightFractal",
+      "value": "0.2",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.15,
+        "parameterType": "Double",
+        "propertyName": "WeightFractal",
+        "friendlyName": "Weight: Fractal",
+        "groupName": "Score Weights",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1",
+      "step": "0.05"
+    },
+    {
+      "name": "WeightSession",
+      "value": "0.2",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.2,
+        "parameterType": "Double",
+        "propertyName": "WeightSession",
+        "friendlyName": "Weight: Session",
+        "groupName": "Score Weights",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1",
+      "step": "0.05"
+    },
+    {
+      "name": "WeightFVG",
+      "value": "0.15",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.15,
+        "parameterType": "Double",
+        "propertyName": "WeightFVG",
+        "friendlyName": "Weight: FVG",
+        "groupName": "Score Weights",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1",
+      "step": "0.05"
+    },
+    {
+      "name": "WeightCandle",
+      "value": "0.05",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.05,
+        "parameterType": "Double",
+        "propertyName": "WeightCandle",
+        "friendlyName": "Weight: Candle",
+        "groupName": "Score Weights",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1",
+      "step": "0.05"
+    }
+  ]
+}
