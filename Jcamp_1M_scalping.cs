@@ -686,6 +686,10 @@ namespace cAlgo.Robots
         private TradingZone activeZone = null;           // Current active zone (or null)
         private DisplacementCandle lastDisplacement = null;  // Most recent displacement detected
 
+        // v2.0 indicators
+        private RelativeStrengthIndex rsiM1;              // RSI for compression-expansion filter
+        private SimpleMovingAverage smaFast;              // Fast SMA for dual trend filter
+
         // Pending Order Tracking
         private readonly Dictionary<string, ZonePendingOrder> _zonePendingOrders = new Dictionary<string, ZonePendingOrder>();
         private const int MAX_PENDING_ORDERS = 2;         // Limit concurrent pending orders
@@ -749,6 +753,11 @@ namespace cAlgo.Robots
                 atrM1 = Indicators.AverageTrueRange(Bars, ATRPeriod, MovingAverageType.Simple);
                 Print("[PRE-Zone] ATR indicators initialized | Period: {0} | Multiplier: {1:F1}x | M1+M15 displacement", ATRPeriod, ATRMultiplier);
             }
+
+            // v2.0: Initialize RSI and Fast SMA
+            rsiM1 = Indicators.RelativeStrengthIndex(Bars.ClosePrices, RSIPeriod);
+            smaFast = Indicators.SimpleMovingAverage(m15Bars.ClosePrices, FastSMAPeriod);
+            Print("[v2.0] RSI Period: {0} | Fast SMA Period: {1}", RSIPeriod, FastSMAPeriod);
 
             if (isM15Chart)
             {
@@ -825,6 +834,20 @@ namespace cAlgo.Robots
                 WeightValidity, WeightExtremity, WeightFractal, WeightSession, WeightFVG, WeightCandle);
             double weightTotal = WeightValidity + WeightExtremity + WeightFractal + WeightSession + WeightFVG + WeightCandle;
             Print("Weight Total: {0:F2} {1}", weightTotal, weightTotal == 1.0 ? "✓" : "⚠ WARNING: Should be 1.0!");
+
+            // v2.0 Enhanced Entry parameters
+            Print("=== ENHANCED ENTRY v2.0 ===");
+            Print("FVG Zone Size: {0}%", FVGZoneSizePercent);
+            Print("Rejection: Wick={0} Engulf={1} PinBar={2} | WickRatio={3:F1} | MaxBars={4}",
+                EnableWickRejection, EnableEngulfingPattern, EnablePinBar, MinWickRatio, MaxBarsWithoutRejection);
+            Print("SL ATR Multiplier: {0:F2}", SLATRMultiplier);
+            Print("RSI Compression: Enabled={0} | Period={1} | Range={2}-{3} | MinBars={4} | Lookback={5}",
+                EnableRSICompression, RSIPeriod, RSICompressionLow, RSICompressionHigh, RSICompressionMinBars, RSICompressionLookback);
+            Print("RSI Expansion: Buy={0}-{1} | Sell={2}-{3}",
+                RSIExpansionBuyMin, RSIExpansionBuyMax, RSIExpansionSellMin, RSIExpansionSellMax);
+            Print("Dual SMA: Enabled={0} | FastPeriod={1}", EnableDualSMA, FastSMAPeriod);
+            Print("False Positive Filters: RejectionATR={0:F1} | DisplacementATR={1:F1}",
+                MinRejectionATRRatio, DisplacementRangeATR);
 
             // ========== TIMEZONE DIAGNOSTIC ==========
             Print("========================================");
