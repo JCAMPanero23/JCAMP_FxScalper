@@ -2183,6 +2183,288 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region v2.0 Helper Methods
+
+        /// <summary>
+        /// Checks if a candle has significant range relative to ATR
+        /// Used to filter out noise candles in rejection pattern detection
+        /// </summary>
+        private bool IsSignificantCandle(int barIdx)
+        {
+            if (barIdx < 0 || barIdx >= Bars.Count)
+                return false;
+
+            double high = Bars.HighPrices[barIdx];
+            double low = Bars.LowPrices[barIdx];
+            double range = high - low;
+            double atr = atrM1.Result[barIdx];
+
+            bool isSignificant = range >= atr * MinRejectionATRRatio;
+
+            return isSignificant;
+        }
+
+        /// <summary>
+        /// Checks for wick rejection pattern
+        /// BUY: Lower wick > body (rejection of lower prices)
+        /// SELL: Upper wick > body (rejection of higher prices)
+        /// </summary>
+        private bool CheckWickRejection(int barIdx, string mode)
+        {
+            if (!EnableWickRejection)
+                return false;
+
+            if (!IsSignificantCandle(barIdx))
+                return false;
+
+            double open = Bars.OpenPrices[barIdx];
+            double close = Bars.ClosePrices[barIdx];
+            double high = Bars.HighPrices[barIdx];
+            double low = Bars.LowPrices[barIdx];
+
+            double body = Math.Abs(close - open);
+            double upperWick = high - Math.Max(open, close);
+            double lowerWick = Math.Min(open, close) - low;
+
+            // Prevent division by zero
+            if (body < Symbol.PipSize * 0.1)
+                body = Symbol.PipSize * 0.1;
+
+            if (mode == "BUY")
+            {
+                bool isRejection = lowerWick > body;
+                if (isRejection)
+                {
+                    Print("[v2.0] Wick rejection BUY | LowerWick: {0:F1} pips > Body: {1:F1} pips",
+                        lowerWick / Symbol.PipSize, body / Symbol.PipSize);
+                }
+                return isRejection;
+            }
+            else
+            {
+                bool isRejection = upperWick > body;
+                if (isRejection)
+                {
+                    Print("[v2.0] Wick rejection SELL | UpperWick: {0:F1} pips > Body: {1:F1} pips",
+                        upperWick / Symbol.PipSize, body / Symbol.PipSize);
+                }
+                return isRejection;
+            }
+        }
+
+        /// <summary>
+        /// Checks for pin bar pattern (stronger wick rejection)
+        /// BUY: Lower wick >= MinWickRatio × body
+        /// SELL: Upper wick >= MinWickRatio × body
+        /// </summary>
+        private bool CheckPinBar(int barIdx, string mode)
+        {
+            if (!EnablePinBar)
+                return false;
+
+            if (!IsSignificantCandle(barIdx))
+                return false;
+
+            double open = Bars.OpenPrices[barIdx];
+            double close = Bars.ClosePrices[barIdx];
+            double high = Bars.HighPrices[barIdx];
+            double low = Bars.LowPrices[barIdx];
+
+            double body = Math.Abs(close - open);
+            double upperWick = high - Math.Max(open, close);
+            double lowerWick = Math.Min(open, close) - low;
+
+            if (body < Symbol.PipSize * 0.1)
+                body = Symbol.PipSize * 0.1;
+
+            if (mode == "BUY")
+            {
+                bool isPinBar = lowerWick >= MinWickRatio * body;
+                if (isPinBar)
+                {
+                    Print("[v2.0] Pin bar BUY | LowerWick: {0:F1} pips >= {1:F1}x Body ({2:F1} pips)",
+                        lowerWick / Symbol.PipSize, MinWickRatio, body / Symbol.PipSize);
+                }
+                return isPinBar;
+            }
+            else
+            {
+                bool isPinBar = upperWick >= MinWickRatio * body;
+                if (isPinBar)
+                {
+                    Print("[v2.0] Pin bar SELL | UpperWick: {0:F1} pips >= {1:F1}x Body ({2:F1} pips)",
+                        upperWick / Symbol.PipSize, MinWickRatio, body / Symbol.PipSize);
+                }
+                return isPinBar;
+            }
+        }
+
+        /// <summary>
+        /// Checks for engulfing pattern
+        /// BUY: Bullish candle engulfs previous bearish candle
+        /// SELL: Bearish candle engulfs previous bullish candle
+        /// </summary>
+        private bool CheckEngulfingPattern(int barIdx, string mode)
+        {
+            if (!EnableEngulfingPattern)
+                return false;
+
+            if (barIdx < 1 || barIdx >= Bars.Count)
+                return false;
+
+            if (!IsSignificantCandle(barIdx))
+                return false;
+
+            double open = Bars.OpenPrices[barIdx];
+            double close = Bars.ClosePrices[barIdx];
+            bool isBullish = close > open;
+            bool isBearish = close < open;
+
+            double prevOpen = Bars.OpenPrices[barIdx - 1];
+            double prevClose = Bars.ClosePrices[barIdx - 1];
+            bool prevBullish = prevClose > prevOpen;
+            bool prevBearish = prevClose < prevOpen;
+
+            double currBody = Math.Abs(close - open);
+            double prevBody = Math.Abs(prevClose - prevOpen);
+
+            if (mode == "BUY")
+            {
+                bool isEngulfing = isBullish && prevBearish && currBody > prevBody &&
+                                   close > prevOpen && open < prevClose;
+                if (isEngulfing)
+                {
+                    Print("[v2.0] Engulfing BUY | CurrBody: {0:F1} pips engulfs PrevBody: {1:F1} pips",
+                        currBody / Symbol.PipSize, prevBody / Symbol.PipSize);
+                }
+                return isEngulfing;
+            }
+            else
+            {
+                bool isEngulfing = isBearish && prevBullish && currBody > prevBody &&
+                                   close < prevOpen && open > prevClose;
+                if (isEngulfing)
+                {
+                    Print("[v2.0] Engulfing SELL | CurrBody: {0:F1} pips engulfs PrevBody: {1:F1} pips",
+                        currBody / Symbol.PipSize, prevBody / Symbol.PipSize);
+                }
+                return isEngulfing;
+            }
+        }
+
+        /// <summary>
+        /// Checks if any rejection pattern is present
+        /// Returns true if ANY enabled pattern is detected
+        /// </summary>
+        private bool HasRejectionConfirmation(int barIdx, string mode)
+        {
+            if (CheckWickRejection(barIdx, mode))
+                return true;
+
+            if (CheckPinBar(barIdx, mode))
+                return true;
+
+            if (CheckEngulfingPattern(barIdx, mode))
+                return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// Checks RSI compression-expansion pattern
+        /// 1. Count bars where RSI was in compression zone (40-60) in lookback period
+        /// 2. Require minimum compression bars
+        /// 3. Current RSI must be in expansion zone (60-80 for BUY, 20-40 for SELL)
+        /// </summary>
+        private bool CheckRSICompressionExpansion(string mode)
+        {
+            if (!EnableRSICompression)
+                return true;
+
+            int currentIdx = Bars.Count - 1;
+            if (currentIdx < RSICompressionLookback)
+                return false;
+
+            int compressionBars = 0;
+            for (int i = 1; i <= RSICompressionLookback; i++)
+            {
+                int idx = currentIdx - i;
+                if (idx < 0) break;
+
+                double rsiValue = rsiM1.Result[idx];
+                if (rsiValue >= RSICompressionLow && rsiValue <= RSICompressionHigh)
+                {
+                    compressionBars++;
+                }
+            }
+
+            if (compressionBars < RSICompressionMinBars)
+            {
+                return false;
+            }
+
+            double currentRSI = rsiM1.Result[currentIdx];
+
+            if (mode == "BUY")
+            {
+                bool inExpansion = currentRSI >= RSIExpansionBuyMin && currentRSI <= RSIExpansionBuyMax;
+                if (inExpansion)
+                {
+                    Print("[v2.0] RSI compression-expansion BUY | Compression: {0} bars | Current RSI: {1:F1}",
+                        compressionBars, currentRSI);
+                }
+                return inExpansion;
+            }
+            else
+            {
+                bool inExpansion = currentRSI >= RSIExpansionSellMin && currentRSI <= RSIExpansionSellMax;
+                if (inExpansion)
+                {
+                    Print("[v2.0] RSI compression-expansion SELL | Compression: {0} bars | Current RSI: {1:F1}",
+                        compressionBars, currentRSI);
+                }
+                return inExpansion;
+            }
+        }
+
+        /// <summary>
+        /// Checks dual SMA trend filter
+        /// BUY: Price > SMA200 AND Price > SMAFast
+        /// SELL: Price < SMA200 AND Price < SMAFast
+        /// </summary>
+        private bool CheckDualSMAFilter(string mode)
+        {
+            if (!EnableDualSMA)
+                return true;
+
+            double currentPrice = Symbol.Bid;
+            double sma200Value = sma.Result.LastValue;
+            double smaFastValue = smaFast.Result.LastValue;
+
+            if (mode == "BUY")
+            {
+                bool aboveBoth = currentPrice > sma200Value && currentPrice > smaFastValue;
+                if (aboveBoth)
+                {
+                    Print("[v2.0] Dual SMA BUY | Price: {0:F5} > SMA200: {1:F5} AND > SMAFast({2}): {3:F5}",
+                        currentPrice, sma200Value, FastSMAPeriod, smaFastValue);
+                }
+                return aboveBoth;
+            }
+            else
+            {
+                bool belowBoth = currentPrice < sma200Value && currentPrice < smaFastValue;
+                if (belowBoth)
+                {
+                    Print("[v2.0] Dual SMA SELL | Price: {0:F5} < SMA200: {1:F5} AND < SMAFast({2}): {3:F5}",
+                        currentPrice, sma200Value, FastSMAPeriod, smaFastValue);
+                }
+                return belowBoth;
+            }
+        }
+
+        #endregion
+
         #region Phase 4: PRE-Zone System
 
         /// <summary>
