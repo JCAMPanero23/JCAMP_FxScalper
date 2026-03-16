@@ -696,6 +696,10 @@ namespace cAlgo.Robots
         private readonly Dictionary<string, ZonePendingOrder> _zonePendingOrders = new Dictionary<string, ZonePendingOrder>();
         private const int MAX_PENDING_ORDERS = 2;         // Limit concurrent pending orders
 
+        // v2.0: Pending order validation tracking
+        private int _pendingOrderBarsWaiting = 0;
+        private bool _rejectionConfirmed = false;
+
         // Daily Loss Limit Tracking
         private double _dailyRLoss = 0.0;                  // Cumulative R loss for current day
         private int _dailyLosingTrades = 0;                // Count of losing trades for current day
@@ -916,6 +920,8 @@ namespace cAlgo.Robots
             if (EntryExecution == EntryExecutionMode.PendingStop)
             {
                 CheckExpiredPendingOrders();
+                // v2.0: Validate pending order filters
+                ValidatePendingOrderFilters();
             }
 
             // ============================================================
@@ -2465,6 +2471,67 @@ namespace cAlgo.Robots
             }
         }
 
+        /// <summary>
+        /// Validates pending order each bar:
+        /// 1. Check for rejection candle
+        /// 2. Re-validate filters
+        /// 3. Cancel if max bars exceeded without rejection
+        /// </summary>
+        private void ValidatePendingOrderFilters()
+        {
+            if (activeZone == null || activeZone.State != ZoneState.Armed)
+                return;
+
+            if (EntryExecution != EntryExecutionMode.PendingStop)
+                return;
+
+            // Check if we have a pending order for this zone
+            if (!_zonePendingOrders.ContainsKey(activeZone.Id))
+                return;
+
+            _pendingOrderBarsWaiting++;
+
+            // Check for rejection confirmation
+            int currentBar = Bars.Count - 1;
+            if (!_rejectionConfirmed && HasRejectionConfirmation(currentBar, activeZone.Mode))
+            {
+                _rejectionConfirmed = true;
+                Print("[v2.0] Rejection confirmed for zone {0} | Bar: {1}", activeZone.Id, _pendingOrderBarsWaiting);
+            }
+
+            // Re-validate filters
+            if (!CheckDualSMAFilter(activeZone.Mode))
+            {
+                CancelZonePendingOrder(activeZone.Id, "v2.0: Dual SMA filter invalid");
+                ResetPendingOrderTracking();
+                return;
+            }
+
+            if (!CheckRSICompressionExpansion(activeZone.Mode))
+            {
+                CancelZonePendingOrder(activeZone.Id, "v2.0: RSI filter invalid");
+                ResetPendingOrderTracking();
+                return;
+            }
+
+            // Cancel if max bars exceeded without rejection
+            if (!_rejectionConfirmed && _pendingOrderBarsWaiting >= MaxBarsWithoutRejection)
+            {
+                CancelZonePendingOrder(activeZone.Id, $"v2.0: No rejection in {MaxBarsWithoutRejection} bars");
+                ResetPendingOrderTracking();
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Resets pending order validation tracking
+        /// </summary>
+        private void ResetPendingOrderTracking()
+        {
+            _pendingOrderBarsWaiting = 0;
+            _rejectionConfirmed = false;
+        }
+
         #endregion
 
         #region Phase 4: PRE-Zone System
@@ -2897,6 +2964,8 @@ namespace cAlgo.Robots
                         {
                             PlaceSellPendingOrder(activeZone);
                         }
+                        // v2.0: Reset pending order tracking when new order placed
+                        ResetPendingOrderTracking();
                     }
                 }
             }
