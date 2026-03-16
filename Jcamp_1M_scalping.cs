@@ -4200,9 +4200,14 @@ namespace cAlgo.Robots
             // Calculate entry price at zone top + offset
             double entryPrice = zone.TopPrice + (PendingEntryOffsetPips * Symbol.PipSize);
 
-            // Calculate SL at zone bottom - buffer
-            double slPrice = zone.BottomPrice - (SLBufferPips * Symbol.PipSize);
+            // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
+            double zoneBoundarySL = zone.FVGBottomPrice - (SLBufferPips * Symbol.PipSize);
+            double atrBasedSL = entryPrice - (atrM1.Result.LastValue * SLATRMultiplier);
+            double slPrice = Math.Min(zoneBoundarySL, atrBasedSL);  // Take the wider SL
             double slPips = (entryPrice - slPrice) / Symbol.PipSize;
+
+            Print("[v2.0] BUY SL | Zone: {0:F5} | ATR: {1:F5} | Final: {2:F5} ({3:F1} pips)",
+                zoneBoundarySL, atrBasedSL, slPrice, slPips);
 
             // Calculate TP using existing TP logic
             double initialTP = entryPrice + (slPips * MinimumRRRatio * Symbol.PipSize);
@@ -4285,9 +4290,14 @@ namespace cAlgo.Robots
             // Calculate entry price at zone bottom - offset
             double entryPrice = zone.BottomPrice - (PendingEntryOffsetPips * Symbol.PipSize);
 
-            // Calculate SL at zone top + buffer
-            double slPrice = zone.TopPrice + (SLBufferPips * Symbol.PipSize);
+            // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
+            double zoneBoundarySL = zone.FVGTopPrice + (SLBufferPips * Symbol.PipSize);
+            double atrBasedSL = entryPrice + (atrM1.Result.LastValue * SLATRMultiplier);
+            double slPrice = Math.Max(zoneBoundarySL, atrBasedSL);  // Take the wider SL
             double slPips = (slPrice - entryPrice) / Symbol.PipSize;
+
+            Print("[v2.0] SELL SL | Zone: {0:F5} | ATR: {1:F5} | Final: {2:F5} ({3:F1} pips)",
+                zoneBoundarySL, atrBasedSL, slPrice, slPips);
 
             // Calculate TP using existing TP logic
             double initialTP = entryPrice - (slPips * MinimumRRRatio * Symbol.PipSize);
