@@ -2458,23 +2458,25 @@ namespace cAlgo.Robots
 
             if (mode == "BUY")
             {
-                bool aboveBoth = currentPrice > sma200Value && currentPrice > smaFastValue;
-                if (aboveBoth)
+                // Relaxed: Only check SMA200 trend (allow pullbacks to Fast SMA)
+                bool buyOK = currentPrice > sma200Value;
+                if (buyOK)
                 {
-                    Print("[v2.0] Dual SMA BUY | Price: {0:F5} > SMA200: {1:F5} AND > SMAFast({2}): {3:F5}",
-                        currentPrice, sma200Value, FastSMAPeriod, smaFastValue);
+                    Print("[v2.0] Dual SMA BUY | Price: {0:F5} > SMA200: {1:F5} (Fast SMA: {2:F5})",
+                        currentPrice, sma200Value, smaFastValue);
                 }
-                return aboveBoth;
+                return buyOK;
             }
             else
             {
-                bool belowBoth = currentPrice < sma200Value && currentPrice < smaFastValue;
-                if (belowBoth)
+                // Relaxed: Only check SMA200 trend (allow pullbacks to Fast SMA)
+                bool sellOK = currentPrice < sma200Value;
+                if (sellOK)
                 {
-                    Print("[v2.0] Dual SMA SELL | Price: {0:F5} < SMA200: {1:F5} AND < SMAFast({2}): {3:F5}",
-                        currentPrice, sma200Value, FastSMAPeriod, smaFastValue);
+                    Print("[v2.0] Dual SMA SELL | Price: {0:F5} < SMA200: {1:F5} (Fast SMA: {2:F5})",
+                        currentPrice, sma200Value, smaFastValue);
                 }
-                return belowBoth;
+                return sellOK;
             }
         }
 
@@ -4207,8 +4209,8 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Calculate entry price at zone top + offset
-            double entryPrice = zone.TopPrice + (PendingEntryOffsetPips * Symbol.PipSize);
+            // Calculate entry price at zone top - offset (INSIDE zone for rejection)
+            double entryPrice = zone.TopPrice - (PendingEntryOffsetPips * Symbol.PipSize);
 
             // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
             double zoneBoundarySL = zone.FVGBottomPrice - (SLBufferPips * Symbol.PipSize);
@@ -4297,8 +4299,8 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Calculate entry price at zone bottom - offset
-            double entryPrice = zone.BottomPrice - (PendingEntryOffsetPips * Symbol.PipSize);
+            // Calculate entry price at zone bottom + offset (INSIDE zone for rejection)
+            double entryPrice = zone.BottomPrice + (PendingEntryOffsetPips * Symbol.PipSize);
 
             // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
             double zoneBoundarySL = zone.FVGTopPrice + (SLBufferPips * Symbol.PipSize);
