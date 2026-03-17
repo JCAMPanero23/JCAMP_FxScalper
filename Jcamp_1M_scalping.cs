@@ -4209,8 +4209,8 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Calculate entry price at zone top - offset (INSIDE zone for rejection)
-            double entryPrice = zone.TopPrice - (PendingEntryOffsetPips * Symbol.PipSize);
+            // Calculate entry price at FVG top - offset (rejection from support FVG)
+            double entryPrice = zone.FVGTopPrice - (PendingEntryOffsetPips * Symbol.PipSize);
 
             // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
             double zoneBoundarySL = zone.FVGBottomPrice - (SLBufferPips * Symbol.PipSize);
@@ -4299,8 +4299,8 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Calculate entry price at zone bottom + offset (INSIDE zone for rejection)
-            double entryPrice = zone.BottomPrice + (PendingEntryOffsetPips * Symbol.PipSize);
+            // Calculate entry price at FVG bottom + offset (rejection from resistance FVG)
+            double entryPrice = zone.FVGBottomPrice + (PendingEntryOffsetPips * Symbol.PipSize);
 
             // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
             double zoneBoundarySL = zone.FVGTopPrice + (SLBufferPips * Symbol.PipSize);
