@@ -73,8 +73,8 @@ namespace cAlgo.Robots
         [Parameter("SL Buffer Pips", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 4.0, Step = 0.5, Group = "Trade Management")]
         public double SLBufferPips { get; set; }
 
-        // Min RR: Trade quality filter. Step=0.5 gives 7 combinations (2-5)
-        [Parameter("Minimum RR Ratio", DefaultValue = 3.0, MinValue = 2.0, MaxValue = 5.0, Step = 0.5, Group = "Trade Management")]
+        // Min RR: Trade quality filter (Pass #980: 3.5 for quality trades)
+        [Parameter("Minimum RR Ratio", DefaultValue = 3.5, MinValue = 2.0, MaxValue = 5.0, Step = 0.5, Group = "Trade Management")]
         public double MinimumRRRatio { get; set; }
 
         // Max Positions: Usually 1-3 for scalping. Step=1 gives 3 combinations
@@ -97,8 +97,8 @@ namespace cAlgo.Robots
         [Parameter("Activation RR Fraction", DefaultValue = 0.75, MinValue = 0.5, MaxValue = 0.85, Step = 0.05, Group = "Chandelier SL")]
         public double ChandelierActivationRR { get; set; }
 
-        // Trail Increment: How many pips price must move before SL trails. Step=1 gives range (3-30)
-        [Parameter("Trail Increment (pips)", DefaultValue = 10.0, MinValue = 3.0, MaxValue = 30.0, Step = 1.0, Group = "Chandelier SL")]
+        // Trail Increment: How many pips price must move before SL trails (Pass #980: 5 pips for aggressive trailing)
+        [Parameter("Trail Increment (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 30.0, Step = 1.0, Group = "Chandelier SL")]
         public double TrailIncrementPips { get; set; }
 
         [Parameter("Trail Mode", DefaultValue = TrailMode.Watermark, Group = "Chandelier SL")]
@@ -112,7 +112,8 @@ namespace cAlgo.Robots
         [Parameter("Min Profit Buffer (pips)", DefaultValue = 5.0, MinValue = 2.0, MaxValue = 10.0, Step = 1.0, Group = "Chandelier SL")]
         public double MinProfitBufferPips { get; set; }
 
-        [Parameter("TP Mode", DefaultValue = ChandelierTPMode.TrailingTP, Group = "Chandelier SL")]
+        // TP Mode: RemoveTP allows unlimited profit potential (Pass #980 setting)
+        [Parameter("TP Mode", DefaultValue = ChandelierTPMode.RemoveTP, Group = "Chandelier SL")]
         public ChandelierTPMode ChandelierTPModeSelection { get; set; }
 
         // Minimum distance from price for SL modification. Step=1 gives 6 combinations (3-8)
@@ -136,8 +137,8 @@ namespace cAlgo.Robots
         [Parameter("H1 Level Proximity Pips", DefaultValue = 50, MinValue = 30, MaxValue = 80, Step = 10, Group = "TP Management")]
         public int H1LevelProximityPips { get; set; }
 
-        // Max Dynamic RR: Cap on dynamic TP adjustment. Step=0.5 gives 5 combinations (3-5)
-        [Parameter("Max Dynamic RR", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 5.0, Step = 0.5, Group = "TP Management")]
+        // Max Dynamic RR: Cap on dynamic TP adjustment (Optimized: 4.0 = +11.4% vs 5.0)
+        [Parameter("Max Dynamic RR", DefaultValue = 4.0, MinValue = 3.0, MaxValue = 5.0, Step = 0.5, Group = "TP Management")]
         public double MaxDynamicRR { get; set; }
 
         #endregion
@@ -468,69 +469,69 @@ namespace cAlgo.Robots
         [Parameter("FVG Zone Size %", DefaultValue = 100, MinValue = 50, MaxValue = 150, Step = 25, Group = "Enhanced Entry")]
         public int FVGZoneSizePercent { get; set; }
 
-        // Rejection Pattern Configuration
-        [Parameter("Enable Wick Rejection", DefaultValue = true, Group = "Enhanced Entry")]
+        // Rejection Pattern Configuration (Pass #980 optimal: All disabled)
+        [Parameter("Enable Wick Rejection", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnableWickRejection { get; set; }
 
-        [Parameter("Enable Engulfing Pattern", DefaultValue = true, Group = "Enhanced Entry")]
+        [Parameter("Enable Engulfing Pattern", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnableEngulfingPattern { get; set; }
 
-        [Parameter("Enable Pin Bar", DefaultValue = true, Group = "Enhanced Entry")]
+        [Parameter("Enable Pin Bar", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnablePinBar { get; set; }
 
         [Parameter("Min Wick Ratio", DefaultValue = 2.0, MinValue = 1.5, MaxValue = 3.0, Step = 0.5, Group = "Enhanced Entry")]
         public double MinWickRatio { get; set; }
 
-        [Parameter("Max Bars Without Rejection", DefaultValue = 5, MinValue = 3, MaxValue = 10, Step = 1, Group = "Enhanced Entry")]
+        [Parameter("Max Bars Without Rejection", DefaultValue = 6, MinValue = 3, MaxValue = 10, Step = 1, Group = "Enhanced Entry")]
         public int MaxBarsWithoutRejection { get; set; }
 
-        // ATR Stop Loss Configuration
-        [Parameter("SL ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
+        // ATR Stop Loss Configuration (Pass #980 optimal: 2.0x)
+        [Parameter("SL ATR Multiplier", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
         public double SLATRMultiplier { get; set; }
 
-        // RSI Compression-Expansion Configuration
+        // RSI Compression-Expansion Configuration (Pass #980 optimal)
         [Parameter("Enable RSI Compression", DefaultValue = true, Group = "Enhanced Entry")]
         public bool EnableRSICompression { get; set; }
 
-        [Parameter("RSI Period", DefaultValue = 7, MinValue = 5, MaxValue = 14, Step = 1, Group = "Enhanced Entry")]
+        [Parameter("RSI Period", DefaultValue = 6, MinValue = 5, MaxValue = 14, Step = 1, Group = "Enhanced Entry")]
         public int RSIPeriod { get; set; }
 
-        [Parameter("RSI Compression Low", DefaultValue = 40, MinValue = 35, MaxValue = 45, Step = 5, Group = "Enhanced Entry")]
+        [Parameter("RSI Compression Low", DefaultValue = 45, MinValue = 35, MaxValue = 45, Step = 5, Group = "Enhanced Entry")]
         public int RSICompressionLow { get; set; }
 
-        [Parameter("RSI Compression High", DefaultValue = 60, MinValue = 55, MaxValue = 65, Step = 5, Group = "Enhanced Entry")]
+        [Parameter("RSI Compression High", DefaultValue = 55, MinValue = 55, MaxValue = 65, Step = 5, Group = "Enhanced Entry")]
         public int RSICompressionHigh { get; set; }
 
-        [Parameter("RSI Compression Min Bars", DefaultValue = 6, MinValue = 4, MaxValue = 10, Step = 2, Group = "Enhanced Entry")]
+        [Parameter("RSI Compression Min Bars", DefaultValue = 10, MinValue = 4, MaxValue = 10, Step = 2, Group = "Enhanced Entry")]
         public int RSICompressionMinBars { get; set; }
 
-        [Parameter("RSI Compression Lookback", DefaultValue = 15, MinValue = 10, MaxValue = 25, Step = 5, Group = "Enhanced Entry")]
+        [Parameter("RSI Compression Lookback", DefaultValue = 20, MinValue = 10, MaxValue = 25, Step = 5, Group = "Enhanced Entry")]
         public int RSICompressionLookback { get; set; }
 
-        [Parameter("RSI Expansion Buy Min", DefaultValue = 60, Group = "Enhanced Entry")]
+        [Parameter("RSI Expansion Buy Min", DefaultValue = 62, Group = "Enhanced Entry")]
         public int RSIExpansionBuyMin { get; set; }
 
-        [Parameter("RSI Expansion Buy Max", DefaultValue = 80, Group = "Enhanced Entry")]
+        [Parameter("RSI Expansion Buy Max", DefaultValue = 76, Group = "Enhanced Entry")]
         public int RSIExpansionBuyMax { get; set; }
 
-        [Parameter("RSI Expansion Sell Min", DefaultValue = 20, Group = "Enhanced Entry")]
+        [Parameter("RSI Expansion Sell Min", DefaultValue = 24, Group = "Enhanced Entry")]
         public int RSIExpansionSellMin { get; set; }
 
-        [Parameter("RSI Expansion Sell Max", DefaultValue = 40, Group = "Enhanced Entry")]
+        [Parameter("RSI Expansion Sell Max", DefaultValue = 44, Group = "Enhanced Entry")]
         public int RSIExpansionSellMax { get; set; }
 
-        // Dual SMA Configuration
-        [Parameter("Enable Dual SMA", DefaultValue = true, Group = "Enhanced Entry")]
+        // Dual SMA Configuration (Pass #980 optimal: Disabled, but Fast SMA = 30)
+        [Parameter("Enable Dual SMA", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnableDualSMA { get; set; }
 
-        [Parameter("Fast SMA Period", DefaultValue = 50, MinValue = 20, MaxValue = 100, Step = 10, Group = "Enhanced Entry")]
+        [Parameter("Fast SMA Period", DefaultValue = 30, MinValue = 20, MaxValue = 100, Step = 10, Group = "Enhanced Entry")]
         public int FastSMAPeriod { get; set; }
 
-        // False Positive Filters
-        [Parameter("Min Rejection ATR Ratio", DefaultValue = 0.5, MinValue = 0.3, MaxValue = 1.0, Step = 0.1, Group = "Enhanced Entry")]
+        // False Positive Filters (Pass #980 optimal)
+        [Parameter("Min Rejection ATR Ratio", DefaultValue = 0.6, MinValue = 0.3, MaxValue = 1.0, Step = 0.1, Group = "Enhanced Entry")]
         public double MinRejectionATRRatio { get; set; }
 
-        [Parameter("Displacement Range ATR", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
+        [Parameter("Displacement Range ATR", DefaultValue = 1.2, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
         public double DisplacementRangeATR { get; set; }
 
         #endregion
@@ -611,21 +612,27 @@ namespace cAlgo.Robots
         [Parameter("=== SCORE WEIGHTS ===", DefaultValue = "")]
         public string WeightsHeader { get; set; }
 
-        [Parameter("Weight: Validity", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // Normalized from optimization (0.25/1.15 = 0.217)
+        [Parameter("Weight: Validity", DefaultValue = 0.22, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightValidity { get; set; }
 
-        [Parameter("Weight: Extremity", DefaultValue = 0.25, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // Normalized from optimization (0.30/1.15 = 0.261)
+        [Parameter("Weight: Extremity", DefaultValue = 0.26, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightExtremity { get; set; }
 
-        [Parameter("Weight: Fractal", DefaultValue = 0.15, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // Normalized from optimization (0.20/1.15 = 0.174)
+        [Parameter("Weight: Fractal", DefaultValue = 0.17, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightFractal { get; set; }
 
-        [Parameter("Weight: Session", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // Normalized from optimization (0.20/1.15 = 0.174)
+        [Parameter("Weight: Session", DefaultValue = 0.17, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightSession { get; set; }
 
-        [Parameter("Weight: FVG", DefaultValue = 0.15, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // Normalized from optimization (0.15/1.15 = 0.130)
+        [Parameter("Weight: FVG", DefaultValue = 0.13, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightFVG { get; set; }
 
+        // Normalized from optimization (0.05/1.15 = 0.043)
         [Parameter("Weight: Candle", DefaultValue = 0.05, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightCandle { get; set; }
 
