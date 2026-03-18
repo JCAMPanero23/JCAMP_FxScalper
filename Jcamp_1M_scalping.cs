@@ -321,6 +321,34 @@ namespace cAlgo.Robots
             public TradeType TradeDirection { get; set; }
             public double PriceWatermark { get; set; }  // Highest (BUY) or Lowest (SELL) price reached
             public int LastIncrementCount { get; set; }  // Track last increment to only update on boundary changes
+
+            // NEW v3.0: Exhaustion exit tracking
+            public int ChandelierMoveCount { get; set; }
+            public List<SwingPoint> SwingHistory { get; set; }
+            public ExhaustionState ExhaustionStatus { get; set; }
+            public double ConfirmationPrice { get; set; }
+            public int ConfirmationBarIndex { get; set; }
+        }
+
+        /// <summary>
+        /// Represents a swing point (high or low) with RSI value
+        /// </summary>
+        private class SwingPoint
+        {
+            public double Price { get; set; }
+            public double RSIValue { get; set; }
+            public int BarIndex { get; set; }
+        }
+
+        /// <summary>
+        /// Exhaustion pattern detection state machine
+        /// </summary>
+        private enum ExhaustionState
+        {
+            Monitoring,          // Watching for pattern
+            PatternDetected,     // 2 HL/LH + divergence found, waiting confirmation
+            Confirmed,           // Confirmation bar validates pattern
+            Invalidated          // Confirmation bar breaks pattern
         }
 
         #endregion
