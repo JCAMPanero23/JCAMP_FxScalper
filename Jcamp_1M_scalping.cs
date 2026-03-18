@@ -771,6 +771,9 @@ namespace cAlgo.Robots
         // Chandelier trailing stop tracking
         private Dictionary<int, ChandelierState> _chandelierStates;
 
+        // v3.0: Exhaustion exit RSI indicator
+        private RelativeStrengthIndex _exhaustionRSI;
+
         // Visualization tracking
         private ChartStaticText modeLabel;
 
@@ -808,6 +811,10 @@ namespace cAlgo.Robots
 
             // Initialize chandelier state tracking
             _chandelierStates = new Dictionary<int, ChandelierState>();
+
+            // v3.0: Initialize exhaustion RSI indicator (M1 timeframe)
+            _exhaustionRSI = Indicators.RelativeStrengthIndex(Bars.ClosePrices, ExhaustionRSIPeriod);
+            Print("[INIT] Exhaustion RSI initialized with period {0}", ExhaustionRSIPeriod);
 
             // Phase 4: Initialize ATR indicators
             // FIXED: atrM1 always initialized (needed for v2.0 ATR-based SL), atr only for PreZoneSystem
