@@ -5216,6 +5216,110 @@ namespace cAlgo.Robots
             }
         }
 
+        /// <summary>
+        /// Main exhaustion exit logic - called from ProcessSinglePosition
+        /// Manages swing tracking, pattern detection, and confirmation
+        /// </summary>
+        private void CheckExhaustionExit(Position position, ChandelierState state)
+        {
+            // Safety checks
+            if (!EnableExhaustionExit) return;
+            if (!state.IsActivated) return;
+            if (state.ChandelierMoveCount < MinChandelierMovesBeforeExit) return;
+            if (Bars.Count < ExhaustionSwingBars + 5) return;
+
+            // Check if in confirmation state (waiting for next bar)
+            if (state.ExhaustionStatus == ExhaustionState.PatternDetected)
+            {
+                // Check if we're on the confirmation bar (next bar after detection)
+                if (Bars.Count > state.ConfirmationBarIndex)
+                {
+                    if (position.TradeType == TradeType.Sell)
+                    {
+                        CheckSellConfirmation(position, state);
+                    }
+                    else
+                    {
+                        CheckBuyConfirmation(position, state);
+                    }
+                }
+                return;  // Don't update swings during confirmation wait
+            }
+
+            // Update swing history (Monitoring state)
+            if (state.ExhaustionStatus == ExhaustionState.Monitoring)
+            {
+                double swingPrice, rsiValue;
+                bool swingDetected = false;
+
+                if (position.TradeType == TradeType.Sell)
+                {
+                    // Detect swing lows for SELL positions
+                    swingDetected = DetectSwingLow(0, out swingPrice, out rsiValue);
+                }
+                else
+                {
+                    // Detect swing highs for BUY positions
+                    swingDetected = DetectSwingHigh(0, out swingPrice, out rsiValue);
+                }
+
+                // Add to swing history if new swing detected
+                if (swingDetected)
+                {
+                    // Check if this is a new swing (different from last)
+                    bool isNewSwing = state.SwingHistory.Count == 0 ||
+                                      Math.Abs(state.SwingHistory[state.SwingHistory.Count - 1].Price - swingPrice) > Symbol.PipSize * 0.1;
+
+                    if (isNewSwing)
+                    {
+                        state.SwingHistory.Add(new SwingPoint
+                        {
+                            Price = swingPrice,
+                            RSIValue = rsiValue,
+                            BarIndex = Bars.Count
+                        });
+
+                        // Keep only last 3 swings
+                        if (state.SwingHistory.Count > 3)
+                        {
+                            state.SwingHistory.RemoveAt(0);
+                        }
+
+                        Print("[EXHAUSTION] Position {0} | New {1} swing: {2:F5}, RSI: {3:F1} | History count: {4}",
+                            position.Id,
+                            position.TradeType == TradeType.Sell ? "LOW" : "HIGH",
+                            swingPrice, rsiValue, state.SwingHistory.Count);
+                    }
+                }
+
+                // Check for pattern + divergence (need 3 swings)
+                if (state.SwingHistory.Count >= 3)
+                {
+                    bool hasDivergence = false;
+
+                    if (position.TradeType == TradeType.Sell)
+                    {
+                        hasDivergence = CheckBullishDivergence(state);
+                    }
+                    else
+                    {
+                        hasDivergence = CheckBearishDivergence(state);
+                    }
+
+                    if (hasDivergence)
+                    {
+                        // Pattern detected! Enter confirmation wait state
+                        state.ExhaustionStatus = ExhaustionState.PatternDetected;
+                        state.ConfirmationPrice = state.SwingHistory[2].Price;  // HL2 or LH2
+                        state.ConfirmationBarIndex = Bars.Count;
+
+                        Print("[EXHAUSTION] Pattern detected on Position {0} | Waiting confirmation | Level: {1:F5}",
+                            position.Id, state.ConfirmationPrice);
+                    }
+                }
+            }
+        }
+
         #endregion
 
         #region Visualization Methods
