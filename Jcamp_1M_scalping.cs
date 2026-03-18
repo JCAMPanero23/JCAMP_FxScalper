@@ -165,7 +165,7 @@ namespace cAlgo.Robots
         [Parameter("Entry Execution Mode", DefaultValue = EntryExecutionMode.Market, Group = "Entry System")]
         public EntryExecutionMode EntryExecution { get; set; }
 
-        [Parameter("Pending Entry Offset (pips)", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 5.0, Step = 0.5, Group = "Entry System")]
+        [Parameter("Pending Entry Offset (pips)", DefaultValue = 2.0, MinValue = 0.0, MaxValue = 5.0, Step = 0.5, Group = "Entry System")]
         public double PendingEntryOffsetPips { get; set; }
 
         [Parameter("Pending Order Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 240, Step = 30, Group = "Entry System")]
@@ -536,6 +536,25 @@ namespace cAlgo.Robots
 
         [Parameter("Displacement Range ATR", DefaultValue = 1.2, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
         public double DisplacementRangeATR { get; set; }
+
+        #endregion
+
+        #region Parameters - Exhaustion Exit v3.0
+
+        [Parameter("=== EXHAUSTION EXIT v3.0 ===", DefaultValue = "")]
+        public string ExhaustionHeader { get; set; }
+
+        [Parameter("Enable Exhaustion Exit", DefaultValue = false, Group = "Exhaustion Exit")]
+        public bool EnableExhaustionExit { get; set; }
+
+        [Parameter("Min Chandelier Moves", DefaultValue = 2, MinValue = 1, MaxValue = 5, Step = 1, Group = "Exhaustion Exit")]
+        public int MinChandelierMovesBeforeExit { get; set; }
+
+        [Parameter("Swing Lookback Bars", DefaultValue = 8, MinValue = 3, MaxValue = 15, Step = 1, Group = "Exhaustion Exit")]
+        public int ExhaustionSwingBars { get; set; }
+
+        [Parameter("RSI Period", DefaultValue = 14, MinValue = 6, MaxValue = 21, Step = 1, Group = "Exhaustion Exit")]
+        public int ExhaustionRSIPeriod { get; set; }
 
         #endregion
 
