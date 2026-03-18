@@ -4986,7 +4986,7 @@ namespace cAlgo.Robots
             rsiValue = 0;
 
             // Check enough bars available
-            int lookbackStart = barsBack + ExhaustionSwingBars;
+            int lookbackStart = barsBack + ExhaustionSwingBars - 1;
             if (Bars.Count < lookbackStart + 1)
             {
                 return false;  // Not enough bars
@@ -5010,6 +5010,9 @@ namespace cAlgo.Robots
                 return false;
 
             // Get RSI value at swing point
+            if (lowestIndex >= _exhaustionRSI.Result.Count)
+                return false;
+
             if (_exhaustionRSI.Result.Last(lowestIndex).IsNaN())
                 return false;
 
@@ -5028,7 +5031,7 @@ namespace cAlgo.Robots
             rsiValue = 0;
 
             // Check enough bars available
-            int lookbackStart = barsBack + ExhaustionSwingBars;
+            int lookbackStart = barsBack + ExhaustionSwingBars - 1;
             if (Bars.Count < lookbackStart + 1)
             {
                 return false;  // Not enough bars
@@ -5052,6 +5055,9 @@ namespace cAlgo.Robots
                 return false;
 
             // Get RSI value at swing point
+            if (highestIndex >= _exhaustionRSI.Result.Count)
+                return false;
+
             if (_exhaustionRSI.Result.Last(highestIndex).IsNaN())
                 return false;
 
