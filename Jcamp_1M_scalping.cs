@@ -4974,6 +4974,94 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Exhaustion Exit Methods - v3.0
+
+        /// <summary>
+        /// Detects swing low on M1: lowest low in last N bars
+        /// Returns true if swing detected, outputs swing price and RSI value
+        /// </summary>
+        private bool DetectSwingLow(int barsBack, out double swingPrice, out double rsiValue)
+        {
+            swingPrice = 0;
+            rsiValue = 0;
+
+            // Check enough bars available
+            int lookbackStart = barsBack + ExhaustionSwingBars;
+            if (Bars.Count < lookbackStart + 1)
+            {
+                return false;  // Not enough bars
+            }
+
+            // Find lowest low in lookback window
+            double lowestLow = double.MaxValue;
+            int lowestIndex = -1;
+
+            for (int i = lookbackStart; i >= barsBack; i--)
+            {
+                double low = Bars.LowPrices.Last(i);
+                if (low < lowestLow)
+                {
+                    lowestLow = low;
+                    lowestIndex = i;
+                }
+            }
+
+            if (lowestIndex == -1)
+                return false;
+
+            // Get RSI value at swing point
+            if (_exhaustionRSI.Result.Last(lowestIndex).IsNaN())
+                return false;
+
+            swingPrice = lowestLow;
+            rsiValue = _exhaustionRSI.Result.Last(lowestIndex);
+            return true;
+        }
+
+        /// <summary>
+        /// Detects swing high on M1: highest high in last N bars
+        /// Returns true if swing detected, outputs swing price and RSI value
+        /// </summary>
+        private bool DetectSwingHigh(int barsBack, out double swingPrice, out double rsiValue)
+        {
+            swingPrice = 0;
+            rsiValue = 0;
+
+            // Check enough bars available
+            int lookbackStart = barsBack + ExhaustionSwingBars;
+            if (Bars.Count < lookbackStart + 1)
+            {
+                return false;  // Not enough bars
+            }
+
+            // Find highest high in lookback window
+            double highestHigh = double.MinValue;
+            int highestIndex = -1;
+
+            for (int i = lookbackStart; i >= barsBack; i--)
+            {
+                double high = Bars.HighPrices.Last(i);
+                if (high > highestHigh)
+                {
+                    highestHigh = high;
+                    highestIndex = i;
+                }
+            }
+
+            if (highestIndex == -1)
+                return false;
+
+            // Get RSI value at swing point
+            if (_exhaustionRSI.Result.Last(highestIndex).IsNaN())
+                return false;
+
+            swingPrice = highestHigh;
+            rsiValue = _exhaustionRSI.Result.Last(highestIndex);
+            return true;
+        }
+
+        #endregion
+
         #region Visualization Methods
 
         /// <summary>
