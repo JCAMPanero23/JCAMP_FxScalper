@@ -4923,6 +4923,11 @@ namespace cAlgo.Robots
                 Print("[CHANDELIER] Position {0} SL trailed: {1:F5} → {2:F5} | Mode: {3} | Price: {4:F1} pips | Inc: {5}",
                     position.Id, oldSL, newSL, modeLabel, priceMovementPips, currentIncrementCount);
 
+                // v3.0: Increment chandelier move counter (excludes BE activation)
+                state.ChandelierMoveCount++;
+                Print("[CHANDELIER] Position {0} trailing move #{1} | SL: {2:F5} → {3:F5}",
+                    position.Id, state.ChandelierMoveCount, oldSL, proposedSL);
+
                 // Start TP trailing if mode is TrailingTP and SL moved beyond BE
                 if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
                 {
