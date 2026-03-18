@@ -5066,6 +5066,68 @@ namespace cAlgo.Robots
             return true;
         }
 
+        /// <summary>
+        /// Checks for bullish divergence: price making HL, RSI making LL
+        /// Indicates SELL position exhaustion (downtrend weakening)
+        /// </summary>
+        private bool CheckBullishDivergence(ChandelierState state)
+        {
+            if (state.SwingHistory.Count < 3)
+                return false;
+
+            var swing0 = state.SwingHistory[0];
+            var swing1 = state.SwingHistory[1];
+            var swing2 = state.SwingHistory[2];
+
+            bool priceHL1 = swing1.Price > swing0.Price;
+            bool priceHL2 = swing2.Price > swing1.Price;
+
+            bool rsiLL1 = swing1.RSIValue < swing0.RSIValue;
+            bool rsiLL2 = swing2.RSIValue < swing1.RSIValue;
+
+            bool hasDivergence = priceHL1 && priceHL2 && rsiLL1 && rsiLL2;
+
+            if (hasDivergence)
+            {
+                Print("[EXHAUSTION] Bullish Divergence | Price HL: {0:F5} → {1:F5} → {2:F5} | RSI LL: {3:F1} → {4:F1} → {5:F1}",
+                    swing0.Price, swing1.Price, swing2.Price,
+                    swing0.RSIValue, swing1.RSIValue, swing2.RSIValue);
+            }
+
+            return hasDivergence;
+        }
+
+        /// <summary>
+        /// Checks for bearish divergence: price making LH, RSI making HH
+        /// Indicates BUY position exhaustion (uptrend weakening)
+        /// </summary>
+        private bool CheckBearishDivergence(ChandelierState state)
+        {
+            if (state.SwingHistory.Count < 3)
+                return false;
+
+            var swing0 = state.SwingHistory[0];
+            var swing1 = state.SwingHistory[1];
+            var swing2 = state.SwingHistory[2];
+
+            bool priceLH1 = swing1.Price < swing0.Price;
+            bool priceLH2 = swing2.Price < swing1.Price;
+
+            bool rsiHH1 = swing1.RSIValue > swing0.RSIValue;
+            bool rsiHH2 = swing2.RSIValue > swing1.RSIValue;
+
+            bool hasDivergence = priceLH1 && priceLH2 && rsiHH1 && rsiHH2;
+
+            if (hasDivergence)
+            {
+                Print("[EXHAUSTION] Bearish Divergence | Price LH: {0:F5} → {1:F5} → {2:F5} | RSI HH: {3:F1} → {4:F1} → {5:F1}",
+                    swing0.Price, swing1.Price, swing2.Price,
+                    swing0.RSIValue, swing1.RSIValue, swing2.RSIValue);
+            }
+
+            return hasDivergence;
+        }
+
         #endregion
 
         #region Visualization Methods
