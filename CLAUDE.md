@@ -38,3 +38,34 @@ Also available via local symlink: `D:\JCAMP_FxScalper\Backtest\log.txt` (may be 
 
 - `Jcamp_1M_scalping.cs` - Main trading bot code
 - `TrendModeRectangleIndicator.cs` - Trend mode indicator
+
+## Version History
+
+### v3.0.0 (2026-03-18)
+**Feature:** Exhaustion Exit Protection
+- Detects market exhaustion via swing pattern + RSI divergence
+- SELL: Exit when 2 consecutive Higher Lows + RSI Lower Lows (bullish divergence)
+- BUY: Exit when 2 consecutive Lower Highs + RSI Higher Highs (bearish divergence)
+- Activates only after chandelier makes 2+ trailing moves (configurable)
+- N-bar swing detection with confirmation/invalidation mechanism
+- Defaults: disabled (EnableExhaustionExit=false), conservative settings
+- Design spec: `Docs/superpowers/specs/2026-03-18-exhaustion-exit-design.md`
+- Implementation plan: `Docs/superpowers/plans/2026-03-18-exhaustion-exit-v3.md`
+
+### v2.0.0 (2026-03-16)
+**Features:** Enhanced Entry System + Chandelier Trailing Stop
+- FVG (Fair Value Gap) zones with rejection confirmation
+- RSI compression-expansion entry filter
+- ATR-based stop loss
+- Dual SMA trend filter (SMA 50 + SMA 200)
+- Chandelier trailing stop with configurable activation (RR-based)
+- Three TP modes: KeepOriginal, RemoveTP, TrailingTP
+- Design spec: `Docs/superpowers/specs/2026-03-14-chandelier-sl-design.md`
+
+### v1.0.0 (Initial)
+**Core Features:**
+- M15 SMA 200 trend detection
+- Williams Fractal swing detection
+- Rectangle entry zones (swing high/low)
+- M1 timeframe execution
+- Session filtering (London/NY overlap)

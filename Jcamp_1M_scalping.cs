@@ -17,9 +17,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "2.0.0";
-        private const string VERSION_DATE = "2026-03-16";
-        private const string VERSION_NOTES = "FVG zones, rejection confirmation, RSI compression-expansion, ATR SL, dual SMA";
+        private const string BOT_VERSION = "3.0.0";
+        private const string VERSION_DATE = "2026-03-18";
+        private const string VERSION_NOTES = "Exhaustion exit protection with RSI divergence detection";
         #endregion
 
         #region Parameters - Trend Detection
