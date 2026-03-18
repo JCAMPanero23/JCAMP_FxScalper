@@ -4715,6 +4715,9 @@ namespace cAlgo.Robots
 
             // Phase 2 & 3: Trail the stop
             TrailChandelierStop(position, state);
+
+            // v3.0: Phase 4: Check exhaustion exit
+            CheckExhaustionExit(position, state);
         }
 
         /// <summary>
