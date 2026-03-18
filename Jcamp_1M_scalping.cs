@@ -4147,7 +4147,14 @@ namespace cAlgo.Robots
                         TPTrailingStarted = false,
                         TradeDirection = TradeType.Sell,
                         PriceWatermark = 0,  // Will be initialized on first trail
-                        LastIncrementCount = 0  // Start at 0 increments
+                        LastIncrementCount = 0,  // Start at 0 increments
+
+                        // v3.0: Initialize exhaustion state
+                        ChandelierMoveCount = 0,
+                        SwingHistory = new List<SwingPoint>(),
+                        ExhaustionStatus = ExhaustionState.Monitoring,
+                        ConfirmationPrice = 0,
+                        ConfirmationBarIndex = 0
                     };
                     _chandelierStates[result.Position.Id] = state;
 
@@ -4246,7 +4253,14 @@ namespace cAlgo.Robots
                         TPTrailingStarted = false,
                         TradeDirection = TradeType.Buy,
                         PriceWatermark = 0,  // Will be initialized on first trail
-                        LastIncrementCount = 0  // Start at 0 increments
+                        LastIncrementCount = 0,  // Start at 0 increments
+
+                        // v3.0: Initialize exhaustion state
+                        ChandelierMoveCount = 0,
+                        SwingHistory = new List<SwingPoint>(),
+                        ExhaustionStatus = ExhaustionState.Monitoring,
+                        ConfirmationPrice = 0,
+                        ConfirmationBarIndex = 0
                     };
                     _chandelierStates[result.Position.Id] = state;
 
@@ -5141,7 +5155,14 @@ namespace cAlgo.Robots
                                 TPTrailingStarted = false,
                                 TradeDirection = TradeType.Buy,
                                 PriceWatermark = 0,  // Will be initialized on first trail
-                                LastIncrementCount = 0  // Start at 0 increments
+                                LastIncrementCount = 0,  // Start at 0 increments
+
+                                // v3.0: Initialize exhaustion state
+                                ChandelierMoveCount = 0,
+                                SwingHistory = new List<SwingPoint>(),
+                                ExhaustionStatus = ExhaustionState.Monitoring,
+                                ConfirmationPrice = 0,
+                                ConfirmationBarIndex = 0
                             };
                             _chandelierStates[args.Position.Id] = state;
 
@@ -5165,7 +5186,14 @@ namespace cAlgo.Robots
                                 TPTrailingStarted = false,
                                 TradeDirection = TradeType.Sell,
                                 PriceWatermark = 0,  // Will be initialized on first trail
-                                LastIncrementCount = 0  // Start at 0 increments
+                                LastIncrementCount = 0,  // Start at 0 increments
+
+                                // v3.0: Initialize exhaustion state
+                                ChandelierMoveCount = 0,
+                                SwingHistory = new List<SwingPoint>(),
+                                ExhaustionStatus = ExhaustionState.Monitoring,
+                                ConfirmationPrice = 0,
+                                ConfirmationBarIndex = 0
                             };
                             _chandelierStates[args.Position.Id] = state;
 
