@@ -5139,7 +5139,7 @@ namespace cAlgo.Robots
                 return;
 
             // Get current bar data (last completed bar)
-            double currentLow = Bars.LowPrices.Last(1);
+            double currentLow = Bars.LowPrices.Last(0);
 
             // Check for INVALIDATION: Price breaks below HL2 level
             if (currentLow < state.ConfirmationPrice)
@@ -5183,7 +5183,7 @@ namespace cAlgo.Robots
                 return;
 
             // Get current bar data (last completed bar)
-            double currentHigh = Bars.HighPrices.Last(1);
+            double currentHigh = Bars.HighPrices.Last(0);
 
             // Check for INVALIDATION: Price breaks above LH2 level
             if (currentHigh > state.ConfirmationPrice)
