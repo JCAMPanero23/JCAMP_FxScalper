@@ -485,6 +485,9 @@ namespace cAlgo.Robots
         [Parameter("Max Bars Without Rejection", DefaultValue = 6, MinValue = 3, MaxValue = 10, Step = 1, Group = "Enhanced Entry")]
         public int MaxBarsWithoutRejection { get; set; }
 
+        [Parameter("Filter Grace Period (min)", DefaultValue = 15, MinValue = 5, MaxValue = 30, Step = 5, Group = "Enhanced Entry")]
+        public int FilterGracePeriodMinutes { get; set; }
+
         // ATR Stop Loss Configuration (Pass #980 optimal: 2.0x)
         [Parameter("SL ATR Multiplier", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
         public double SLATRMultiplier { get; set; }
@@ -759,12 +762,15 @@ namespace cAlgo.Robots
             // Initialize chandelier state tracking
             _chandelierStates = new Dictionary<int, ChandelierState>();
 
-            // Phase 4: Initialize ATR indicators for displacement detection
+            // Phase 4: Initialize ATR indicators
+            // FIXED: atrM1 always initialized (needed for v2.0 ATR-based SL), atr only for PreZoneSystem
+            atrM1 = Indicators.AverageTrueRange(Bars, ATRPeriod, MovingAverageType.Simple);
+            Print("[v2.0] ATR M1 initialized | Period: {0} | Multiplier: {1:F1}x (for SL calculation)", ATRPeriod, SLATRMultiplier);
+
             if (EnablePreZoneSystem)
             {
                 atr = Indicators.AverageTrueRange(m15Bars, ATRPeriod, MovingAverageType.Simple);
-                atrM1 = Indicators.AverageTrueRange(Bars, ATRPeriod, MovingAverageType.Simple);
-                Print("[PRE-Zone] ATR indicators initialized | Period: {0} | Multiplier: {1:F1}x | M1+M15 displacement", ATRPeriod, ATRMultiplier);
+                Print("[PRE-Zone] ATR M15 initialized for displacement detection");
             }
 
             // v2.0: Initialize RSI and Fast SMA
@@ -1068,7 +1074,8 @@ namespace cAlgo.Robots
             }
 
             // Phase 4: Update zone states (expiry, arming, invalidation)
-            if (EnablePreZoneSystem && activeZone != null)
+            // FIXED: Run zone state management even when PreZoneSystem disabled (fractal zones still need arming)
+            if (activeZone != null)
             {
                 UpdateZoneStates();
             }
@@ -1079,11 +1086,12 @@ namespace cAlgo.Robots
             ProcessChandelierStops();
 
             // Phase 1B: Entry detection on M1 bar close
-            // Process breakout entry logic if trading is enabled
-            if (EnableTrading && hasActiveSwing)
-            {
-                ProcessEntryLogic();
-            }
+            // DISABLED: Old breakout entry system (replaced by Enhanced Entry System v2.0 with FVG zones)
+            // The new system uses UpdateZoneStates() → PlacePendingOrder() instead
+            // if (EnableTrading && hasActiveSwing)
+            // {
+            //     ProcessEntryLogic();
+            // }
         }
 
         /// <summary>
@@ -2508,11 +2516,32 @@ namespace cAlgo.Robots
                 Print("[v2.0] Rejection confirmed for zone {0} | Bar: {1}", activeZone.Id, _pendingOrderBarsWaiting);
             }
 
-            // Re-validate filters
+            // GRACE PERIOD: Don't cancel due to filter failure during configurable grace period
+            var pendingOrder = _zonePendingOrders[activeZone.Id];
+            double minutesSincePlacement = (Server.Time - pendingOrder.PlacedAt).TotalMinutes;
+
+            if (minutesSincePlacement < FilterGracePeriodMinutes)
+            {
+                // Still in grace period - log but don't cancel
+                if (!CheckDualSMAFilter(activeZone.Mode) || !CheckRSICompressionExpansion(activeZone.Mode))
+                {
+                    Print("[v2.0] Filter invalid but in grace period ({0:F1}/{1} min) - keeping order",
+                        minutesSincePlacement, FilterGracePeriodMinutes);
+                }
+                return;  // Skip filter cancellation during grace period
+            }
+
+            // Re-validate filters (only after grace period)
             if (!CheckDualSMAFilter(activeZone.Mode))
             {
                 CancelZonePendingOrder(activeZone.Id, "v2.0: Dual SMA filter invalid");
                 ResetPendingOrderTracking();
+                // FIXED: Revert zone to Valid state so it can re-arm when filters pass again
+                if (activeZone != null && activeZone.State == ZoneState.Armed)
+                {
+                    activeZone.State = ZoneState.Valid;
+                    Print("[Zone] Reverted to VALID (can re-arm when filters pass)");
+                }
                 return;
             }
 
@@ -2520,6 +2549,12 @@ namespace cAlgo.Robots
             {
                 CancelZonePendingOrder(activeZone.Id, "v2.0: RSI filter invalid");
                 ResetPendingOrderTracking();
+                // FIXED: Revert zone to Valid state so it can re-arm when filters pass again
+                if (activeZone != null && activeZone.State == ZoneState.Armed)
+                {
+                    activeZone.State = ZoneState.Valid;
+                    Print("[Zone] Reverted to VALID (can re-arm when filters pass)");
+                }
                 return;
             }
 
@@ -2528,6 +2563,12 @@ namespace cAlgo.Robots
             {
                 CancelZonePendingOrder(activeZone.Id, $"v2.0: No rejection in {MaxBarsWithoutRejection} bars");
                 ResetPendingOrderTracking();
+                // FIXED: Revert zone to Valid state so it can re-arm when filters pass again
+                if (activeZone != null && activeZone.State == ZoneState.Armed)
+                {
+                    activeZone.State = ZoneState.Valid;
+                    Print("[Zone] Reverted to VALID (can re-arm when filters pass)");
+                }
                 return;
             }
         }
@@ -4209,8 +4250,16 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Calculate entry price at FVG top - offset (rejection from support FVG)
-            double entryPrice = zone.FVGTopPrice - (PendingEntryOffsetPips * Symbol.PipSize);
+            // Calculate entry price INSIDE zone (near FVG top, rejection from support)
+            // BUY STOP: Price wicks into support zone, pending order fills, price rejects up
+            Print("[DEBUG] Zone prices | Visual: {0:F5}-{1:F5} | FVG: {2:F5}-{3:F5}",
+                zone.BottomPrice, zone.TopPrice, zone.FVGBottomPrice, zone.FVGTopPrice);
+
+            double offsetDistance = PendingEntryOffsetPips * Symbol.PipSize;
+            Print("[DEBUG] BUY Calc | FVGTop={0:F5} | OffsetPips={1:F1} | PipSize={2:F7} | OffsetDist={3:F7}",
+                zone.FVGTopPrice, PendingEntryOffsetPips, Symbol.PipSize, offsetDistance);
+            double entryPrice = zone.FVGTopPrice - offsetDistance;
+            Print("[DEBUG] BUY Entry | {0:F5} - {1:F7} = {2:F5}", zone.FVGTopPrice, offsetDistance, entryPrice);
 
             // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
             double zoneBoundarySL = zone.FVGBottomPrice - (SLBufferPips * Symbol.PipSize);
@@ -4239,8 +4288,22 @@ namespace cAlgo.Robots
             // Set order expiry
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
-            // Place pending STOP order with SL/TP included
-            var result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
+            // Choose order type based on current price vs entry price
+            double currentPrice = Symbol.Ask;
+            TradeResult result;
+
+            if (currentPrice > entryPrice)
+            {
+                // Price is above entry - needs to FALL to trigger - use BUY LIMIT
+                Print("[PENDING] Current {0:F5} > Entry {1:F5} → Using BUY LIMIT", currentPrice, entryPrice);
+                result = PlaceLimitOrder(TradeType.Buy, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
+            }
+            else
+            {
+                // Price is below entry - needs to RISE to trigger - use BUY STOP
+                Print("[PENDING] Current {0:F5} <= Entry {1:F5} → Using BUY STOP", currentPrice, entryPrice);
+                result = PlaceStopOrder(TradeType.Buy, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
+            }
 
             if (result.IsSuccessful)
             {
@@ -4299,8 +4362,17 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Calculate entry price at FVG bottom + offset (rejection from resistance FVG)
-            double entryPrice = zone.FVGBottomPrice + (PendingEntryOffsetPips * Symbol.PipSize);
+            // Calculate entry price INSIDE zone (near FVG bottom, rejection from resistance)
+            // SELL STOP: Price wicks into resistance zone, pending order fills, price rejects down
+            Print("[DEBUG] Zone prices | Visual: {0:F5}-{1:F5} | FVG: {2:F5}-{3:F5}",
+                zone.BottomPrice, zone.TopPrice, zone.FVGBottomPrice, zone.FVGTopPrice);
+
+            double offsetDistance = PendingEntryOffsetPips * Symbol.PipSize;
+            Print("[DEBUG] SELL Calc | FVGBottom={0:F10} | OffsetPips={1:F1} | PipSize={2:F10} | OffsetDist={3:F10}",
+                zone.FVGBottomPrice, PendingEntryOffsetPips, Symbol.PipSize, offsetDistance);
+            double entryPrice = zone.FVGBottomPrice + offsetDistance;
+            Print("[DEBUG] SELL Entry | {0:F10} + {1:F10} = {2:F10}", zone.FVGBottomPrice, offsetDistance, entryPrice);
+            Print("[DEBUG] SELL Verify | entryPrice variable = {0:F10}", entryPrice);
 
             // v2.0: Calculate SL using MAX(FVG boundary + buffer, ATR × multiplier)
             double zoneBoundarySL = zone.FVGTopPrice + (SLBufferPips * Symbol.PipSize);
@@ -4329,8 +4401,22 @@ namespace cAlgo.Robots
             // Set order expiry
             DateTime expiry = Server.Time.AddMinutes(PendingOrderExpiryMinutes);
 
-            // Place pending STOP order with SL/TP included
-            var result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
+            // Choose order type based on current price vs entry price
+            double currentPrice = Symbol.Bid;
+            TradeResult result;
+
+            if (currentPrice < entryPrice)
+            {
+                // Price is below entry - needs to RISE to trigger - use SELL LIMIT
+                Print("[PENDING] Current {0:F5} < Entry {1:F5} → Using SELL LIMIT", currentPrice, entryPrice);
+                result = PlaceLimitOrder(TradeType.Sell, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
+            }
+            else
+            {
+                // Price is above entry - needs to FALL to trigger - use SELL STOP
+                Print("[PENDING] Current {0:F5} >= Entry {1:F5} → Using SELL STOP", currentPrice, entryPrice);
+                result = PlaceStopOrder(TradeType.Sell, SymbolName, volume, entryPrice, MagicNumber.ToString(), slPips, tpPips, expiry);
+            }
 
             if (result.IsSuccessful)
             {
