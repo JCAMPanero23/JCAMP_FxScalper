@@ -814,7 +814,6 @@ namespace cAlgo.Robots
 
             // v3.0: Initialize exhaustion RSI indicator (M1 timeframe)
             _exhaustionRSI = Indicators.RelativeStrengthIndex(Bars.ClosePrices, ExhaustionRSIPeriod);
-            Print("[INIT] Exhaustion RSI initialized with period {0}", ExhaustionRSIPeriod);
 
             // Phase 4: Initialize ATR indicators
             // FIXED: atrM1 always initialized (needed for v2.0 ATR-based SL), atr only for PreZoneSystem
@@ -4928,8 +4927,6 @@ namespace cAlgo.Robots
 
                 // v3.0: Increment chandelier move counter (excludes BE activation)
                 state.ChandelierMoveCount++;
-                Print("[CHANDELIER] Position {0} trailing move #{1} | SL: {2:F5} → {3:F5}",
-                    position.Id, state.ChandelierMoveCount, oldSL, proposedSL);
 
                 // Start TP trailing if mode is TrailingTP and SL moved beyond BE
                 if (ChandelierTPModeSelection == ChandelierTPMode.TrailingTP && !state.TPTrailingStarted)
@@ -5016,7 +5013,7 @@ namespace cAlgo.Robots
             if (lowestIndex >= _exhaustionRSI.Result.Count)
                 return false;
 
-            if (_exhaustionRSI.Result.Last(lowestIndex).IsNaN())
+            if (double.IsNaN(_exhaustionRSI.Result.Last(lowestIndex)))
                 return false;
 
             swingPrice = lowestLow;
@@ -5061,7 +5058,7 @@ namespace cAlgo.Robots
             if (highestIndex >= _exhaustionRSI.Result.Count)
                 return false;
 
-            if (_exhaustionRSI.Result.Last(highestIndex).IsNaN())
+            if (double.IsNaN(_exhaustionRSI.Result.Last(highestIndex)))
                 return false;
 
             swingPrice = highestHigh;
