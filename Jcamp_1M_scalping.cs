@@ -5128,6 +5128,94 @@ namespace cAlgo.Robots
             return hasDivergence;
         }
 
+        /// <summary>
+        /// Checks SELL position confirmation: validates if price respects HL2 level
+        /// If price breaks below HL2 (downtrend resumes) → INVALIDATE pattern
+        /// If price respects HL2 (reversal continues) → CONFIRM and close position
+        /// </summary>
+        private void CheckSellConfirmation(Position position, ChandelierState state)
+        {
+            if (state.ExhaustionStatus != ExhaustionState.PatternDetected)
+                return;
+
+            // Get current bar data (last completed bar)
+            double currentLow = Bars.LowPrices.Last(1);
+
+            // Check for INVALIDATION: Price breaks below HL2 level
+            if (currentLow < state.ConfirmationPrice)
+            {
+                Print("[EXHAUSTION] INVALIDATED - Price broke HL2 level {0:F5}, current: {1:F5}",
+                    state.ConfirmationPrice, currentLow);
+
+                // Reset to monitoring state
+                state.ExhaustionStatus = ExhaustionState.Monitoring;
+                state.SwingHistory.Clear();
+                state.ConfirmationPrice = 0;
+                return;
+            }
+
+            // Check for CONFIRMATION: Price respects HL2 level (HL2 >= current low)
+            // This indicates reversal is continuing, time to exit SELL
+            Print("[EXHAUSTION] CONFIRMED - Closing SELL position {0} at {1:F5}, Profit: {2:F2} pips",
+                position.Id, Symbol.Bid, position.Pips);
+
+            // Close position at market
+            var closeResult = ClosePosition(position);
+            if (closeResult.IsSuccessful)
+            {
+                Print("[EXHAUSTION] ✅ SELL position closed successfully | Exhaustion exit executed");
+                state.ExhaustionStatus = ExhaustionState.Confirmed;
+            }
+            else
+            {
+                Print("[EXHAUSTION] ❌ Failed to close SELL position: {0}", closeResult.Error);
+            }
+        }
+
+        /// <summary>
+        /// Checks BUY position confirmation: validates if price respects LH2 level
+        /// If price breaks above LH2 (uptrend resumes) → INVALIDATE pattern
+        /// If price respects LH2 (reversal continues) → CONFIRM and close position
+        /// </summary>
+        private void CheckBuyConfirmation(Position position, ChandelierState state)
+        {
+            if (state.ExhaustionStatus != ExhaustionState.PatternDetected)
+                return;
+
+            // Get current bar data (last completed bar)
+            double currentHigh = Bars.HighPrices.Last(1);
+
+            // Check for INVALIDATION: Price breaks above LH2 level
+            if (currentHigh > state.ConfirmationPrice)
+            {
+                Print("[EXHAUSTION] INVALIDATED - Price broke LH2 level {0:F5}, current: {1:F5}",
+                    state.ConfirmationPrice, currentHigh);
+
+                // Reset to monitoring state
+                state.ExhaustionStatus = ExhaustionState.Monitoring;
+                state.SwingHistory.Clear();
+                state.ConfirmationPrice = 0;
+                return;
+            }
+
+            // Check for CONFIRMATION: Price respects LH2 level (LH2 <= current high)
+            // This indicates reversal is continuing, time to exit BUY
+            Print("[EXHAUSTION] CONFIRMED - Closing BUY position {0} at {1:F5}, Profit: {2:F2} pips",
+                position.Id, Symbol.Ask, position.Pips);
+
+            // Close position at market
+            var closeResult = ClosePosition(position);
+            if (closeResult.IsSuccessful)
+            {
+                Print("[EXHAUSTION] ✅ BUY position closed successfully | Exhaustion exit executed");
+                state.ExhaustionStatus = ExhaustionState.Confirmed;
+            }
+            else
+            {
+                Print("[EXHAUSTION] ❌ Failed to close BUY position: {0}", closeResult.Error);
+            }
+        }
+
         #endregion
 
         #region Visualization Methods
