@@ -2899,7 +2899,19 @@ namespace cAlgo.Robots
             // Determine mode based on displacement direction
             // Bearish displacement (price dropped) = SELL zone at high
             // Bullish displacement (price rose) = BUY zone at low
-            string mode = displacement.IsBullish ? "BUY" : "SELL";
+            string displacementMode = displacement.IsBullish ? "BUY" : "SELL";
+
+            // CRITICAL FIX: Validate displacement matches SMA trend
+            // PRE-Zone must align with overall trend to avoid counter-trend trades
+            string trendMode = DetectTrendMode();
+            if (displacementMode != trendMode)
+            {
+                Print("[PRE-Zone] Rejected | Displacement ({0}) against SMA trend ({1})",
+                    displacementMode, trendMode);
+                return null;
+            }
+
+            string mode = displacementMode;
 
             // v2.0: Calculate zone boundaries from FVG with configurable size percentage
             double fvgHeight = fvg.TopPrice - fvg.BottomPrice;
@@ -3034,7 +3046,9 @@ namespace cAlgo.Robots
             }
 
             // Check proximity for arming (if not already armed)
-            if (activeZone.State == ZoneState.Pre || activeZone.State == ZoneState.Valid)
+            // CRITICAL FIX: Only VALID zones can be armed (requires fractal confirmation)
+            // PRE-zones must wait for fractal to upgrade to VALID before arming
+            if (activeZone.State == ZoneState.Valid)
             {
                 if (CheckZoneProximity())
                 {

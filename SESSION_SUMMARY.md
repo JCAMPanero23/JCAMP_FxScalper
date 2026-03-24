@@ -1,105 +1,90 @@
-# V3 OPTIMIZATION SESSION SUMMARY
+# PRE-ZONE INVESTIGATION SESSION
 
-**Date:** 2026-03-18
+**Date:** 2026-03-24
 **Branch:** enhance-entry-system
-**Commit:** 63e5ef7
 
 ---
 
-## 🚨 CRITICAL DISCOVERY
+## BUG FIXED
 
-**Current entry system is fundamentally broken:**
-- 20% win rate (both BUY and SELL directions)
-- All entry filters either don't work or make it worse
-- Fractal zones are low-quality (weak swings, false breakouts)
+### Critical Issue: PRE-Zone Trend Mismatch
 
----
+**Problem Found:**
+PRE-Zone system was creating zones based solely on displacement direction without validating against the SMA trend. This caused:
+- Counter-trend zones (e.g., BUY zone when SMA trend is SELL)
+- `SyncZoneToLegacyVariables()` would override `currentMode` with zone direction
+- System would take trades AGAINST the overall trend
 
-## 📊 KEY RESULTS
-
-### Baseline (3 Periods, Pre-v2 Settings):
-- **260 total trades**
-- **17.3% win rate** (should be 50%+ for viable strategy)
-- **-$3,221 loss (-64%)**
-- All 3 periods losing money consistently
-
-### Isolation Tests (Period 2):
-| Test | What | Result |
-|------|------|--------|
-| A | No filters | 224 trades, 20.5% win rate |
-| B | RSI only | **WORSE** (17% win rate) |
-| C | Patterns only | **NO EFFECT** (same as Test A) |
-| D | SMA only | **NO EFFECT** (same as Test A) |
-| E | Tight RSI | **0 trades** (too strict) |
-| A-Rev | Reversed logic | **EVEN WORSE** (-63% loss) |
-
----
-
-## 💡 THE PROBLEM
-
-**Fractal swing zones (MinimumSwingScore: 0.6) are garbage:**
-- Created at weak, non-structural price levels
-- Both BUY and SELL lose at these zones
-- Filters can't fix bad zone selection
-
----
-
-## 🎯 THE SOLUTION: PRE-ZONE SYSTEM
-
-**Current (Broken):**
-```
-M15 Fractal → Zone → Entry → 20% win rate ❌
+**Fix Applied:** Added trend validation in `CreatePreZone()` at line 2904-2912:
+```csharp
+// CRITICAL FIX: Validate displacement matches SMA trend
+string trendMode = DetectTrendMode();
+if (displacementMode != trendMode)
+{
+    Print("[PRE-Zone] Rejected | Displacement ({0}) against SMA trend ({1})",
+        displacementMode, trendMode);
+    return null;
+}
 ```
 
-**PRE-Zone (Hypothesis):**
-```
-M1 Displacement (momentum)
-  + FVG (institutional footprint)
-  + M15 Fractal (structure)
-  → Triple Confirmation
-  → Better Zones
-  → Higher Win Rate? ✓
-```
+**Files Modified:**
+- `Jcamp_1M_scalping.cs` - Added trend validation
+- Copied to cAlgo build directory
 
 ---
 
-## 📋 NEXT SESSION PLAN
+## TEST G READY
 
-1. **Re-enable PRE-Zone system** (currently disabled)
-2. **Run Test G** on Period 2
-3. **Target: >30% win rate** (vs 20% without PRE-Zone)
-4. **If successful:** Optimize PRE-Zone parameters
-5. **If fails:** Deep investigation or new approach
+**Test G Settings Created:**
+- Location: `Backtest/V3 baseline/Period 2/Round2/TestG_parameters.cbotset`
+- Key change: `EnablePreZoneSystem: True` (was False in TestA)
+- All entry filters: DISABLED (same as TestA)
 
----
-
-## 📁 IMPORTANT FILES
-
-**Read First:**
-- `Docs/NEXT_SESSION_PRE-ZONE_FIX.md` ← **START HERE!**
-
-**Backtest Results:**
-- `Backtest/V3 baseline/` (all test data)
-
-**Code:**
-- `Jcamp_1M_scalping.cs` (ready for PRE-Zone re-enablement)
+**Comparison Target:**
+- TestA (no PRE-Zone): 224 trades, 20.5% win rate, -$1,531
+- TestG (with PRE-Zone + trend fix): Target >30% win rate
 
 ---
 
-## ⚡ QUICK START NEXT SESSION
+## NEXT STEPS
 
-```bash
-# 1. Read the plan
-cat "D:\JCAMP_FxScalper\Docs\NEXT_SESSION_PRE-ZONE_FIX.md"
+### 1. Rebuild Bot in cTrader
+- Open cTrader
+- Build the bot (code already copied to cAlgo directory)
 
-# 2. Enable PRE-Zone in code
-# Line 81: EnablePreZoneSystem: false → true
+### 2. Run Test G Backtest
+- Period: Oct 2024 - Jun 2025 (Period 2)
+- Import settings from: `TestG_parameters.cbotset`
+- Save results to: `Backtest/V3 baseline/Period 2/Round2/TestG/`
 
-# 3. Run Test G backtest (Period 2)
+### 3. Analyze Results
+**Success Criteria:**
+- Trade count: 20-60 trades (not 0, not 200+)
+- Win rate: >30% (vs 20% without PRE-Zone)
+- Profit factor: >1.2
+- No critical errors in logs
 
-# 4. Compare results to Test A (20.5% win rate baseline)
-```
+**If Successful:** Proceed to PRE-Zone parameter optimization
+**If Fails:** Deeper investigation needed
 
 ---
 
-**BOTTOM LINE:** Current system is broken. PRE-Zone might fix it through better zone quality. Next session = test this hypothesis! 🚀
+## KEY FILES
+
+| File | Purpose |
+|------|---------|
+| `Jcamp_1M_scalping.cs` | Main bot code (edited) |
+| `Backtest/V3 baseline/Period 2/Round2/TestG_parameters.cbotset` | Test G settings |
+| `Docs/NEXT_SESSION_PRE-ZONE_FIX.md` | Original investigation plan |
+
+---
+
+## HYPOTHESIS RECAP
+
+**Current System (PRE-Zone OFF):**
+Weak fractals → garbage zones → 20% win rate
+
+**Fixed PRE-Zone System (PRE-Zone ON + trend validation):**
+Displacement + FVG + Fractal + **TREND VALIDATION** → quality zones → higher win rate?
+
+The trend validation fix ensures PRE-Zones only form in the direction of the SMA trend, which should significantly improve quality.
