@@ -1,90 +1,103 @@
-# PRE-ZONE INVESTIGATION SESSION
+# PRE-ZONE INVESTIGATION SESSION SUMMARY
 
-**Date:** 2026-03-24
+**Date:** 2026-03-25
 **Branch:** enhance-entry-system
+**Commit:** 2c52300
 
 ---
 
-## BUG FIXED
+## FINDINGS
 
-### Critical Issue: PRE-Zone Trend Mismatch
+### PRE-Zone Triple Confirmation Hypothesis: FAILED
 
-**Problem Found:**
-PRE-Zone system was creating zones based solely on displacement direction without validating against the SMA trend. This caused:
-- Counter-trend zones (e.g., BUY zone when SMA trend is SELL)
-- `SyncZoneToLegacyVariables()` would override `currentMode` with zone direction
-- System would take trades AGAINST the overall trend
+We tested whether requiring Displacement + FVG + Fractal would improve zone quality.
 
-**Fix Applied:** Added trend validation in `CreatePreZone()` at line 2904-2912:
-```csharp
-// CRITICAL FIX: Validate displacement matches SMA trend
-string trendMode = DetectTrendMode();
-if (displacementMode != trendMode)
-{
-    Print("[PRE-Zone] Rejected | Displacement ({0}) against SMA trend ({1})",
-        displacementMode, trendMode);
-    return null;
-}
-```
+**Results:**
 
-**Files Modified:**
-- `Jcamp_1M_scalping.cs` - Added trend validation
-- Copied to cAlgo build directory
+| Test | Trades | Win Rate | Net P/L |
+|------|--------|----------|---------|
+| TestA (no PRE-Zone) | 224 | 20.5% | -$1,531 |
+| TestG (PRE-Zone ON) | 211 | 19.4% | -$2,229 |
+
+**Conclusion:** PRE-Zone doesn't improve trade quality. Win rate is essentially the same (~20%).
 
 ---
 
-## TEST G READY
+## BUGS FIXED
 
-**Test G Settings Created:**
-- Location: `Backtest/V3 baseline/Period 2/Round2/TestG_parameters.cbotset`
-- Key change: `EnablePreZoneSystem: True` (was False in TestA)
-- All entry filters: DISABLED (same as TestA)
+### 1. Trend Validation (Line 2904-2912)
+PRE-Zone now rejects displacements that go against SMA trend.
 
-**Comparison Target:**
-- TestA (no PRE-Zone): 224 trades, 20.5% win rate, -$1,531
-- TestG (with PRE-Zone + trend fix): Target >30% win rate
+### 2. Fractal Confirmation Required (Line 3051)
+PRE-zones can no longer arm directly - must wait for fractal confirmation.
 
 ---
 
-## NEXT STEPS
+## ROOT CAUSE ANALYSIS
 
-### 1. Rebuild Bot in cTrader
-- Open cTrader
-- Build the bot (code already copied to cAlgo directory)
+The **zone locations themselves are the problem**, not the confirmation method.
 
-### 2. Run Test G Backtest
-- Period: Oct 2024 - Jun 2025 (Period 2)
-- Import settings from: `TestG_parameters.cbotset`
-- Save results to: `Backtest/V3 baseline/Period 2/Round2/TestG/`
-
-### 3. Analyze Results
-**Success Criteria:**
-- Trade count: 20-60 trades (not 0, not 200+)
-- Win rate: >30% (vs 20% without PRE-Zone)
-- Profit factor: >1.2
-- No critical errors in logs
-
-**If Successful:** Proceed to PRE-Zone parameter optimization
-**If Fails:** Deeper investigation needed
+Both systems (fractal-only and PRE-Zone) create zones at similar price levels because:
+- PRE-Zone still relies on fractals for final confirmation
+- Fractals form at weak swing points (score 0.6 threshold)
+- These are not real support/resistance levels
 
 ---
 
-## KEY FILES
+## NEXT SESSION: VISUAL INVESTIGATION
+
+**File:** `VISUAL_INVESTIGATION_GUIDE.md`
+
+### Goal
+Manually watch losing trades in Visual Mode to understand WHY they lose.
+
+### Key Questions
+1. Are zones at quality S/R levels?
+2. Is entry timing good?
+3. Are SLs being stop-hunted?
+4. What's the most common losing pattern?
+
+### How to Run
+1. Open cTrader backtester
+2. Enable Visual Mode
+3. Run on short period (1-2 weeks)
+4. Slow speed (100-500x)
+5. Watch and document losing patterns
+
+---
+
+## POSSIBLE ISSUES TO LOOK FOR
+
+1. **Fake Breakouts** - Price enters zone, triggers, immediately reverses
+2. **Stop Hunts** - SL hit by wick, then price continues original direction
+3. **Late Entries** - Zone forms after move is exhausted
+4. **Weak Fractals** - Zones at random price levels, not real S/R
+
+---
+
+## FILES
 
 | File | Purpose |
 |------|---------|
-| `Jcamp_1M_scalping.cs` | Main bot code (edited) |
-| `Backtest/V3 baseline/Period 2/Round2/TestG_parameters.cbotset` | Test G settings |
-| `Docs/NEXT_SESSION_PRE-ZONE_FIX.md` | Original investigation plan |
+| `Jcamp_1M_scalping.cs` | Bot code with PRE-Zone fixes |
+| `VISUAL_INVESTIGATION_GUIDE.md` | Guide for manual chart analysis |
+| `Backtest/V3 baseline/Period 2/Round2/` | Test results |
 
 ---
 
-## HYPOTHESIS RECAP
+## HYPOTHESIS FOR NEXT SESSION
 
-**Current System (PRE-Zone OFF):**
-Weak fractals → garbage zones → 20% win rate
+**If visual investigation shows zones at weak levels:**
+→ Increase MinimumSwingScore (0.6 → 0.7-0.8)
+→ Add H1/H4 confluence requirement
+→ Require zone at session high/low
 
-**Fixed PRE-Zone System (PRE-Zone ON + trend validation):**
-Displacement + FVG + Fractal + **TREND VALIDATION** → quality zones → higher win rate?
+**If visual investigation shows SL issues:**
+→ Widen SL buffer
+→ Use ATR-based dynamic SL
+→ Add break-even logic earlier
 
-The trend validation fix ensures PRE-Zones only form in the direction of the SMA trend, which should significantly improve quality.
+**If visual investigation shows entry timing issues:**
+→ Add momentum confirmation
+→ Wait for rejection candle
+→ Use limit orders instead of stops
