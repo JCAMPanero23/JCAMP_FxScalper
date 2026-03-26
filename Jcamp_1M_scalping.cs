@@ -4799,6 +4799,17 @@ namespace cAlgo.Robots
             Print("[v2.0] BUY SL | Zone: {0:F5} | ATR: {1:F5} | Final: {2:F5} ({3:F1} pips)",
                 zoneBoundarySL, atrBasedSL, slPrice, slPips);
 
+            // Issue #3: Enforce minimum SL
+            double minimumSLDistance = MinimumSLPips * Symbol.PipSize;
+            if ((entryPrice - slPrice) < minimumSLDistance)
+            {
+                double oldSL = slPrice;
+                slPrice = entryPrice - minimumSLDistance;
+                slPips = MinimumSLPips;
+                Print("[v3.0] BUY SL enforced minimum | Old: {0:F5} | New: {1:F5} ({2:F1} pips)",
+                    oldSL, slPrice, slPips);
+            }
+
             // Calculate TP using existing TP logic
             double initialTP = entryPrice + (slPips * MinimumRRRatio * Symbol.PipSize);
             double tpPrice = AdjustTPForMarketStructure(entryPrice, initialTP, slPrice, "BUY");
@@ -4911,6 +4922,17 @@ namespace cAlgo.Robots
 
             Print("[v2.0] SELL SL | Zone: {0:F5} | ATR: {1:F5} | Final: {2:F5} ({3:F1} pips)",
                 zoneBoundarySL, atrBasedSL, slPrice, slPips);
+
+            // Issue #3: Enforce minimum SL
+            double minimumSLDistance = MinimumSLPips * Symbol.PipSize;
+            if ((slPrice - entryPrice) < minimumSLDistance)
+            {
+                double oldSL = slPrice;
+                slPrice = entryPrice + minimumSLDistance;
+                slPips = MinimumSLPips;
+                Print("[v3.0] SELL SL enforced minimum | Old: {0:F5} | New: {1:F5} ({2:F1} pips)",
+                    oldSL, slPrice, slPips);
+            }
 
             // Calculate TP using existing TP logic
             double initialTP = entryPrice - (slPips * MinimumRRRatio * Symbol.PipSize);
