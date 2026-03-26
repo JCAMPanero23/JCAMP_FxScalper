@@ -6147,6 +6147,14 @@ namespace cAlgo.Robots
 
         protected override void OnStop()
         {
+            // Save debug logs at end of backtest
+            if (EnableDebugLogging && _debugLogger != null)
+            {
+                _debugLogger.SaveDetailedLog();
+                _debugLogger.SaveSummaryLog();
+                _debugLogger.PrintSummaryToLog();
+            }
+
             Print("========================================");
             Print("=== JCAMP 1M SCALPING BOT STOPPED ===");
             Print("========================================");
