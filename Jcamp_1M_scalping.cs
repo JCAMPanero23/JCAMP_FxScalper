@@ -3399,6 +3399,22 @@ namespace cAlgo.Robots
                 return;
             }
 
+            // Issue #1: Check if price moved too far from ARMED zone
+            if (CheckPriceDistanceInvalidation())
+            {
+                activeZone.State = ZoneState.Invalidated;
+                Print("[Zone] Invalidated | Price moved too far away");
+
+                // Cancel pending order if exists
+                if (EntryExecution == EntryExecutionMode.PendingStop)
+                {
+                    CancelZonePendingOrder(activeZone.Id, "Price too far from zone");
+                }
+
+                SyncZoneToLegacyVariables();
+                return;
+            }
+
             // Check expiry (skip if ARMED - armed zones stay until entry or invalidation)
             if (activeZone.State != ZoneState.Armed)
             {
@@ -3528,6 +3544,41 @@ namespace cAlgo.Robots
                 // BUY zone invalidated if body closes BELOW zone bottom
                 return (close < activeZone.BottomPrice && open < activeZone.BottomPrice);
             }
+        }
+
+        /// <summary>
+        /// Checks if price has moved too far from an ARMED zone
+        /// Issue #1 Fix: Invalidate zones when price moves away without triggering entry
+        /// </summary>
+        private bool CheckPriceDistanceInvalidation()
+        {
+            if (activeZone == null || activeZone.State != ZoneState.Armed)
+                return false;
+
+            double currentPrice = Symbol.Bid;
+            double distancePips;
+
+            if (activeZone.Mode == "SELL")
+            {
+                // For SELL zone at high, price should be approaching from below
+                // If price drops far below the zone, invalidate
+                distancePips = (activeZone.BottomPrice - currentPrice) / Symbol.PipSize;
+            }
+            else // BUY
+            {
+                // For BUY zone at low, price should be approaching from above
+                // If price rises far above the zone, invalidate
+                distancePips = (currentPrice - activeZone.TopPrice) / Symbol.PipSize;
+            }
+
+            if (distancePips > MaxPriceDistancePips)
+            {
+                Print("[Zone] Price distance {0:F1} pips > Max {1:F1} pips - INVALIDATING",
+                    distancePips, MaxPriceDistancePips);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
