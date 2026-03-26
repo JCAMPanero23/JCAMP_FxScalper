@@ -3413,6 +3413,9 @@ namespace cAlgo.Robots
             // Issue #1: Check if price moved too far from ARMED zone
             if (CheckPriceDistanceInvalidation())
             {
+                // Try reversal entry before invalidating
+                ProcessReversalEntry(activeZone);
+
                 activeZone.State = ZoneState.Invalidated;
                 Print("[Zone] Invalidated | Price moved too far away");
 
@@ -3618,6 +3621,22 @@ namespace cAlgo.Robots
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Placeholder for reversal entry system
+        /// When price moves away from zone without triggering, consider placing limit order
+        /// </summary>
+        private void ProcessReversalEntry(TradingZone zone)
+        {
+            if (!EnableReversalEntry)
+                return;
+
+            // TODO: Implement reversal entry logic
+            // - Calculate limit order price at zone boundary
+            // - Place limit order betting on price return
+            // - Track separately in DebugTradeLogger as "Reversal" entry system
+            Print("[Reversal] PLACEHOLDER - Not yet implemented");
         }
 
         /// <summary>
