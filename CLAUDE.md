@@ -41,6 +41,18 @@ Also available via local symlink: `D:\JCAMP_FxScalper\Backtest\log.txt` (may be 
 
 ## Version History
 
+### v3.1.0 (2026-03-27)
+**Feature:** Zone Management Fixes + Debug Logging
+- Issue #1: Invalidate ARMED zones when price moves > MaxPriceDistancePips away
+- Issue #2: Invalidate all active zones when entering danger session
+- Issue #3: Enforce MinimumSLPips floor for stop loss
+- Issue #5: Block zone creation and arming when position is open
+- DebugTradeLogger: Captures first 3 trades per category (16 categories total)
+- Outputs detailed and summary logs to D:\JCAMP_FxScalper\DebugLogs\
+- Reversal entry system placeholder (not yet implemented)
+- Design spec: `Docs/superpowers/specs/2026-03-25-zone-manager-refactor-design.md`
+- Implementation plan: `Docs/superpowers/plans/2026-03-27-zone-manager-refactor.md`
+
 ### v3.0.0 (2026-03-18)
 **Feature:** Exhaustion Exit Protection
 - Detects market exhaustion via swing pattern + RSI divergence
