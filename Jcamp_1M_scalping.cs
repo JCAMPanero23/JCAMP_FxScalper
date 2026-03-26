@@ -481,9 +481,9 @@ namespace cAlgo.Robots
                 }
                 var current = _tallies[tallyKey];
                 if (trade.Result == "Win")
-                    _tallies[tallyKey] = (current.wins + 1, current.losses);
+                    _tallies[tallyKey] = (current.Item1 + 1, current.Item2);
                 else
-                    _tallies[tallyKey] = (current.wins, current.losses + 1);
+                    _tallies[tallyKey] = (current.Item1, current.Item2 + 1);
 
                 // Store detailed trade if under limit
                 string detailKey = GetDetailKey(trade.ZoneType, trade.EntrySystem, trade.Direction, trade.Result);
@@ -589,8 +589,8 @@ namespace cAlgo.Robots
                 sb.AppendLine("=== COMPARISON ===");
                 var preStats = GetZoneStats("PRE-Zone");
                 var swingStats = GetZoneStats("Swing");
-                sb.AppendLine($"PRE-Zone Win Rate:   {preStats.winRate:F1}%");
-                sb.AppendLine($"Swing Zone Win Rate: {swingStats.winRate:F1}%");
+                sb.AppendLine($"PRE-Zone Win Rate:   {preStats.Item3:F1}%");
+                sb.AppendLine($"Swing Zone Win Rate: {swingStats.Item3:F1}%");
                 sb.AppendLine();
 
                 // Entry system stats
@@ -617,12 +617,12 @@ namespace cAlgo.Robots
                 {
                     string key = GetTallyKey(zoneType, "Standard", direction);
                     var stats = _tallies.ContainsKey(key) ? _tallies[key] : (0, 0);
-                    int total = stats.wins + stats.losses;
-                    double winRate = total > 0 ? (stats.wins * 100.0 / total) : 0;
-                    sb.AppendLine($"  Standard {direction}:  Wins: {stats.wins,-3}  Losses: {stats.losses,-3}  Win Rate: {winRate:F1}%");
+                    int total = stats.Item1 + stats.Item2;
+                    double winRate = total > 0 ? (stats.Item1 * 100.0 / total) : 0;
+                    sb.AppendLine($"  Standard {direction}:  Wins: {stats.Item1,-3}  Losses: {stats.Item2,-3}  Win Rate: {winRate:F1}%");
                 }
                 var zoneStats = GetZoneStats(zoneType);
-                sb.AppendLine($"  TOTAL:         Wins: {zoneStats.wins,-3}  Losses: {zoneStats.losses,-3}  Win Rate: {zoneStats.winRate:F1}%");
+                sb.AppendLine($"  TOTAL:         Wins: {zoneStats.Item1,-3}  Losses: {zoneStats.Item2,-3}  Win Rate: {zoneStats.Item3:F1}%");
             }
 
             private (int wins, int losses, double winRate) GetZoneStats(string zoneType)
@@ -635,8 +635,8 @@ namespace cAlgo.Robots
                         string key = GetTallyKey(zoneType, entrySystem, direction);
                         if (_tallies.ContainsKey(key))
                         {
-                            wins += _tallies[key].wins;
-                            losses += _tallies[key].losses;
+                            wins += _tallies[key].Item1;
+                            losses += _tallies[key].Item2;
                         }
                     }
                 }
@@ -655,8 +655,8 @@ namespace cAlgo.Robots
                         string key = GetTallyKey(zoneType, entrySystem, direction);
                         if (_tallies.ContainsKey(key))
                         {
-                            wins += _tallies[key].wins;
-                            losses += _tallies[key].losses;
+                            wins += _tallies[key].Item1;
+                            losses += _tallies[key].Item2;
                         }
                     }
                 }
@@ -711,9 +711,9 @@ namespace cAlgo.Robots
                 var swingStats = GetZoneStats("Swing");
 
                 _robot.Print("PRE-Zone:  Wins: {0}  Losses: {1}  Win Rate: {2:F1}%",
-                    preStats.wins, preStats.losses, preStats.winRate);
+                    preStats.Item1, preStats.Item2, preStats.Item3);
                 _robot.Print("Swing:     Wins: {0}  Losses: {1}  Win Rate: {2:F1}%",
-                    swingStats.wins, swingStats.losses, swingStats.winRate);
+                    swingStats.Item1, swingStats.Item2, swingStats.Item3);
 
                 _robot.Print("==========================================");
             }
