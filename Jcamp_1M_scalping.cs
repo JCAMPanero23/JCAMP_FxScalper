@@ -375,6 +375,349 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Debug Trade Logger Classes
+
+        /// <summary>
+        /// Represents a single trade for debug logging
+        /// </summary>
+        public class TradeRecord
+        {
+            public int TradeId { get; set; }
+            public string ZoneType { get; set; }        // "PRE-Zone", "Swing"
+            public string EntrySystem { get; set; }     // "Standard", "Reversal"
+            public string Direction { get; set; }       // "BUY", "SELL"
+            public DateTime EntryTime { get; set; }
+            public double EntryPrice { get; set; }
+            public double StopLoss { get; set; }
+            public double TakeProfit { get; set; }
+            public string Result { get; set; }          // "Win", "Loss", null if open
+            public double PLPips { get; set; }
+            public DateTime? ExitTime { get; set; }
+            public string ExitReason { get; set; }      // "SL", "TP", "Chandelier", etc.
+        }
+
+        /// <summary>
+        /// Captures and logs trade data for performance analysis
+        /// Tracks first 3 trades per category (ZoneType × EntrySystem × Direction × Result)
+        /// </summary>
+        public class DebugTradeLogger
+        {
+            private const int MAX_TRADES_PER_CATEGORY = 3;
+            private readonly string _logFolder;
+            private readonly Robot _robot;
+
+            // Trade storage: [ZoneType][EntrySystem][Direction][Result] = List<TradeRecord>
+            private Dictionary<string, List<TradeRecord>> _detailedTrades;
+
+            // Tally counters: "PRE-Zone_Standard_BUY" → (wins, losses)
+            private Dictionary<string, (int wins, int losses)> _tallies;
+
+            // Open trades awaiting close
+            private Dictionary<int, TradeRecord> _openTrades;
+
+            public DebugTradeLogger(Robot robot, string logFolder = @"D:\JCAMP_FxScalper\DebugLogs\")
+            {
+                _robot = robot;
+                _logFolder = logFolder;
+                _detailedTrades = new Dictionary<string, List<TradeRecord>>();
+                _tallies = new Dictionary<string, (int wins, int losses)>();
+                _openTrades = new Dictionary<int, TradeRecord>();
+
+                // Ensure log folder exists
+                if (!System.IO.Directory.Exists(_logFolder))
+                {
+                    System.IO.Directory.CreateDirectory(_logFolder);
+                }
+            }
+
+            /// <summary>
+            /// Records a trade when it opens
+            /// </summary>
+            public void RecordTradeOpen(int positionId, string zoneType, string entrySystem,
+                string direction, DateTime entryTime, double entryPrice, double sl, double tp)
+            {
+                var trade = new TradeRecord
+                {
+                    TradeId = positionId,
+                    ZoneType = zoneType,
+                    EntrySystem = entrySystem,
+                    Direction = direction,
+                    EntryTime = entryTime,
+                    EntryPrice = entryPrice,
+                    StopLoss = sl,
+                    TakeProfit = tp
+                };
+
+                _openTrades[positionId] = trade;
+                _robot.Print("[DebugLog] Trade opened | ID: {0} | {1} {2} {3}",
+                    positionId, zoneType, entrySystem, direction);
+            }
+
+            /// <summary>
+            /// Records trade result when it closes
+            /// </summary>
+            public void RecordTradeClose(int positionId, double exitPrice, DateTime exitTime,
+                string exitReason, double plPips)
+            {
+                if (!_openTrades.TryGetValue(positionId, out var trade))
+                {
+                    _robot.Print("[DebugLog] Warning: No open trade found for ID {0}", positionId);
+                    return;
+                }
+
+                trade.ExitTime = exitTime;
+                trade.ExitReason = exitReason;
+                trade.PLPips = plPips;
+                trade.Result = plPips >= 0 ? "Win" : "Loss";
+
+                // Update tallies
+                string tallyKey = GetTallyKey(trade.ZoneType, trade.EntrySystem, trade.Direction);
+                if (!_tallies.ContainsKey(tallyKey))
+                {
+                    _tallies[tallyKey] = (0, 0);
+                }
+                var current = _tallies[tallyKey];
+                if (trade.Result == "Win")
+                    _tallies[tallyKey] = (current.wins + 1, current.losses);
+                else
+                    _tallies[tallyKey] = (current.wins, current.losses + 1);
+
+                // Store detailed trade if under limit
+                string detailKey = GetDetailKey(trade.ZoneType, trade.EntrySystem, trade.Direction, trade.Result);
+                if (!_detailedTrades.ContainsKey(detailKey))
+                {
+                    _detailedTrades[detailKey] = new List<TradeRecord>();
+                }
+                if (_detailedTrades[detailKey].Count < MAX_TRADES_PER_CATEGORY)
+                {
+                    _detailedTrades[detailKey].Add(trade);
+                }
+
+                _openTrades.Remove(positionId);
+                _robot.Print("[DebugLog] Trade closed | ID: {0} | {1} | {2:F1} pips | {3}",
+                    positionId, trade.Result, plPips, exitReason);
+            }
+
+            private string GetTallyKey(string zoneType, string entrySystem, string direction)
+            {
+                return $"{zoneType}_{entrySystem}_{direction}";
+            }
+
+            private string GetDetailKey(string zoneType, string entrySystem, string direction, string result)
+            {
+                return $"{zoneType}_{entrySystem}_{direction}_{result}";
+            }
+
+            /// <summary>
+            /// Saves detailed trade log to file
+            /// </summary>
+            public void SaveDetailedLog()
+            {
+                string filename = $"trades_detailed_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+                string filepath = System.IO.Path.Combine(_logFolder, filename);
+
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("=== DETAILED TRADE LOG ===");
+                sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                sb.AppendLine();
+
+                // Order: PRE-Zone first, then Swing; Standard first, then Reversal
+                var zoneTypes = new[] { "PRE-Zone", "Swing" };
+                var entrySystems = new[] { "Standard", "Reversal" };
+                var directions = new[] { "BUY", "SELL" };
+                var results = new[] { "Win", "Loss" };
+
+                foreach (var zoneType in zoneTypes)
+                {
+                    foreach (var entrySystem in entrySystems)
+                    {
+                        foreach (var direction in directions)
+                        {
+                            foreach (var result in results)
+                            {
+                                string key = GetDetailKey(zoneType, entrySystem, direction, result);
+                                if (!_detailedTrades.ContainsKey(key) || _detailedTrades[key].Count == 0)
+                                    continue;
+
+                                int tradeNum = 0;
+                                foreach (var trade in _detailedTrades[key])
+                                {
+                                    tradeNum++;
+                                    sb.AppendLine($"--- {zoneType.ToUpper()} {entrySystem.ToUpper()} {direction} {result.ToUpper()} #{tradeNum} ---");
+                                    sb.AppendLine($"Entry Time: {trade.EntryTime:yyyy-MM-dd HH:mm} (Use for Visual Replay)");
+                                    sb.AppendLine($"Zone Type: {trade.ZoneType}");
+                                    sb.AppendLine($"Entry System: {trade.EntrySystem}");
+                                    sb.AppendLine($"Entry: {trade.EntryPrice:F5} | SL: {trade.StopLoss:F5} | TP: {trade.TakeProfit:F5}");
+                                    sb.AppendLine($"Exit Time: {trade.ExitTime:yyyy-MM-dd HH:mm}");
+                                    sb.AppendLine($"Exit Reason: {trade.ExitReason}");
+                                    sb.AppendLine($"P/L: {(trade.PLPips >= 0 ? "+" : "")}{trade.PLPips:F1} pips");
+                                    sb.AppendLine();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                System.IO.File.WriteAllText(filepath, sb.ToString());
+                _robot.Print("[DebugLog] Detailed log saved: {0}", filepath);
+            }
+
+            /// <summary>
+            /// Saves summary log with tallies and replay timestamps
+            /// </summary>
+            public void SaveSummaryLog()
+            {
+                string filename = $"trades_summary_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+                string filepath = System.IO.Path.Combine(_logFolder, filename);
+
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("=== ZONE TYPE PERFORMANCE ===");
+                sb.AppendLine();
+
+                // PRE-Zone stats
+                WriteSectionStats(sb, "PRE-ZONE", "PRE-Zone");
+                sb.AppendLine();
+
+                // Swing Zone stats
+                WriteSectionStats(sb, "SWING ZONE", "Swing");
+                sb.AppendLine();
+
+                // Comparison
+                sb.AppendLine("=== COMPARISON ===");
+                var preStats = GetZoneStats("PRE-Zone");
+                var swingStats = GetZoneStats("Swing");
+                sb.AppendLine($"PRE-Zone Win Rate:   {preStats.winRate:F1}%");
+                sb.AppendLine($"Swing Zone Win Rate: {swingStats.winRate:F1}%");
+                sb.AppendLine();
+
+                // Entry system stats
+                sb.AppendLine("=== ENTRY SYSTEM PERFORMANCE (Combined) ===");
+                sb.AppendLine();
+                WriteEntrySystemStats(sb, "STANDARD ENTRY", "Standard");
+                WriteEntrySystemStats(sb, "REVERSAL ENTRY", "Reversal");
+                sb.AppendLine();
+
+                // Replay timestamps
+                sb.AppendLine("=== REPLAY TIMESTAMPS ===");
+                sb.AppendLine("(Copy these times to Visual Mode backtest)");
+                sb.AppendLine();
+                WriteReplayTimestamps(sb);
+
+                System.IO.File.WriteAllText(filepath, sb.ToString());
+                _robot.Print("[DebugLog] Summary log saved: {0}", filepath);
+            }
+
+            private void WriteSectionStats(System.Text.StringBuilder sb, string header, string zoneType)
+            {
+                sb.AppendLine($"{header}:");
+                foreach (var direction in new[] { "BUY", "SELL" })
+                {
+                    string key = GetTallyKey(zoneType, "Standard", direction);
+                    var stats = _tallies.ContainsKey(key) ? _tallies[key] : (0, 0);
+                    int total = stats.wins + stats.losses;
+                    double winRate = total > 0 ? (stats.wins * 100.0 / total) : 0;
+                    sb.AppendLine($"  Standard {direction}:  Wins: {stats.wins,-3}  Losses: {stats.losses,-3}  Win Rate: {winRate:F1}%");
+                }
+                var zoneStats = GetZoneStats(zoneType);
+                sb.AppendLine($"  TOTAL:         Wins: {zoneStats.wins,-3}  Losses: {zoneStats.losses,-3}  Win Rate: {zoneStats.winRate:F1}%");
+            }
+
+            private (int wins, int losses, double winRate) GetZoneStats(string zoneType)
+            {
+                int wins = 0, losses = 0;
+                foreach (var direction in new[] { "BUY", "SELL" })
+                {
+                    foreach (var entrySystem in new[] { "Standard", "Reversal" })
+                    {
+                        string key = GetTallyKey(zoneType, entrySystem, direction);
+                        if (_tallies.ContainsKey(key))
+                        {
+                            wins += _tallies[key].wins;
+                            losses += _tallies[key].losses;
+                        }
+                    }
+                }
+                int total = wins + losses;
+                double winRate = total > 0 ? (wins * 100.0 / total) : 0;
+                return (wins, losses, winRate);
+            }
+
+            private void WriteEntrySystemStats(System.Text.StringBuilder sb, string header, string entrySystem)
+            {
+                int wins = 0, losses = 0;
+                foreach (var zoneType in new[] { "PRE-Zone", "Swing" })
+                {
+                    foreach (var direction in new[] { "BUY", "SELL" })
+                    {
+                        string key = GetTallyKey(zoneType, entrySystem, direction);
+                        if (_tallies.ContainsKey(key))
+                        {
+                            wins += _tallies[key].wins;
+                            losses += _tallies[key].losses;
+                        }
+                    }
+                }
+                int total = wins + losses;
+                double winRate = total > 0 ? (wins * 100.0 / total) : 0;
+                sb.AppendLine($"{header}:");
+                sb.AppendLine($"  Total: Wins: {wins}  Losses: {losses}  Win Rate: {(total > 0 ? winRate.ToString("F1") + "%" : "N/A")}");
+            }
+
+            private void WriteReplayTimestamps(System.Text.StringBuilder sb)
+            {
+                var zoneTypes = new[] { "PRE-Zone", "Swing" };
+                var entrySystems = new[] { "Standard", "Reversal" };
+                var directions = new[] { "BUY", "SELL" };
+                var results = new[] { "Win", "Loss" };
+
+                foreach (var zoneType in zoneTypes)
+                {
+                    foreach (var entrySystem in entrySystems)
+                    {
+                        foreach (var direction in directions)
+                        {
+                            foreach (var result in results)
+                            {
+                                string key = GetDetailKey(zoneType, entrySystem, direction, result);
+                                if (!_detailedTrades.ContainsKey(key) || _detailedTrades[key].Count == 0)
+                                    continue;
+
+                                string displayZone = zoneType == "PRE-Zone" ? "PRE-ZONE" : "SWING";
+                                sb.AppendLine($"{displayZone} {entrySystem} {direction} {result}:");
+                                int num = 0;
+                                foreach (var trade in _detailedTrades[key])
+                                {
+                                    num++;
+                                    sb.AppendLine($"  {num}. {trade.EntryTime:yyyy-MM-dd HH:mm}");
+                                }
+                                sb.AppendLine();
+                            }
+                        }
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Prints summary to cTrader log
+            /// </summary>
+            public void PrintSummaryToLog()
+            {
+                _robot.Print("========== DEBUG TRADE SUMMARY ==========");
+
+                var preStats = GetZoneStats("PRE-Zone");
+                var swingStats = GetZoneStats("Swing");
+
+                _robot.Print("PRE-Zone:  Wins: {0}  Losses: {1}  Win Rate: {2:F1}%",
+                    preStats.wins, preStats.losses, preStats.winRate);
+                _robot.Print("Swing:     Wins: {0}  Losses: {1}  Win Rate: {2:F1}%",
+                    swingStats.wins, swingStats.losses, swingStats.winRate);
+
+                _robot.Print("==========================================");
+            }
+        }
+
+        #endregion
+
         #region Pending Order Tracking Class
 
         /// <summary>
@@ -796,6 +1139,9 @@ namespace cAlgo.Robots
         // v3.0: Exhaustion exit RSI indicator
         private RelativeStrengthIndex _exhaustionRSI;
 
+        // Debug logging
+        private DebugTradeLogger _debugLogger;
+
         // Visualization tracking
         private ChartStaticText modeLabel;
 
@@ -836,6 +1182,13 @@ namespace cAlgo.Robots
 
             // v3.0: Initialize exhaustion RSI indicator (M1 timeframe)
             _exhaustionRSI = Indicators.RelativeStrengthIndex(Bars.ClosePrices, ExhaustionRSIPeriod);
+
+            // Initialize debug logger
+            if (EnableDebugLogging)
+            {
+                _debugLogger = new DebugTradeLogger(this);
+                Print("[DEBUG] DebugTradeLogger initialized");
+            }
 
             // Phase 4: Initialize ATR indicators
             // FIXED: atrM1 always initialized (needed for v2.0 ATR-based SL), atr only for PreZoneSystem
