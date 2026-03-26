@@ -310,6 +310,9 @@ namespace cAlgo.Robots
             // Direction
             public string Mode { get; set; }             // "BUY" or "SELL"
 
+            // Debug tracking
+            public bool IsPreZone { get; set; }  // true = PRE-Zone, false = Swing
+
             /// <summary>
             /// Creates a unique ID for this zone
             /// </summary>
@@ -3356,7 +3359,8 @@ namespace cAlgo.Robots
                 SessionScore = CalculateSessionAlignmentForZone(originPrice, displacement.Time, mode),
                 PeriodScore = CalculateOptimalPeriodScore(displacement.Time),
                 TotalScore = score,
-                Mode = mode
+                Mode = mode,
+                IsPreZone = true
             };
 
             Print("[PRE-Zone] Created {0} zone | Price: {1:F5}-{2:F5} | Score: {3:F2} | Expiry: {4}",
@@ -4260,7 +4264,8 @@ namespace cAlgo.Robots
                 FractalBarIndex = swingIndex,
                 // v2.0: Use swing boundaries as fallback for SL calculation
                 FVGTopPrice = swingTopPrice,
-                FVGBottomPrice = swingBottomPrice
+                FVGBottomPrice = swingBottomPrice,
+                IsPreZone = false
             };
 
             // Issue 1 Fix: Check if current price is close enough to rectangle to "arm" it
@@ -4888,6 +4893,14 @@ namespace cAlgo.Robots
                     TakeProfit = tpPrice
                 };
 
+                // Record for debug logging
+                if (EnableDebugLogging && _debugLogger != null)
+                {
+                    string zoneType = zone.IsPreZone ? "PRE-Zone" : "Swing";
+                    _debugLogger.RecordTradeOpen(result.PendingOrder.Id, zoneType, "Standard",
+                        "BUY", Server.Time, entryPrice, slPrice, tpPrice);
+                }
+
                 Print($"[PENDING BUY] Zone {zone.Id} | Entry: {entryPrice:F5} | SL: {slPrice:F5} ({slPips:F1} pips) | TP: {tpPrice:F5} ({tpPips:F1} pips) | Expiry: {expiry:HH:mm}");
             }
             else
@@ -5011,6 +5024,14 @@ namespace cAlgo.Robots
                     StopLoss = slPrice,
                     TakeProfit = tpPrice
                 };
+
+                // Record for debug logging
+                if (EnableDebugLogging && _debugLogger != null)
+                {
+                    string zoneType = zone.IsPreZone ? "PRE-Zone" : "Swing";
+                    _debugLogger.RecordTradeOpen(result.PendingOrder.Id, zoneType, "Standard",
+                        "SELL", Server.Time, entryPrice, slPrice, tpPrice);
+                }
 
                 Print($"[PENDING SELL] Zone {zone.Id} | Entry: {entryPrice:F5} | SL: {slPrice:F5} ({slPips:F1} pips) | TP: {tpPrice:F5} ({tpPips:F1} pips) | Expiry: {expiry:HH:mm}");
             }
@@ -6084,8 +6105,40 @@ namespace cAlgo.Robots
 
         private void OnPositionClosedHandler(PositionClosedEventArgs args)
         {
+            var position = args.Position;
+
+            // Only process our positions
+            if (position.Label != MagicNumber.ToString())
+                return;
+
             // Track position result for daily loss limit
-            TrackPositionResult(args.Position);
+            TrackPositionResult(position);
+
+            // Record for debug logging
+            if (EnableDebugLogging && _debugLogger != null)
+            {
+                double plPips = position.Pips;
+                string exitReason = DetermineExitReason(position);
+                _debugLogger.RecordTradeClose(position.Id, position.CurrentPrice,
+                    Server.Time, exitReason, plPips);
+            }
+        }
+
+        private string DetermineExitReason(Position position)
+        {
+            // Check what triggered the close
+            if (position.StopLoss.HasValue &&
+                Math.Abs(position.CurrentPrice - position.StopLoss.Value) < Symbol.PipSize * 2)
+            {
+                return "SL Hit";
+            }
+            if (position.TakeProfit.HasValue &&
+                Math.Abs(position.CurrentPrice - position.TakeProfit.Value) < Symbol.PipSize * 2)
+            {
+                return "TP Hit";
+            }
+            // Chandelier or manual
+            return "Chandelier/Manual";
         }
 
         #endregion
