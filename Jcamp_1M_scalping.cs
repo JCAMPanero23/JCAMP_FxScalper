@@ -3415,6 +3415,28 @@ namespace cAlgo.Robots
                 return;
             }
 
+            // Issue #2: Invalidate active zones when entering danger session
+            if (EnableSessionFilter)
+            {
+                DateTime currentTime = Bars.OpenTimes.LastValue;
+                OptimalPeriod currentPeriod = GetOptimalPeriod(currentTime);
+                if (currentPeriod == OptimalPeriod.DangerDeadZone || currentPeriod == OptimalPeriod.DangerLateNY)
+                {
+                    activeZone.State = ZoneState.Invalidated;
+                    Print("[Zone] Invalidated | Entered danger session ({0})",
+                        currentPeriod == OptimalPeriod.DangerDeadZone ? "04:00-08:00 UTC" : "20:00-00:00 UTC");
+
+                    // Cancel pending order if exists
+                    if (EntryExecution == EntryExecutionMode.PendingStop)
+                    {
+                        CancelZonePendingOrder(activeZone.Id, "Entered danger session");
+                    }
+
+                    SyncZoneToLegacyVariables();
+                    return;
+                }
+            }
+
             // Check expiry (skip if ARMED - armed zones stay until entry or invalidation)
             if (activeZone.State != ZoneState.Armed)
             {
