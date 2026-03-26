@@ -3259,6 +3259,13 @@ namespace cAlgo.Robots
         /// </summary>
         private TradingZone CreatePreZone(DisplacementCandle displacement, FairValueGap fvg)
         {
+            // Issue #5: Block zone creation when position is open
+            if (HasOpenPosition())
+            {
+                Print("[PRE-Zone] Blocked | Position already open");
+                return null;
+            }
+
             // Block zone creation during danger zones
             if (EnableSessionFilter)
             {
@@ -3463,6 +3470,12 @@ namespace cAlgo.Robots
             // PRE-zones must wait for fractal to upgrade to VALID before arming
             if (activeZone.State == ZoneState.Valid)
             {
+                // Issue #5: Don't arm zones when position is open
+                if (HasOpenPosition())
+                {
+                    return;  // Silently skip - don't arm while position open
+                }
+
                 if (CheckZoneProximity())
                 {
                     // v2.0: Check filters before arming
@@ -3601,6 +3614,16 @@ namespace cAlgo.Robots
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Checks if there's an open position for this bot
+        /// Issue #5: Block zone creation and arming when position is open
+        /// </summary>
+        private bool HasOpenPosition()
+        {
+            var positions = Positions.FindAll(MagicNumber.ToString(), SymbolName);
+            return positions.Length > 0;
         }
 
         /// <summary>
@@ -4175,6 +4198,13 @@ namespace cAlgo.Robots
         /// </summary>
         private void UpdateSwingZone(int swingIndex, string mode)
         {
+            // Issue #5: Block zone creation when position is open
+            if (HasOpenPosition())
+            {
+                Print("[SwingZone] Blocked | Position already open");
+                return;
+            }
+
             // Block zone creation during danger zones (check CURRENT time, not swing time)
             if (EnableSessionFilter)
             {
