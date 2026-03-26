@@ -184,6 +184,28 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Zone Management
+
+        [Parameter("=== ZONE MANAGEMENT ===", DefaultValue = "")]
+        public string ZoneManagementHeader { get; set; }
+
+        [Parameter("Max Price Distance (pips)", DefaultValue = 15.0, MinValue = 10.0, MaxValue = 30.0, Step = 5.0, Group = "Zone Management")]
+        public double MaxPriceDistancePips { get; set; }
+
+        [Parameter("Minimum SL (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 10.0, Step = 1.0, Group = "Zone Management")]
+        public double MinimumSLPips { get; set; }
+
+        [Parameter("Enable Reversal Entry", DefaultValue = false, Group = "Zone Management")]
+        public bool EnableReversalEntry { get; set; }
+
+        [Parameter("Reversal Distance (pips)", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 5.0, Group = "Zone Management")]
+        public double ReversalDistancePips { get; set; }
+
+        [Parameter("Enable Debug Logging", DefaultValue = true, Group = "Zone Management")]
+        public bool EnableDebugLogging { get; set; }
+
+        #endregion
+
         #region Entry Mode Enum
 
         public enum EntryMode
