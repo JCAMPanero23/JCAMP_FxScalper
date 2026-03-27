@@ -455,10 +455,18 @@ namespace cAlgo.Robots
                 _tallies = new Dictionary<string, TallyCount>();
                 _openTrades = new Dictionary<int, TradeRecord>();
 
-                // Ensure log folder exists
-                if (!System.IO.Directory.Exists(_logFolder))
+                // Ensure log folder exists (wrapped in try-catch for backtest environment)
+                try
                 {
-                    System.IO.Directory.CreateDirectory(_logFolder);
+                    if (!System.IO.Directory.Exists(_logFolder))
+                    {
+                        System.IO.Directory.CreateDirectory(_logFolder);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _robot.Print("[DebugLog] Warning: Could not create log folder: {0}", ex.Message);
+                    // Continue without file logging - will still track in memory
                 }
             }
 
@@ -589,8 +597,15 @@ namespace cAlgo.Robots
                     }
                 }
 
-                System.IO.File.WriteAllText(filepath, sb.ToString());
-                _robot.Print("[DebugLog] Detailed log saved: {0}", filepath);
+                try
+                {
+                    System.IO.File.WriteAllText(filepath, sb.ToString());
+                    _robot.Print("[DebugLog] Detailed log saved: {0}", filepath);
+                }
+                catch (Exception ex)
+                {
+                    _robot.Print("[DebugLog] Warning: Could not save detailed log: {0}", ex.Message);
+                }
             }
 
             /// <summary>
@@ -634,8 +649,15 @@ namespace cAlgo.Robots
                 sb.AppendLine();
                 WriteReplayTimestamps(sb);
 
-                System.IO.File.WriteAllText(filepath, sb.ToString());
-                _robot.Print("[DebugLog] Summary log saved: {0}", filepath);
+                try
+                {
+                    System.IO.File.WriteAllText(filepath, sb.ToString());
+                    _robot.Print("[DebugLog] Summary log saved: {0}", filepath);
+                }
+                catch (Exception ex)
+                {
+                    _robot.Print("[DebugLog] Warning: Could not save summary log: {0}", ex.Message);
+                }
             }
 
             private void WriteSectionStats(System.Text.StringBuilder sb, string header, string zoneType)
@@ -3756,6 +3778,12 @@ namespace cAlgo.Robots
         /// </summary>
         private void UpdateH1Levels()
         {
+            if (h1Bars == null)
+            {
+                Print("[H1 Levels] Warning: h1Bars not initialized");
+                return;
+            }
+
             h1Supports.Clear();
             h1Resistances.Clear();
 
