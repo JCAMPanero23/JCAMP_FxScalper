@@ -400,6 +400,35 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
+        /// Simple class to hold win/loss tallies (replaces ValueTuple for cAlgo compatibility)
+        /// </summary>
+        public class TallyCount
+        {
+            public int Wins { get; set; }
+            public int Losses { get; set; }
+
+            public TallyCount() { Wins = 0; Losses = 0; }
+            public TallyCount(int wins, int losses) { Wins = wins; Losses = losses; }
+        }
+
+        /// <summary>
+        /// Simple class to hold zone statistics (replaces ValueTuple for cAlgo compatibility)
+        /// </summary>
+        public class ZoneStats
+        {
+            public int Wins { get; set; }
+            public int Losses { get; set; }
+            public double WinRate { get; set; }
+
+            public ZoneStats(int wins, int losses, double winRate)
+            {
+                Wins = wins;
+                Losses = losses;
+                WinRate = winRate;
+            }
+        }
+
+        /// <summary>
         /// Captures and logs trade data for performance analysis
         /// Tracks first 3 trades per category (ZoneType × EntrySystem × Direction × Result)
         /// </summary>
@@ -412,8 +441,8 @@ namespace cAlgo.Robots
             // Trade storage: [ZoneType][EntrySystem][Direction][Result] = List<TradeRecord>
             private Dictionary<string, List<TradeRecord>> _detailedTrades;
 
-            // Tally counters: "PRE-Zone_Standard_BUY" → (wins, losses)
-            private Dictionary<string, (int wins, int losses)> _tallies;
+            // Tally counters: "PRE-Zone_Standard_BUY" → TallyCount
+            private Dictionary<string, TallyCount> _tallies;
 
             // Open trades awaiting close
             private Dictionary<int, TradeRecord> _openTrades;
@@ -423,7 +452,7 @@ namespace cAlgo.Robots
                 _robot = robot;
                 _logFolder = logFolder;
                 _detailedTrades = new Dictionary<string, List<TradeRecord>>();
-                _tallies = new Dictionary<string, (int wins, int losses)>();
+                _tallies = new Dictionary<string, TallyCount>();
                 _openTrades = new Dictionary<int, TradeRecord>();
 
                 // Ensure log folder exists
@@ -477,13 +506,12 @@ namespace cAlgo.Robots
                 string tallyKey = GetTallyKey(trade.ZoneType, trade.EntrySystem, trade.Direction);
                 if (!_tallies.ContainsKey(tallyKey))
                 {
-                    _tallies[tallyKey] = (0, 0);
+                    _tallies[tallyKey] = new TallyCount();
                 }
-                var current = _tallies[tallyKey];
                 if (trade.Result == "Win")
-                    _tallies[tallyKey] = (current.Item1 + 1, current.Item2);
+                    _tallies[tallyKey].Wins++;
                 else
-                    _tallies[tallyKey] = (current.Item1, current.Item2 + 1);
+                    _tallies[tallyKey].Losses++;
 
                 // Store detailed trade if under limit
                 string detailKey = GetDetailKey(trade.ZoneType, trade.EntrySystem, trade.Direction, trade.Result);
@@ -589,8 +617,8 @@ namespace cAlgo.Robots
                 sb.AppendLine("=== COMPARISON ===");
                 var preStats = GetZoneStats("PRE-Zone");
                 var swingStats = GetZoneStats("Swing");
-                sb.AppendLine($"PRE-Zone Win Rate:   {preStats.Item3:F1}%");
-                sb.AppendLine($"Swing Zone Win Rate: {swingStats.Item3:F1}%");
+                sb.AppendLine($"PRE-Zone Win Rate:   {preStats.WinRate:F1}%");
+                sb.AppendLine($"Swing Zone Win Rate: {swingStats.WinRate:F1}%");
                 sb.AppendLine();
 
                 // Entry system stats
@@ -616,16 +644,16 @@ namespace cAlgo.Robots
                 foreach (var direction in new[] { "BUY", "SELL" })
                 {
                     string key = GetTallyKey(zoneType, "Standard", direction);
-                    var stats = _tallies.ContainsKey(key) ? _tallies[key] : (0, 0);
-                    int total = stats.Item1 + stats.Item2;
-                    double winRate = total > 0 ? (stats.Item1 * 100.0 / total) : 0;
-                    sb.AppendLine($"  Standard {direction}:  Wins: {stats.Item1,-3}  Losses: {stats.Item2,-3}  Win Rate: {winRate:F1}%");
+                    var stats = _tallies.ContainsKey(key) ? _tallies[key] : new TallyCount();
+                    int total = stats.Wins + stats.Losses;
+                    double winRate = total > 0 ? (stats.Wins * 100.0 / total) : 0;
+                    sb.AppendLine($"  Standard {direction}:  Wins: {stats.Wins,-3}  Losses: {stats.Losses,-3}  Win Rate: {winRate:F1}%");
                 }
                 var zoneStats = GetZoneStats(zoneType);
-                sb.AppendLine($"  TOTAL:         Wins: {zoneStats.Item1,-3}  Losses: {zoneStats.Item2,-3}  Win Rate: {zoneStats.Item3:F1}%");
+                sb.AppendLine($"  TOTAL:         Wins: {zoneStats.Wins,-3}  Losses: {zoneStats.Losses,-3}  Win Rate: {zoneStats.WinRate:F1}%");
             }
 
-            private (int wins, int losses, double winRate) GetZoneStats(string zoneType)
+            private ZoneStats GetZoneStats(string zoneType)
             {
                 int wins = 0, losses = 0;
                 foreach (var direction in new[] { "BUY", "SELL" })
@@ -635,14 +663,14 @@ namespace cAlgo.Robots
                         string key = GetTallyKey(zoneType, entrySystem, direction);
                         if (_tallies.ContainsKey(key))
                         {
-                            wins += _tallies[key].Item1;
-                            losses += _tallies[key].Item2;
+                            wins += _tallies[key].Wins;
+                            losses += _tallies[key].Losses;
                         }
                     }
                 }
                 int total = wins + losses;
                 double winRate = total > 0 ? (wins * 100.0 / total) : 0;
-                return (wins, losses, winRate);
+                return new ZoneStats(wins, losses, winRate);
             }
 
             private void WriteEntrySystemStats(System.Text.StringBuilder sb, string header, string entrySystem)
@@ -655,8 +683,8 @@ namespace cAlgo.Robots
                         string key = GetTallyKey(zoneType, entrySystem, direction);
                         if (_tallies.ContainsKey(key))
                         {
-                            wins += _tallies[key].Item1;
-                            losses += _tallies[key].Item2;
+                            wins += _tallies[key].Wins;
+                            losses += _tallies[key].Losses;
                         }
                     }
                 }
@@ -711,9 +739,9 @@ namespace cAlgo.Robots
                 var swingStats = GetZoneStats("Swing");
 
                 _robot.Print("PRE-Zone:  Wins: {0}  Losses: {1}  Win Rate: {2:F1}%",
-                    preStats.Item1, preStats.Item2, preStats.Item3);
+                    preStats.Wins, preStats.Losses, preStats.WinRate);
                 _robot.Print("Swing:     Wins: {0}  Losses: {1}  Win Rate: {2:F1}%",
-                    swingStats.Item1, swingStats.Item2, swingStats.Item3);
+                    swingStats.Wins, swingStats.Losses, swingStats.WinRate);
 
                 _robot.Print("==========================================");
             }
