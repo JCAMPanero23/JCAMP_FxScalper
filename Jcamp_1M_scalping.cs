@@ -447,7 +447,7 @@ namespace cAlgo.Robots
             // Open trades awaiting close
             private Dictionary<int, TradeRecord> _openTrades;
 
-            public DebugTradeLogger(Robot robot, string logFolder = @"D:\JCAMP_FxScalper\DebugLogs\")
+            public DebugTradeLogger(Robot robot, string logFolder = @"C:\Users\Jcamp_Laptop\Documents\cAlgo\Data\cBots\Jcamp_1M_scalping\DebugLogs\")
             {
                 _robot = robot;
                 _logFolder = logFolder;
@@ -1464,100 +1464,83 @@ namespace cAlgo.Robots
 
                 Print("=== NEW M15 BAR: {0} ===", lastM15BarTime);
 
-                try
+                // Phase 1C: Update market structure levels on new M15 bar
+                UpdateH1Levels();
+                UpdateM15Levels();
+
+                // Phase 2: Update session tracking
+                UpdateSessionTracking();
+
+                // Note: M15 displacement detection removed - now handled on M1 bars above
+                // This allows faster PRE-zone creation (within 1 minute instead of 15)
+
+                // 1. Detect current trend mode
+                string newMode = DetectTrendMode();
+
+                // 2. Update mode if changed
+                if (newMode != currentMode && !string.IsNullOrEmpty(newMode))
                 {
-                    // Phase 1C: Update market structure levels on new M15 bar
-                    Print("[M15-DEBUG] Step 1: UpdateH1Levels...");
-                    UpdateH1Levels();
-                    Print("[M15-DEBUG] Step 2: UpdateM15Levels...");
-                    UpdateM15Levels();
+                    currentMode = newMode;
+                    Print(">>> MODE CHANGED: {0} MODE <<<", currentMode);
+                }
 
-                    // Phase 2: Update session tracking
-                    Print("[M15-DEBUG] Step 3: UpdateSessionTracking...");
-                    UpdateSessionTracking();
+                // 3. Find significant swing point based on mode (with scoring)
+                int swingIndex = FindSignificantSwing(currentMode);
 
-                    // Note: M15 displacement detection removed - now handled on M1 bars above
-                    // This allows faster PRE-zone creation (within 1 minute instead of 15)
+                if (swingIndex == -1)
+                {
+                    Print("[{0}] No NEW significant swing found (score >= {1:F2}) in last {2} M15 bars",
+                        currentMode, MinimumSwingScore, SwingLookbackBars);
+                    // DON'T deactivate existing rectangle! It remains active until expired/invalidated/traded
+                }
+                else
+                {
+                    // 4. Update swing rectangle zone (only if we found a new swing)
+                    DateTime swingTime = m15Bars.OpenTimes[swingIndex];
 
-                    // 1. Detect current trend mode
-                    Print("[M15-DEBUG] Step 4: DetectTrendMode...");
-                    string newMode = DetectTrendMode();
+                    // Check if this is a new swing
+                    bool isNewSwing = (swingTime != lastSwingTime);
 
-                    // 2. Update mode if changed
-                    if (newMode != currentMode && !string.IsNullOrEmpty(newMode))
+                    if (isNewSwing)
                     {
-                        currentMode = newMode;
-                        Print(">>> MODE CHANGED: {0} MODE <<<", currentMode);
-                    }
+                        lastSwingTime = swingTime;
+                        hasBreakoutOccurred = false;  // Reset breakout tracking for new swing
 
-                    // 3. Find significant swing point based on mode (with scoring)
-                    Print("[M15-DEBUG] Step 5: FindSignificantSwing...");
-                    int swingIndex = FindSignificantSwing(currentMode);
-
-                    if (swingIndex == -1)
-                    {
-                        Print("[{0}] No NEW significant swing found (score >= {1:F2}) in last {2} M15 bars",
-                            currentMode, MinimumSwingScore, SwingLookbackBars);
-                        // DON'T deactivate existing rectangle! It remains active until expired/invalidated/traded
-                    }
-                    else
-                    {
-                        // 4. Update swing rectangle zone (only if we found a new swing)
-                        Print("[M15-DEBUG] Step 6: Processing swing at index {0}...", swingIndex);
-                        DateTime swingTime = m15Bars.OpenTimes[swingIndex];
-
-                        // Check if this is a new swing
-                        bool isNewSwing = (swingTime != lastSwingTime);
-
-                        if (isNewSwing)
+                        // Phase 4: Check if fractal confirms existing PRE-zone
+                        bool skipFractalZoneCreation = false;
+                        if (EnablePreZoneSystem && activeZone != null && activeZone.State == ZoneState.Pre)
                         {
-                            lastSwingTime = swingTime;
-                            hasBreakoutOccurred = false;  // Reset breakout tracking for new swing
+                            double fractalPrice = currentMode == "SELL" ?
+                                m15Bars.HighPrices[swingIndex] :
+                                m15Bars.LowPrices[swingIndex];
 
-                            // Phase 4: Check if fractal confirms existing PRE-zone
-                            bool skipFractalZoneCreation = false;
-                            if (EnablePreZoneSystem && activeZone != null && activeZone.State == ZoneState.Pre)
+                            double distanceToZone = Math.Abs(fractalPrice - activeZone.OriginPrice) / Symbol.PipSize;
+
+                            if (distanceToZone <= FractalZoneTolerancePips)
                             {
-                                Print("[M15-DEBUG] Step 7: Checking PRE-zone confirmation...");
-                                double fractalPrice = currentMode == "SELL" ?
-                                    m15Bars.HighPrices[swingIndex] :
-                                    m15Bars.LowPrices[swingIndex];
+                                // Fractal confirms PRE-zone - upgrade to VALID
+                                UpgradeToValidZone(activeZone, swingIndex);
+                                SyncZoneToLegacyVariables();
 
-                                double distanceToZone = Math.Abs(fractalPrice - activeZone.OriginPrice) / Symbol.PipSize;
-
-                                if (distanceToZone <= FractalZoneTolerancePips)
+                                if (ShowRectangles)
                                 {
-                                    // Fractal confirms PRE-zone - upgrade to VALID
-                                    UpgradeToValidZone(activeZone, swingIndex);
-                                    SyncZoneToLegacyVariables();
-
-                                    if (ShowRectangles)
-                                    {
-                                        DrawZoneRectangle();  // Redraw with VALID state color
-                                    }
-
-                                    // Skip normal fractal zone creation (but continue with other M15 processing)
-                                    skipFractalZoneCreation = true;
-                                    Print("[FractalConfirm] ✅ Fractal confirms PRE-zone at {0:F5} | Distance: {1:F1} pips | UPGRADED to VALID",
-                                        fractalPrice, distanceToZone);
+                                    DrawZoneRectangle();  // Redraw with VALID state color
                                 }
-                            }
 
-                            // Only create fractal zone if not confirmed by PRE-zone
-                            if (!skipFractalZoneCreation)
-                            {
-                                Print("[M15-DEBUG] Step 8: UpdateSwingZone...");
-                                // UpdateSwingZone will set hasActiveSwing based on proximity check
-                                UpdateSwingZone(swingIndex, currentMode);
+                                // Skip normal fractal zone creation (but continue with other M15 processing)
+                                skipFractalZoneCreation = true;
+                                Print("[FractalConfirm] ✅ Fractal confirms PRE-zone at {0:F5} | Distance: {1:F1} pips | UPGRADED to VALID",
+                                    fractalPrice, distanceToZone);
                             }
                         }
+
+                        // Only create fractal zone if not confirmed by PRE-zone
+                        if (!skipFractalZoneCreation)
+                        {
+                            // UpdateSwingZone will set hasActiveSwing based on proximity check
+                            UpdateSwingZone(swingIndex, currentMode);
+                        }
                     }
-                    Print("[M15-DEBUG] M15 bar processing complete.");
-                }
-                catch (Exception ex)
-                {
-                    Print("[M15-ERROR] NullReferenceException in M15 processing: {0}", ex.Message);
-                    Print("[M15-ERROR] Stack trace: {0}", ex.StackTrace);
                 }
             }
 
