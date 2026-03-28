@@ -39,9 +39,9 @@ Also available via local symlink: `D:\JCAMP_FxScalper\Backtest\log.txt` (may be 
 - `Jcamp_1M_scalping.cs` - Main trading bot code
 - `TrendModeRectangleIndicator.cs` - Trend mode indicator
 
-## Optimized Parameters (Nov 2025 - Jan 2026)
+## Optimized Parameters (v4.1.2 - Nov 2025 - Feb 2026)
 
-Based on optimization runs, these are the recommended parameters:
+Based on optimization runs with ADX FlipDirection mode:
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
@@ -53,22 +53,44 @@ Based on optimization runs, these are the recommended parameters:
 | Minimum RR Ratio | 5.0 | Only high-quality setups |
 | Chandelier Activation | 0.75 | Let winners run longer |
 | Enable Daily Loss Limit | Yes | -3R max, 5 losses max |
+| Enable ADX Filter | Yes | FlipDirection mode |
+| ADX Mode | FlipDirection | Contrarian in ranging markets |
+| ADX Period | 18 | Slightly longer than default |
+| ADX Min Threshold | 15 | Lower = more flips |
+| Enable Monthly DD Limit | Yes | 10% max drawdown per month |
 
-**Performance (Nov 2025 - Jan 2026):**
-- Net Profit: +18.7%
-- Profit Factor: 1.41
-- Win Rate: 28%
-- Max Drawdown: 13.28%
+**Performance (Nov 2025 - Feb 2026):**
+| Period | Result | Notes |
+|--------|--------|-------|
+| Nov-Jan 2026 | +36% | FlipDirection 75% win rate |
+| Feb 2026 | -10% | Capped by monthly limit (was -15%) |
+| **Net** | **+26%** | vs +21% without monthly limit |
 
 **Recommendation:** Re-optimize monthly using last 2-3 months of data.
 
 ## Version History
 
+### v4.1.2 (2026-03-29)
+**Feature:** Monthly Drawdown Limit
+- Stop trading if equity drops 10% from month start
+- Based on NET loss from month start (not peak drawdown)
+- Resumes automatically at start of next month
+- Saved 5% in Feb 2026 (-10% vs -15% without limit)
+- Branch: `feature/adx-exhaustion`
+
+### v4.1.1 (2026-03-29)
+**Feature:** ADX FlipDirection Mode
+- New ADX mode: FlipDirection (contrarian in ranging markets)
+- When ADX < threshold, reverse trade direction (BUY→SELL, SELL→BUY)
+- 75% win rate on flipped trades in Nov-Jan 2026 backtest
+- +36% with FlipDirection vs +19% without
+- Branch: `feature/adx-exhaustion`
+
 ### v4.1.0 (2026-03-29)
 **Feature:** ADX Filter + Exhaustion Exit Protection
 - **ADX Filter:** DirectionalMovementSystem indicator filters ranging markets
   - Configurable period (default: 14) and threshold (default: 20)
-  - Entry skipped when ADX < threshold (no trend)
+  - BlockEntry mode: Entry skipped when ADX < threshold
 - **Exhaustion Exit:** RSI divergence detection from v3.0 spec
   - SELL: Bullish divergence (Higher Lows + RSI Lower Lows)
   - BUY: Bearish divergence (Lower Highs + RSI Higher Highs)
