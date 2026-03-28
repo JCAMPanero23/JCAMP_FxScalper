@@ -17,9 +17,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "3.1.0";
-        private const string VERSION_DATE = "2026-03-27";
-        private const string VERSION_NOTES = "Zone management fixes: price distance, danger session, min SL, position check + debug logging";
+        private const string BOT_VERSION = "4.0.0";
+        private const string VERSION_DATE = "2026-03-28";
+        private const string VERSION_NOTES = "MTF SMA Alignment entry system - trade when price > SMA on M1 + TF2 + TF3";
         #endregion
 
         #region Parameters - Trend Detection
@@ -203,6 +203,28 @@ namespace cAlgo.Robots
 
         [Parameter("Enable Debug Logging", DefaultValue = true, Group = "Zone Management")]
         public bool EnableDebugLogging { get; set; }
+
+        #endregion
+
+        #region Parameters - MTF SMA Alignment v4.0
+
+        [Parameter("=== MTF SMA ALIGNMENT v4.0 ===", DefaultValue = "")]
+        public string MTFSMAHeader { get; set; }
+
+        [Parameter("Enable MTF SMA Entry", DefaultValue = true, Group = "MTF SMA Alignment")]
+        public bool EnableMTFSMAEntry { get; set; }
+
+        [Parameter("MTF SMA Period", DefaultValue = 200, MinValue = 50, MaxValue = 300, Step = 50, Group = "MTF SMA Alignment")]
+        public int MTFSMAPeriod { get; set; }
+
+        [Parameter("Timeframe 2", DefaultValue = "Minute3", Group = "MTF SMA Alignment")]
+        public TimeFrame Timeframe2 { get; set; }
+
+        [Parameter("Timeframe 3", DefaultValue = "Minute5", Group = "MTF SMA Alignment")]
+        public TimeFrame Timeframe3 { get; set; }
+
+        [Parameter("Require All TFs Aligned", DefaultValue = true, Group = "MTF SMA Alignment")]
+        public bool RequireAllTFsAligned { get; set; }
 
         #endregion
 
@@ -1112,6 +1134,12 @@ namespace cAlgo.Robots
         private Bars h1Bars;
         private bool isM15Chart;
 
+        // MTF SMA Alignment v4.0
+        private Bars m1Bars;      // Fixed - execution TF (M1)
+        private Bars tf2Bars;     // Configurable TF2
+        private Bars tf3Bars;     // Configurable TF3
+        private string _previousM1Alignment = "";  // Track previous M1 alignment for crossover detection
+
         // State tracking
         private string currentMode = "";
         private DateTime lastM15BarTime;
@@ -1229,6 +1257,16 @@ namespace cAlgo.Robots
             // Always use MarketData.GetBars for M15 data to ensure consistency
             // between M1 and M15 chart runs (same data source = same results)
             m15Bars = MarketData.GetBars(TimeFrame.Minute15);
+
+            // v4.0: Initialize MTF SMA Alignment bar data
+            if (EnableMTFSMAEntry)
+            {
+                m1Bars = MarketData.GetBars(TimeFrame.Minute);
+                tf2Bars = MarketData.GetBars(Timeframe2);
+                tf3Bars = MarketData.GetBars(Timeframe3);
+                Print("[MTF-SMA v4.0] Initialized | M1 + {0} + {1} | SMA Period: {2} | Require All: {3}",
+                    Timeframe2, Timeframe3, MTFSMAPeriod, RequireAllTFsAligned);
+            }
 
             // Initialize chandelier state tracking
             _chandelierStates = new Dictionary<int, ChandelierState>();
@@ -1554,11 +1592,22 @@ namespace cAlgo.Robots
                 TryRearmRectangle();
             }
 
-            // Phase 4: Update zone states (expiry, arming, invalidation)
-            // FIXED: Run zone state management even when PreZoneSystem disabled (fractal zones still need arming)
-            if (activeZone != null)
+            // ============================================================
+            // v4.0: MTF SMA ALIGNMENT ENTRY SYSTEM
+            // ============================================================
+            if (EnableMTFSMAEntry)
             {
-                UpdateZoneStates();
+                // Use MTF SMA alignment for entries (zone-based system disabled)
+                ProcessMTFSMAEntry();
+            }
+            else
+            {
+                // Phase 4: Update zone states (expiry, arming, invalidation)
+                // FIXED: Run zone state management even when PreZoneSystem disabled (fractal zones still need arming)
+                if (activeZone != null)
+                {
+                    UpdateZoneStates();
+                }
             }
 
             // ============================================================
@@ -4635,6 +4684,185 @@ namespace cAlgo.Robots
             }
 
             return volumeInUnits;
+        }
+
+        #endregion
+
+        #region MTF SMA Alignment v4.0
+
+        /// <summary>
+        /// Calculates SMA for a given Bars data series
+        /// </summary>
+        private double CalculateSMAForBars(Bars bars, int period)
+        {
+            int count = Math.Min(period, bars.Count);
+            if (count <= 0) return 0;
+
+            double sum = 0;
+            for (int i = 0; i < count; i++)
+            {
+                sum += bars.ClosePrices.Last(i);
+            }
+            return sum / count;
+        }
+
+        /// <summary>
+        /// Gets alignment direction for a given timeframe
+        /// Returns "BUY" if price > SMA, "SELL" if price < SMA
+        /// </summary>
+        private string GetSMAAlignment(Bars bars)
+        {
+            if (bars == null || bars.Count < MTFSMAPeriod)
+                return "NONE";
+
+            double price = bars.ClosePrices.LastValue;
+            double sma = CalculateSMAForBars(bars, MTFSMAPeriod);
+
+            if (sma <= 0) return "NONE";
+
+            return price > sma ? "BUY" : "SELL";
+        }
+
+        /// <summary>
+        /// Checks if all configured timeframes are aligned
+        /// Returns (aligned, direction) tuple
+        /// </summary>
+        private bool CheckMTFAlignment(out string direction)
+        {
+            direction = "NONE";
+
+            if (m1Bars == null || tf2Bars == null || tf3Bars == null)
+                return false;
+
+            string m1 = GetSMAAlignment(m1Bars);
+            string tf2 = GetSMAAlignment(tf2Bars);
+            string tf3 = GetSMAAlignment(tf3Bars);
+
+            // Check for full alignment
+            bool allBuy = (m1 == "BUY" && tf2 == "BUY" && tf3 == "BUY");
+            bool allSell = (m1 == "SELL" && tf2 == "SELL" && tf3 == "SELL");
+
+            if (RequireAllTFsAligned)
+            {
+                if (allBuy)
+                {
+                    direction = "BUY";
+                    return true;
+                }
+                if (allSell)
+                {
+                    direction = "SELL";
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                // 2 of 3 must align
+                int buyCount = (m1 == "BUY" ? 1 : 0) + (tf2 == "BUY" ? 1 : 0) + (tf3 == "BUY" ? 1 : 0);
+                int sellCount = (m1 == "SELL" ? 1 : 0) + (tf2 == "SELL" ? 1 : 0) + (tf3 == "SELL" ? 1 : 0);
+
+                if (buyCount >= 2)
+                {
+                    direction = "BUY";
+                    return true;
+                }
+                if (sellCount >= 2)
+                {
+                    direction = "SELL";
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Detects M1 SMA crossover (entry trigger)
+        /// Returns true if price just crossed the M1 SMA
+        /// </summary>
+        private bool DetectM1Crossover(out string direction)
+        {
+            direction = "NONE";
+
+            if (m1Bars == null) return false;
+
+            string current = GetSMAAlignment(m1Bars);
+
+            // Check for crossover (alignment changed from previous bar)
+            bool crossed = !string.IsNullOrEmpty(_previousM1Alignment)
+                           && _previousM1Alignment != "NONE"
+                           && _previousM1Alignment != current
+                           && current != "NONE";
+
+            direction = current;
+            _previousM1Alignment = current;
+
+            return crossed;
+        }
+
+        /// <summary>
+        /// Processes MTF SMA entry signals
+        /// Called from OnBar when EnableMTFSMAEntry is true
+        /// </summary>
+        private void ProcessMTFSMAEntry()
+        {
+            // Skip if trading disabled or position already open
+            if (!EnableTrading || HasOpenPosition())
+                return;
+
+            // Check daily loss limit
+            if (IsDailyLimitReached())
+                return;
+
+            // Check session - only trade during BEST or GOOD periods
+            var period = GetOptimalPeriod(Server.Time);
+            if (period != OptimalPeriod.BestOverlap && period != OptimalPeriod.GoodLondonOpen)
+            {
+                // Not in trading session
+                return;
+            }
+
+            // Check MTF alignment
+            if (!CheckMTFAlignment(out string alignmentDirection))
+            {
+                // Not aligned
+                return;
+            }
+
+            // Check for M1 crossover as entry trigger
+            if (DetectM1Crossover(out string m1Direction))
+            {
+                // Crossover occurred - check if direction matches alignment
+                if (m1Direction == alignmentDirection)
+                {
+                    Print("[MTF-SMA] All TFs aligned {0} | M1 crossover detected | ENTRY SIGNAL", alignmentDirection);
+
+                    // Calculate SL using ATR
+                    double atrValue = atrM1.Result.LastValue;
+                    double slPips = (atrValue * SLATRMultiplier) / Symbol.PipSize;
+
+                    // Enforce minimum SL
+                    if (slPips < MinimumSLPips)
+                    {
+                        slPips = MinimumSLPips;
+                    }
+
+                    // Set swingTopPrice and swingBottomPrice for ExecuteBuyTrade/ExecuteSellTrade
+                    // These methods use these variables for SL calculation
+                    if (alignmentDirection == "BUY")
+                    {
+                        swingBottomPrice = Symbol.Ask - (slPips * Symbol.PipSize);
+                        swingTopPrice = swingBottomPrice + (slPips * Symbol.PipSize * 0.5);  // Minimal zone height
+                        ExecuteBuyTrade();
+                    }
+                    else
+                    {
+                        swingTopPrice = Symbol.Bid + (slPips * Symbol.PipSize);
+                        swingBottomPrice = swingTopPrice - (slPips * Symbol.PipSize * 0.5);  // Minimal zone height
+                        ExecuteSellTrade();
+                    }
+                }
+            }
         }
 
         #endregion

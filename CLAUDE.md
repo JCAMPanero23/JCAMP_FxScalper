@@ -41,6 +41,17 @@ Also available via local symlink: `D:\JCAMP_FxScalper\Backtest\log.txt` (may be 
 
 ## Version History
 
+### v4.0.0 (2026-03-28)
+**Feature:** MTF SMA Alignment Entry System
+- New entry strategy: Trade when price > SMA on ALL configured timeframes
+- M1 (fixed) + TF2 (default M3) + TF3 (default M5) alignment required
+- Entry trigger: M1 SMA crossover while higher TFs already aligned
+- Session filter: BEST (13:00-17:00 UTC) and GOOD (08:00-12:00 UTC) periods only
+- Toggle: EnableMTFSMAEntry (default: true) switches between MTF and zone-based entry
+- ATR-based stop loss maintained from v2.0
+- Keeps all existing risk management, chandelier trailing, and debug logging
+- Branch: `feature/mtf-sma-alignment`
+
 ### v3.1.0 (2026-03-27)
 **Feature:** Zone Management Fixes + Debug Logging
 - Issue #1: Invalidate ARMED zones when price moves > MaxPriceDistancePips away
