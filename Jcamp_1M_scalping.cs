@@ -22,21 +22,20 @@ namespace cAlgo.Robots
         private const string VERSION_NOTES = "MTF SMA Alignment entry system - trade when price > SMA on M1 + TF2 + TF3";
         #endregion
 
-        #region Parameters - Trend Detection
+        #region Parameters - Trend Detection (PARTIALLY DISABLED)
 
-        [Parameter("=== TREND DETECTION ===", DefaultValue = "")]
+        // COMMENTED OUT - Zone-based trend detection (SMAPeriod still used for mode label)
+        // [Parameter("=== TREND DETECTION ===", DefaultValue = "")]
         public string TrendHeader { get; set; }
 
-        // SMA Period: 200 is industry standard, optimize in range 100-300 with step 50
-        [Parameter("SMA Period", DefaultValue = 200, MinValue = 100, MaxValue = 300, Step = 50, Group = "Trend Detection")]
+        // SMA Period - still used for mode detection (SELL/BUY label on chart)
+        [Parameter("SMA Period (Mode Label)", DefaultValue = 200, MinValue = 100, MaxValue = 300, Step = 50, Group = "Visualization")]
         public int SMAPeriod { get; set; }
 
-        // Swing Lookback: How far back to look for fractals. Step=10 gives 7 combinations (20-80)
-        [Parameter("Swing Lookback Bars (M15)", DefaultValue = 30, MinValue = 20, MaxValue = 80, Step = 10, Group = "Trend Detection")]
+        // [Parameter("Swing Lookback Bars (M15)", DefaultValue = 30, MinValue = 20, MaxValue = 80, Step = 10, Group = "Trend Detection")]
         public int SwingLookbackBars { get; set; }
 
-        // Min Swing Score: Quality threshold. Step=0.05 gives 9 combinations (0.40-0.80)
-        [Parameter("Minimum Swing Score", DefaultValue = 0.60, MinValue = 0.40, MaxValue = 0.80, Step = 0.05, Group = "Trend Detection")]
+        // [Parameter("Minimum Swing Score", DefaultValue = 0.60, MinValue = 0.40, MaxValue = 0.80, Step = 0.05, Group = "Trend Detection")]
         public double MinimumSwingScore { get; set; }
 
         #endregion
@@ -55,7 +54,8 @@ namespace cAlgo.Robots
         [Parameter("Session Box Mode", DefaultValue = SessionBoxMode.Advanced, Group = "Session Management")]
         public SessionBoxMode SessionBoxDisplayMode { get; set; }
 
-        [Parameter("Session Weight", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Session Management")]
+        // COMMENTED OUT - Zone scoring weight (not used by MTF SMA)
+        // [Parameter("Session Weight", DefaultValue = 0.20, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Session Management")]
         public double SessionWeight { get; set; }
 
         #endregion
@@ -151,27 +151,26 @@ namespace cAlgo.Robots
         [Parameter("Enable Trading", DefaultValue = false, Group = "Entry Filters")]
         public bool EnableTrading { get; set; }
 
-        [Parameter("Entry Mode", DefaultValue = EntryMode.Breakout, Group = "Entry Filters")]
+        // COMMENTED OUT - Zone-based entry system (not used when MTF SMA Entry enabled)
+        // [Parameter("Entry Mode", DefaultValue = EntryMode.Breakout, Group = "Entry Filters")]
         public EntryMode EntryModeSelection { get; set; }
 
-        [Parameter("Trade on New Swing Only", DefaultValue = true, Group = "Entry Filters")]
+        // [Parameter("Trade on New Swing Only", DefaultValue = true, Group = "Entry Filters")]
         public bool TradeOnNewSwingOnly { get; set; }
 
-        // Max Distance to Arm: How far price can be to arm zone. Step=2 gives 6 combinations (4-14)
-        [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 4.0, MaxValue = 14.0, Step = 2.0, Group = "Entry Filters")]
+        // [Parameter("Max Distance to Arm (pips)", DefaultValue = 10.0, MinValue = 4.0, MaxValue = 14.0, Step = 2.0, Group = "Entry Filters")]
         public double MaxDistanceToArm { get; set; }
 
-        // NEW PARAMETERS START
-        [Parameter("Entry Execution Mode", DefaultValue = EntryExecutionMode.Market, Group = "Entry System")]
+        // [Parameter("Entry Execution Mode", DefaultValue = EntryExecutionMode.Market, Group = "Entry System")]
         public EntryExecutionMode EntryExecution { get; set; }
 
-        [Parameter("Pending Entry Offset (pips)", DefaultValue = 2.0, MinValue = 0.0, MaxValue = 5.0, Step = 0.5, Group = "Entry System")]
+        // [Parameter("Pending Entry Offset (pips)", DefaultValue = 2.0, MinValue = 0.0, MaxValue = 5.0, Step = 0.5, Group = "Entry System")]
         public double PendingEntryOffsetPips { get; set; }
 
-        [Parameter("Pending Order Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 240, Step = 30, Group = "Entry System")]
+        // [Parameter("Pending Order Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 240, Step = 30, Group = "Entry System")]
         public int PendingOrderExpiryMinutes { get; set; }
 
-        // Daily Loss Limit Parameters
+        // Daily Loss Limit Parameters (still used)
         [Parameter("Enable Daily Loss Limit", DefaultValue = false, Group = "Risk Management")]
         public bool EnableDailyLossLimit { get; set; }
 
@@ -180,28 +179,28 @@ namespace cAlgo.Robots
 
         [Parameter("Max Daily Losing Trades", DefaultValue = 5, MinValue = 1, MaxValue = 20, Step = 1, Group = "Risk Management")]
         public int MaxDailyLosingTrades { get; set; }
-        // NEW PARAMETERS END
 
         #endregion
 
-        #region Parameters - Zone Management
+        #region Parameters - Zone Management (DISABLED - MTF SMA uses ATR-based SL)
 
-        [Parameter("=== ZONE MANAGEMENT ===", DefaultValue = "")]
+        // COMMENTED OUT - Zone-based parameters (not used when MTF SMA Entry enabled)
+        // [Parameter("=== ZONE MANAGEMENT ===", DefaultValue = "")]
         public string ZoneManagementHeader { get; set; }
 
-        [Parameter("Max Price Distance (pips)", DefaultValue = 15.0, MinValue = 10.0, MaxValue = 30.0, Step = 5.0, Group = "Zone Management")]
+        // [Parameter("Max Price Distance (pips)", DefaultValue = 15.0, MinValue = 10.0, MaxValue = 30.0, Step = 5.0, Group = "Zone Management")]
         public double MaxPriceDistancePips { get; set; }
 
-        [Parameter("Minimum SL (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 10.0, Step = 1.0, Group = "Zone Management")]
+        [Parameter("Minimum SL (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 10.0, Step = 1.0, Group = "MTF SMA Alignment")]
         public double MinimumSLPips { get; set; }
 
-        [Parameter("Enable Reversal Entry", DefaultValue = false, Group = "Zone Management")]
+        // [Parameter("Enable Reversal Entry", DefaultValue = false, Group = "Zone Management")]
         public bool EnableReversalEntry { get; set; }
 
-        [Parameter("Reversal Distance (pips)", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 5.0, Group = "Zone Management")]
+        // [Parameter("Reversal Distance (pips)", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 5.0, Group = "Zone Management")]
         public double ReversalDistancePips { get; set; }
 
-        [Parameter("Enable Debug Logging", DefaultValue = true, Group = "Zone Management")]
+        [Parameter("Enable Debug Logging", DefaultValue = true, Group = "MTF SMA Alignment")]
         public bool EnableDebugLogging { get; set; }
 
         #endregion
@@ -906,103 +905,97 @@ namespace cAlgo.Robots
 
         #endregion
 
-        #region Parameters - FVG Detection
+        #region Parameters - FVG Detection (DISABLED - not used by MTF SMA)
 
-        [Parameter("=== FVG DETECTION ===", DefaultValue = "")]
+        // COMMENTED OUT - FVG zone-based parameters
+        // [Parameter("=== FVG DETECTION ===", DefaultValue = "")]
         public string FVGHeader { get; set; }
 
-        [Parameter("Enable FVG Filter", DefaultValue = true, Group = "FVG Detection")]
+        // [Parameter("Enable FVG Filter", DefaultValue = true, Group = "FVG Detection")]
         public bool EnableFVGFilter { get; set; }
 
-        // FVG Lookback: How many bars to scan for FVGs. Step=10 gives 5 combinations (20-60)
-        [Parameter("FVG Lookback Bars", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
+        // [Parameter("FVG Lookback Bars", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
         public int FVGLookbackBars { get; set; }
 
-        // Min FVG Size: Filter noise gaps. Step=0.5 gives 5 combinations (0.5-2.5)
-        [Parameter("Min FVG Size (pips)", DefaultValue = 1.5, MinValue = 0.5, MaxValue = 2.5, Step = 0.5, Group = "FVG Detection")]
+        // [Parameter("Min FVG Size (pips)", DefaultValue = 1.5, MinValue = 0.5, MaxValue = 2.5, Step = 0.5, Group = "FVG Detection")]
         public double MinFVGSizePips { get; set; }
 
-        // FVG Max Age: How old FVG can be. Step=10 gives 5 combinations (20-60)
-        [Parameter("FVG Max Age (bars)", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
+        // [Parameter("FVG Max Age (bars)", DefaultValue = 30, MinValue = 20, MaxValue = 60, Step = 10, Group = "FVG Detection")]
         public int FVGMaxAgeBars { get; set; }
 
         #endregion
 
-        #region Parameters - Enhanced Entry v2.0
+        #region Parameters - Enhanced Entry v2.0 (DISABLED - not used by MTF SMA)
 
-        [Parameter("=== ENHANCED ENTRY v2.0 ===", DefaultValue = "")]
+        // COMMENTED OUT - Enhanced Entry zone-based parameters
+        // [Parameter("=== ENHANCED ENTRY v2.0 ===", DefaultValue = "")]
         public string EnhancedEntryHeader { get; set; }
 
-        // Zone Configuration
-        [Parameter("FVG Zone Size %", DefaultValue = 100, MinValue = 50, MaxValue = 150, Step = 25, Group = "Enhanced Entry")]
+        // [Parameter("FVG Zone Size %", DefaultValue = 100, MinValue = 50, MaxValue = 150, Step = 25, Group = "Enhanced Entry")]
         public int FVGZoneSizePercent { get; set; }
 
-        // Rejection Pattern Configuration (Pass #980 optimal: All disabled)
-        [Parameter("Enable Wick Rejection", DefaultValue = false, Group = "Enhanced Entry")]
+        // [Parameter("Enable Wick Rejection", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnableWickRejection { get; set; }
 
-        [Parameter("Enable Engulfing Pattern", DefaultValue = false, Group = "Enhanced Entry")]
+        // [Parameter("Enable Engulfing Pattern", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnableEngulfingPattern { get; set; }
 
-        [Parameter("Enable Pin Bar", DefaultValue = false, Group = "Enhanced Entry")]
+        // [Parameter("Enable Pin Bar", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnablePinBar { get; set; }
 
-        [Parameter("Min Wick Ratio", DefaultValue = 2.0, MinValue = 1.5, MaxValue = 3.0, Step = 0.5, Group = "Enhanced Entry")]
+        // [Parameter("Min Wick Ratio", DefaultValue = 2.0, MinValue = 1.5, MaxValue = 3.0, Step = 0.5, Group = "Enhanced Entry")]
         public double MinWickRatio { get; set; }
 
-        [Parameter("Max Bars Without Rejection", DefaultValue = 6, MinValue = 3, MaxValue = 10, Step = 1, Group = "Enhanced Entry")]
+        // [Parameter("Max Bars Without Rejection", DefaultValue = 6, MinValue = 3, MaxValue = 10, Step = 1, Group = "Enhanced Entry")]
         public int MaxBarsWithoutRejection { get; set; }
 
-        [Parameter("Filter Grace Period (min)", DefaultValue = 15, MinValue = 5, MaxValue = 30, Step = 5, Group = "Enhanced Entry")]
+        // [Parameter("Filter Grace Period (min)", DefaultValue = 15, MinValue = 5, MaxValue = 30, Step = 5, Group = "Enhanced Entry")]
         public int FilterGracePeriodMinutes { get; set; }
 
-        // ATR Stop Loss Configuration (Pass #980 optimal: 2.0x)
-        [Parameter("SL ATR Multiplier", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
+        // ATR Stop Loss Configuration - STILL USED by MTF SMA
+        [Parameter("SL ATR Multiplier", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "MTF SMA Alignment")]
         public double SLATRMultiplier { get; set; }
 
-        // RSI Compression-Expansion Configuration (Pass #980 optimal)
-        [Parameter("Enable RSI Compression", DefaultValue = true, Group = "Enhanced Entry")]
+        // [Parameter("Enable RSI Compression", DefaultValue = true, Group = "Enhanced Entry")]
         public bool EnableRSICompression { get; set; }
 
-        [Parameter("RSI Period", DefaultValue = 6, MinValue = 5, MaxValue = 14, Step = 1, Group = "Enhanced Entry")]
+        // [Parameter("RSI Period", DefaultValue = 6, MinValue = 5, MaxValue = 14, Step = 1, Group = "Enhanced Entry")]
         public int RSIPeriod { get; set; }
 
-        [Parameter("RSI Compression Low", DefaultValue = 45, MinValue = 35, MaxValue = 45, Step = 5, Group = "Enhanced Entry")]
+        // [Parameter("RSI Compression Low", DefaultValue = 45, MinValue = 35, MaxValue = 45, Step = 5, Group = "Enhanced Entry")]
         public int RSICompressionLow { get; set; }
 
-        [Parameter("RSI Compression High", DefaultValue = 55, MinValue = 55, MaxValue = 65, Step = 5, Group = "Enhanced Entry")]
+        // [Parameter("RSI Compression High", DefaultValue = 55, MinValue = 55, MaxValue = 65, Step = 5, Group = "Enhanced Entry")]
         public int RSICompressionHigh { get; set; }
 
-        [Parameter("RSI Compression Min Bars", DefaultValue = 10, MinValue = 4, MaxValue = 10, Step = 2, Group = "Enhanced Entry")]
+        // [Parameter("RSI Compression Min Bars", DefaultValue = 10, MinValue = 4, MaxValue = 10, Step = 2, Group = "Enhanced Entry")]
         public int RSICompressionMinBars { get; set; }
 
-        [Parameter("RSI Compression Lookback", DefaultValue = 20, MinValue = 10, MaxValue = 25, Step = 5, Group = "Enhanced Entry")]
+        // [Parameter("RSI Compression Lookback", DefaultValue = 20, MinValue = 10, MaxValue = 25, Step = 5, Group = "Enhanced Entry")]
         public int RSICompressionLookback { get; set; }
 
-        [Parameter("RSI Expansion Buy Min", DefaultValue = 62, Group = "Enhanced Entry")]
+        // [Parameter("RSI Expansion Buy Min", DefaultValue = 62, Group = "Enhanced Entry")]
         public int RSIExpansionBuyMin { get; set; }
 
-        [Parameter("RSI Expansion Buy Max", DefaultValue = 76, Group = "Enhanced Entry")]
+        // [Parameter("RSI Expansion Buy Max", DefaultValue = 76, Group = "Enhanced Entry")]
         public int RSIExpansionBuyMax { get; set; }
 
-        [Parameter("RSI Expansion Sell Min", DefaultValue = 24, Group = "Enhanced Entry")]
+        // [Parameter("RSI Expansion Sell Min", DefaultValue = 24, Group = "Enhanced Entry")]
         public int RSIExpansionSellMin { get; set; }
 
-        [Parameter("RSI Expansion Sell Max", DefaultValue = 44, Group = "Enhanced Entry")]
+        // [Parameter("RSI Expansion Sell Max", DefaultValue = 44, Group = "Enhanced Entry")]
         public int RSIExpansionSellMax { get; set; }
 
-        // Dual SMA Configuration (Pass #980 optimal: Disabled, but Fast SMA = 30)
-        [Parameter("Enable Dual SMA", DefaultValue = false, Group = "Enhanced Entry")]
+        // [Parameter("Enable Dual SMA", DefaultValue = false, Group = "Enhanced Entry")]
         public bool EnableDualSMA { get; set; }
 
-        [Parameter("Fast SMA Period", DefaultValue = 30, MinValue = 20, MaxValue = 100, Step = 10, Group = "Enhanced Entry")]
+        // [Parameter("Fast SMA Period", DefaultValue = 30, MinValue = 20, MaxValue = 100, Step = 10, Group = "Enhanced Entry")]
         public int FastSMAPeriod { get; set; }
 
-        // False Positive Filters (Pass #980 optimal)
-        [Parameter("Min Rejection ATR Ratio", DefaultValue = 0.6, MinValue = 0.3, MaxValue = 1.0, Step = 0.1, Group = "Enhanced Entry")]
+        // [Parameter("Min Rejection ATR Ratio", DefaultValue = 0.6, MinValue = 0.3, MaxValue = 1.0, Step = 0.1, Group = "Enhanced Entry")]
         public double MinRejectionATRRatio { get; set; }
 
-        [Parameter("Displacement Range ATR", DefaultValue = 1.2, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
+        // [Parameter("Displacement Range ATR", DefaultValue = 1.2, MinValue = 1.0, MaxValue = 2.5, Step = 0.25, Group = "Enhanced Entry")]
         public double DisplacementRangeATR { get; set; }
 
         #endregion
@@ -1026,38 +1019,32 @@ namespace cAlgo.Robots
 
         #endregion
 
-        #region Parameters - PRE-Zone System
+        #region Parameters - PRE-Zone System (DISABLED - not used by MTF SMA)
 
-        [Parameter("=== PRE-ZONE SYSTEM ===", DefaultValue = "")]
+        // COMMENTED OUT - PRE-Zone System parameters
+        // [Parameter("=== PRE-ZONE SYSTEM ===", DefaultValue = "")]
         public string PreZoneHeader { get; set; }
 
-        [Parameter("Enable PRE-Zone System", DefaultValue = true, Group = "PRE-Zone System")]
+        // [Parameter("Enable PRE-Zone System", DefaultValue = true, Group = "PRE-Zone System")]
         public bool EnablePreZoneSystem { get; set; }
 
-        // ATR Period: Standard is 14. Step=2 gives 6 combinations (10-20)
-        [Parameter("ATR Period", DefaultValue = 14, MinValue = 10, MaxValue = 20, Step = 2, Group = "PRE-Zone System")]
+        // ATR Period - STILL USED for ATR-based SL calculation
+        [Parameter("ATR Period", DefaultValue = 14, MinValue = 10, MaxValue = 20, Step = 2, Group = "MTF SMA Alignment")]
         public int ATRPeriod { get; set; }
 
-        // ATR Multiplier: Displacement sensitivity. Step=0.25 gives 5 combinations (1.0-2.0)
-        // KEY OPTIMIZATION PARAMETER
-        [Parameter("ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.0, Step = 0.25, Group = "PRE-Zone System")]
+        // [Parameter("ATR Multiplier", DefaultValue = 1.5, MinValue = 1.0, MaxValue = 2.0, Step = 0.25, Group = "PRE-Zone System")]
         public double ATRMultiplier { get; set; }
 
-        // PRE-Zone Expiry: How long zone stays active. Step=15 gives 5 combinations (30-90)
-        [Parameter("PRE-Zone Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "PRE-Zone System")]
+        // [Parameter("PRE-Zone Expiry (minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "PRE-Zone System")]
         public int PreZoneExpiryMinutes { get; set; }
 
-        // VALID-Zone Expiry: Extended time after fractal confirms. Step=30 gives 5 combinations (60-180)
-        [Parameter("VALID-Zone Expiry (minutes)", DefaultValue = 120, MinValue = 60, MaxValue = 180, Step = 30, Group = "PRE-Zone System")]
+        // [Parameter("VALID-Zone Expiry (minutes)", DefaultValue = 120, MinValue = 60, MaxValue = 180, Step = 30, Group = "PRE-Zone System")]
         public int ValidZoneExpiryMinutes { get; set; }
 
-        // Fractal Tolerance: How close fractal must be to zone. Step=1 gives 5 combinations (3-7)
-        [Parameter("Fractal Zone Tolerance (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 7.0, Step = 1.0, Group = "PRE-Zone System")]
+        // [Parameter("Fractal Zone Tolerance (pips)", DefaultValue = 5.0, MinValue = 3.0, MaxValue = 7.0, Step = 1.0, Group = "PRE-Zone System")]
         public double FractalZoneTolerancePips { get; set; }
 
-        // Min PRE-Zone Score: Quality threshold. Step=0.05 gives 7 combinations (0.40-0.70)
-        // KEY OPTIMIZATION PARAMETER
-        [Parameter("Min PRE-Zone Score", DefaultValue = 0.50, MinValue = 0.40, MaxValue = 0.70, Step = 0.05, Group = "PRE-Zone System")]
+        // [Parameter("Min PRE-Zone Score", DefaultValue = 0.50, MinValue = 0.40, MaxValue = 0.70, Step = 0.05, Group = "PRE-Zone System")]
         public double MinPreZoneScore { get; set; }
 
         #endregion
@@ -1067,63 +1054,58 @@ namespace cAlgo.Robots
         [Parameter("=== VISUALIZATION ===", DefaultValue = "")]
         public string VisualHeader { get; set; }
 
-        [Parameter("Show Rectangles", DefaultValue = true, Group = "Visualization")]
+        // COMMENTED OUT - Zone rectangle visualization (not used by MTF SMA)
+        // [Parameter("Show Rectangles", DefaultValue = true, Group = "Visualization")]
         public bool ShowRectangles { get; set; }
 
-        // Rectangle Width: Trading window duration. Step=15 gives 5 combinations (30-90)
-        [Parameter("Rectangle Width (Minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "Visualization")]
+        // [Parameter("Rectangle Width (Minutes)", DefaultValue = 60, MinValue = 30, MaxValue = 90, Step = 15, Group = "Visualization")]
         public int RectangleWidthMinutes { get; set; }
 
         [Parameter("Show Mode Label", DefaultValue = true, Group = "Visualization")]
         public bool ShowModeLabel { get; set; }
 
-        [Parameter("BUY Color", DefaultValue = "Green", Group = "Visualization")]
+        // [Parameter("BUY Color", DefaultValue = "Green", Group = "Visualization")]
         public string BuyColorName { get; set; }
 
-        [Parameter("SELL Color", DefaultValue = "Red", Group = "Visualization")]
+        // [Parameter("SELL Color", DefaultValue = "Red", Group = "Visualization")]
         public string SellColorName { get; set; }
 
-        [Parameter("Rectangle Transparency", DefaultValue = 80, MinValue = 0, MaxValue = 255, Group = "Visualization")]
+        // [Parameter("Rectangle Transparency", DefaultValue = 80, MinValue = 0, MaxValue = 255, Group = "Visualization")]
         public int RectangleTransparency { get; set; }
 
-        [Parameter("PRE-Zone Color", DefaultValue = "Yellow", Group = "Visualization")]
+        // [Parameter("PRE-Zone Color", DefaultValue = "Yellow", Group = "Visualization")]
         public string ColorPreZoneName { get; set; }
 
-        [Parameter("VALID-Zone Color", DefaultValue = "Blue", Group = "Visualization")]
+        // [Parameter("VALID-Zone Color", DefaultValue = "Blue", Group = "Visualization")]
         public string ColorValidZoneName { get; set; }
 
-        [Parameter("ARMED-Zone Color", DefaultValue = "Green", Group = "Visualization")]
+        // [Parameter("ARMED-Zone Color", DefaultValue = "Green", Group = "Visualization")]
         public string ColorArmedZoneName { get; set; }
 
         #endregion
 
-        #region Parameters - Score Weights
+        #region Parameters - Score Weights (DISABLED - not used by MTF SMA)
 
-        [Parameter("=== SCORE WEIGHTS ===", DefaultValue = "")]
+        // COMMENTED OUT - Zone scoring weights
+        // [Parameter("=== SCORE WEIGHTS ===", DefaultValue = "")]
         public string WeightsHeader { get; set; }
 
-        // Normalized from optimization (0.25/1.15 = 0.217)
-        [Parameter("Weight: Validity", DefaultValue = 0.22, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // [Parameter("Weight: Validity", DefaultValue = 0.22, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightValidity { get; set; }
 
-        // Normalized from optimization (0.30/1.15 = 0.261)
-        [Parameter("Weight: Extremity", DefaultValue = 0.26, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // [Parameter("Weight: Extremity", DefaultValue = 0.26, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightExtremity { get; set; }
 
-        // Normalized from optimization (0.20/1.15 = 0.174)
-        [Parameter("Weight: Fractal", DefaultValue = 0.17, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // [Parameter("Weight: Fractal", DefaultValue = 0.17, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightFractal { get; set; }
 
-        // Normalized from optimization (0.20/1.15 = 0.174)
-        [Parameter("Weight: Session", DefaultValue = 0.17, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // [Parameter("Weight: Session", DefaultValue = 0.17, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightSession { get; set; }
 
-        // Normalized from optimization (0.15/1.15 = 0.130)
-        [Parameter("Weight: FVG", DefaultValue = 0.13, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // [Parameter("Weight: FVG", DefaultValue = 0.13, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightFVG { get; set; }
 
-        // Normalized from optimization (0.05/1.15 = 0.043)
-        [Parameter("Weight: Candle", DefaultValue = 0.05, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
+        // [Parameter("Weight: Candle", DefaultValue = 0.05, MinValue = 0.0, MaxValue = 1.0, Step = 0.05, Group = "Score Weights")]
         public double WeightCandle { get; set; }
 
         #endregion
