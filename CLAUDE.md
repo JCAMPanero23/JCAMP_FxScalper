@@ -64,6 +64,20 @@ Based on optimization runs, these are the recommended parameters:
 
 ## Version History
 
+### v4.1.0 (2026-03-29)
+**Feature:** ADX Filter + Exhaustion Exit Protection
+- **ADX Filter:** DirectionalMovementSystem indicator filters ranging markets
+  - Configurable period (default: 14) and threshold (default: 20)
+  - Entry skipped when ADX < threshold (no trend)
+- **Exhaustion Exit:** RSI divergence detection from v3.0 spec
+  - SELL: Bullish divergence (Higher Lows + RSI Lower Lows)
+  - BUY: Bearish divergence (Lower Highs + RSI Higher Highs)
+  - Swing detection via N-bar method (default: 8 bars)
+  - Confirmation bar prevents false signals
+  - Activates after chandelier trails N times (default: 2)
+  - Disabled by default (EnableExhaustionExit = false)
+- Branch: `feature/adx-exhaustion`
+
 ### v4.0.0 (2026-03-29)
 **Feature:** MTF SMA Alignment Entry System
 - New entry strategy: Trade when price > SMA on ALL configured timeframes
@@ -75,7 +89,7 @@ Based on optimization runs, these are the recommended parameters:
 - Daily loss limit protection (-3R or 5 losses)
 - Clean implementation (~600 lines vs 5500+ in v3.x)
 - Optimized defaults: SMA 275, M4+M15, RR 5.0
-- Branch: `feature/mtf-sma-alignment`
+- Branch: `feature/mtf-sma-alignment` → merged to master
 
 ### v3.1.0 (2026-03-27)
 **Feature:** Zone Management Fixes + Debug Logging
