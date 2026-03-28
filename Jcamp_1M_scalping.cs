@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.1.1";
+        private const string BOT_VERSION = "4.1.2";
         private const string VERSION_DATE = "2026-03-29";
-        private const string VERSION_NOTES = "ADX FlipDirection mode + Exhaustion Exit";
+        private const string VERSION_NOTES = "Monthly Drawdown Limit + ADX Flip + Exhaustion";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -166,6 +166,12 @@ namespace cAlgo.Robots
         [Parameter("Max Daily Losing Trades", DefaultValue = 5, MinValue = 1, MaxValue = 20, Step = 1, Group = "Risk Management")]
         public int MaxDailyLosingTrades { get; set; }
 
+        [Parameter("Enable Monthly DD Limit", DefaultValue = true, Group = "Risk Management")]
+        public bool EnableMonthlyDrawdownLimit { get; set; }
+
+        [Parameter("Max Monthly DD %", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 1.0, Group = "Risk Management")]
+        public double MaxMonthlyDrawdownPercent { get; set; }
+
         #endregion
 
         #region Enums
@@ -236,6 +242,12 @@ namespace cAlgo.Robots
         private int _dailyLosingTrades = 0;
         private DateTime _lastTradingDay = DateTime.MinValue;
         private bool _dailyLimitReached = false;
+
+        // Monthly drawdown tracking
+        private double _monthStartEquity = 0.0;
+        private int _lastTradingMonth = 0;
+        private int _lastTradingYear = 0;
+        private bool _monthlyLimitReached = false;
 
         // Session box tracking
         private OptimalPeriod _lastDrawnPeriod = OptimalPeriod.None;
@@ -320,11 +332,22 @@ namespace cAlgo.Robots
             // Initialize chandelier tracking
             _chandelierStates = new Dictionary<int, ChandelierState>();
 
+            // Initialize monthly drawdown tracking
+            if (EnableMonthlyDrawdownLimit)
+            {
+                _monthStartEquity = Account.Equity;
+                _lastTradingMonth = Server.Time.Month;
+                _lastTradingYear = Server.Time.Year;
+                Print("[MONTHLY-DD] Enabled | Max DD: {0:F0}% | Start Equity: {1:F2}",
+                    MaxMonthlyDrawdownPercent, _monthStartEquity);
+            }
+
             // Subscribe to position events
             Positions.Closed += OnPositionClosedHandler;
 
             Print("Trading Enabled: {0} | Session Filter: {1}", EnableTrading, EnableSessionFilter);
             Print("ADX Filter: {0} | Exhaustion Exit: {1}", EnableADXFilter, EnableExhaustionExit);
+            Print("Daily Limit: {0} | Monthly DD Limit: {1}", EnableDailyLossLimit, EnableMonthlyDrawdownLimit);
             Print("Risk: {0:F1}% | Min RR: {1:F1} | Max Positions: {2}", RiskPercent, MinimumRRRatio, MaxPositions);
             Print("========================================");
         }
@@ -445,6 +468,10 @@ namespace cAlgo.Robots
 
             // Check daily loss limit
             if (IsDailyLimitReached())
+                return;
+
+            // Check monthly drawdown limit
+            if (IsMonthlyLimitReached())
                 return;
 
             // Check session filter
@@ -1118,6 +1145,46 @@ namespace cAlgo.Robots
                 _dailyLimitReached = false;
                 _lastTradingDay = today;
             }
+
+            // Check monthly reset
+            CheckMonthlyReset();
+        }
+
+        private void CheckMonthlyReset()
+        {
+            if (!EnableMonthlyDrawdownLimit) return;
+
+            int currentMonth = Server.Time.Month;
+            int currentYear = Server.Time.Year;
+
+            // New month started
+            if (currentMonth != _lastTradingMonth || currentYear != _lastTradingYear)
+            {
+                _monthStartEquity = Account.Equity;
+                _monthlyLimitReached = false;
+                _lastTradingMonth = currentMonth;
+                _lastTradingYear = currentYear;
+                Print("[MONTHLY-DD] New month started | Reset equity baseline: {0:F2}", _monthStartEquity);
+            }
+
+            // Check if monthly drawdown limit reached
+            if (!_monthlyLimitReached && _monthStartEquity > 0)
+            {
+                double currentDrawdown = (_monthStartEquity - Account.Equity) / _monthStartEquity * 100;
+                if (currentDrawdown >= MaxMonthlyDrawdownPercent)
+                {
+                    _monthlyLimitReached = true;
+                    Print("[MONTHLY-DD] LIMIT REACHED | DD: {0:F1}% | Start: {1:F2} | Current: {2:F2}",
+                        currentDrawdown, _monthStartEquity, Account.Equity);
+                    Print("[MONTHLY-DD] Trading paused until next month. Re-optimize parameters.");
+                }
+            }
+        }
+
+        private bool IsMonthlyLimitReached()
+        {
+            if (!EnableMonthlyDrawdownLimit) return false;
+            return _monthlyLimitReached;
         }
 
         private void OnPositionClosedHandler(PositionClosedEventArgs args)
