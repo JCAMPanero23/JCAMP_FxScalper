@@ -62,6 +62,9 @@ namespace cAlgo.Robots
         [Parameter("Enable ADX Filter", DefaultValue = false, Group = "ADX Filter")]
         public bool EnableADXFilter { get; set; }
 
+        [Parameter("ADX Mode", DefaultValue = ADXFilterMode.BlockEntry, Group = "ADX Filter")]
+        public ADXFilterMode ADXMode { get; set; }
+
         [Parameter("ADX Period", DefaultValue = 14, MinValue = 7, MaxValue = 28, Step = 1, Group = "ADX Filter")]
         public int ADXPeriod { get; set; }
 
@@ -172,6 +175,12 @@ namespace cAlgo.Robots
             KeepOriginal,
             RemoveTP,
             TrailingTP
+        }
+
+        public enum ADXFilterMode
+        {
+            BlockEntry,      // Low ADX = skip entry (original)
+            FlipDirection    // Low ADX = reverse direction (contrarian)
         }
 
         public enum OptimalPeriod
@@ -446,14 +455,24 @@ namespace cAlgo.Robots
                     return;
             }
 
-            // Check ADX filter - skip ranging markets
+            // Check ADX filter
+            bool flipDirection = false;
+            double adxValue = 0;
             if (EnableADXFilter && adxIndicator != null)
             {
-                double adxValue = adxIndicator.ADX.LastValue;
+                adxValue = adxIndicator.ADX.LastValue;
                 if (adxValue < ADXMinThreshold)
                 {
-                    // Ranging market, skip entry
-                    return;
+                    if (ADXMode == ADXFilterMode.BlockEntry)
+                    {
+                        // Ranging market, skip entry
+                        return;
+                    }
+                    else if (ADXMode == ADXFilterMode.FlipDirection)
+                    {
+                        // Ranging market, flip direction (contrarian)
+                        flipDirection = true;
+                    }
                 }
             }
 
@@ -466,10 +485,21 @@ namespace cAlgo.Robots
             {
                 if (m1Direction == alignmentDirection)
                 {
-                    double adxValue = EnableADXFilter && adxIndicator != null ? adxIndicator.ADX.LastValue : 0;
-                    Print("[MTF-SMA] All TFs aligned {0} | M1 crossover | ADX: {1:F1} | ENTRY", alignmentDirection, adxValue);
+                    // Apply flip if ADX is low and mode is FlipDirection
+                    string tradeDirection = alignmentDirection;
+                    if (flipDirection)
+                    {
+                        tradeDirection = (alignmentDirection == "BUY") ? "SELL" : "BUY";
+                        Print("[MTF-SMA] All TFs aligned {0} | ADX: {1:F1} (low) | FLIP → {2}",
+                            alignmentDirection, adxValue, tradeDirection);
+                    }
+                    else
+                    {
+                        Print("[MTF-SMA] All TFs aligned {0} | M1 crossover | ADX: {1:F1} | ENTRY",
+                            tradeDirection, adxValue);
+                    }
 
-                    if (alignmentDirection == "BUY")
+                    if (tradeDirection == "BUY")
                         ExecuteBuyTrade();
                     else
                         ExecuteSellTrade();
