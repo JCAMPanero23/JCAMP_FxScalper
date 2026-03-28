@@ -66,6 +66,8 @@ Based on optimization runs with ADX FlipDirection mode:
 | Feb 2026 | -10% | Capped by monthly limit (was -15%) |
 | **Net** | **+26%** | vs +21% without monthly limit |
 
+**Optimization File:** `Jcamp_1M_scalping, EURUSD m1_v4.1.2.optset`
+
 **Recommendation:** Re-optimize monthly using last 2-3 months of data.
 
 ## Version History
