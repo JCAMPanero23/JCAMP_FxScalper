@@ -59,7 +59,7 @@ namespace cAlgo.Robots
         [Parameter("=== ADX FILTER ===", DefaultValue = "")]
         public string ADXHeader { get; set; }
 
-        [Parameter("Enable ADX Filter", DefaultValue = true, Group = "ADX Filter")]
+        [Parameter("Enable ADX Filter", DefaultValue = false, Group = "ADX Filter")]
         public bool EnableADXFilter { get; set; }
 
         [Parameter("ADX Period", DefaultValue = 14, MinValue = 7, MaxValue = 28, Step = 1, Group = "ADX Filter")]
