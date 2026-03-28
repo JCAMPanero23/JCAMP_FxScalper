@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.1.0";
+        private const string BOT_VERSION = "4.1.1";
         private const string VERSION_DATE = "2026-03-29";
-        private const string VERSION_NOTES = "ADX Filter + Exhaustion Exit Protection";
+        private const string VERSION_NOTES = "ADX FlipDirection mode + Exhaustion Exit";
         #endregion
 
         #region Parameters - MTF SMA Alignment
