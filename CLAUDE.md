@@ -39,17 +39,42 @@ Also available via local symlink: `D:\JCAMP_FxScalper\Backtest\log.txt` (may be 
 - `Jcamp_1M_scalping.cs` - Main trading bot code
 - `TrendModeRectangleIndicator.cs` - Trend mode indicator
 
+## Optimized Parameters (Nov 2025 - Jan 2026)
+
+Based on optimization runs, these are the recommended parameters:
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| MTF SMA Period | 275 | Stable across periods |
+| Timeframe 2 | M4 | Slower = fewer false signals |
+| Timeframe 3 | M15 | Higher TF confirmation |
+| SL ATR Multiplier | 2.0 | Tighter initial SL |
+| SL Buffer Pips | 4.0 | More room for trades |
+| Minimum RR Ratio | 5.0 | Only high-quality setups |
+| Chandelier Activation | 0.75 | Let winners run longer |
+| Enable Daily Loss Limit | Yes | -3R max, 5 losses max |
+
+**Performance (Nov 2025 - Jan 2026):**
+- Net Profit: +18.7%
+- Profit Factor: 1.41
+- Win Rate: 28%
+- Max Drawdown: 13.28%
+
+**Recommendation:** Re-optimize monthly using last 2-3 months of data.
+
 ## Version History
 
-### v4.0.0 (2026-03-28)
+### v4.0.0 (2026-03-29)
 **Feature:** MTF SMA Alignment Entry System
 - New entry strategy: Trade when price > SMA on ALL configured timeframes
-- M1 (fixed) + TF2 (default M3) + TF3 (default M5) alignment required
+- M1 (fixed) + TF2 (configurable) + TF3 (configurable) alignment required
 - Entry trigger: M1 SMA crossover while higher TFs already aligned
 - Session filter: BEST (13:00-17:00 UTC) and GOOD (08:00-12:00 UTC) periods only
-- Toggle: EnableMTFSMAEntry (default: true) switches between MTF and zone-based entry
-- ATR-based stop loss maintained from v2.0
-- Keeps all existing risk management, chandelier trailing, and debug logging
+- ATR-based stop loss with configurable multiplier
+- Chandelier trailing stop with RR-based activation
+- Daily loss limit protection (-3R or 5 losses)
+- Clean implementation (~600 lines vs 5500+ in v3.x)
+- Optimized defaults: SMA 275, M4+M15, RR 5.0
 - Branch: `feature/mtf-sma-alignment`
 
 ### v3.1.0 (2026-03-27)

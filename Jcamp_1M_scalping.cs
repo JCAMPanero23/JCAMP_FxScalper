@@ -17,8 +17,8 @@ namespace cAlgo.Robots
     {
         #region Version Info
         private const string BOT_VERSION = "4.0.0";
-        private const string VERSION_DATE = "2026-03-28";
-        private const string VERSION_NOTES = "MTF SMA Alignment - Clean implementation";
+        private const string VERSION_DATE = "2026-03-29";
+        private const string VERSION_NOTES = "MTF SMA Alignment - Optimized defaults (Nov25-Jan26)";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -29,13 +29,13 @@ namespace cAlgo.Robots
         [Parameter("Enable MTF SMA Entry", DefaultValue = true, Group = "MTF SMA Alignment")]
         public bool EnableMTFSMAEntry { get; set; }
 
-        [Parameter("MTF SMA Period", DefaultValue = 200, MinValue = 50, MaxValue = 300, Step = 50, Group = "MTF SMA Alignment")]
+        [Parameter("MTF SMA Period", DefaultValue = 275, MinValue = 50, MaxValue = 350, Step = 25, Group = "MTF SMA Alignment")]
         public int MTFSMAPeriod { get; set; }
 
-        [Parameter("Timeframe 2", DefaultValue = "Minute3", Group = "MTF SMA Alignment")]
+        [Parameter("Timeframe 2", DefaultValue = "Minute4", Group = "MTF SMA Alignment")]
         public TimeFrame Timeframe2 { get; set; }
 
-        [Parameter("Timeframe 3", DefaultValue = "Minute5", Group = "MTF SMA Alignment")]
+        [Parameter("Timeframe 3", DefaultValue = "Minute15", Group = "MTF SMA Alignment")]
         public TimeFrame Timeframe3 { get; set; }
 
         [Parameter("Require All TFs Aligned", DefaultValue = true, Group = "MTF SMA Alignment")]
@@ -63,10 +63,10 @@ namespace cAlgo.Robots
         [Parameter("Risk Per Trade %", DefaultValue = 1.0, MinValue = 0.5, MaxValue = 3.0, Step = 0.25, Group = "Trade Management")]
         public double RiskPercent { get; set; }
 
-        [Parameter("SL Buffer Pips", DefaultValue = 2.0, MinValue = 1.0, MaxValue = 5.0, Step = 0.5, Group = "Trade Management")]
+        [Parameter("SL Buffer Pips", DefaultValue = 4.0, MinValue = 1.0, MaxValue = 6.0, Step = 0.5, Group = "Trade Management")]
         public double SLBufferPips { get; set; }
 
-        [Parameter("Minimum RR Ratio", DefaultValue = 2.0, MinValue = 1.5, MaxValue = 5.0, Step = 0.5, Group = "Trade Management")]
+        [Parameter("Minimum RR Ratio", DefaultValue = 5.0, MinValue = 1.5, MaxValue = 7.0, Step = 0.5, Group = "Trade Management")]
         public double MinimumRRRatio { get; set; }
 
         [Parameter("Max Positions", DefaultValue = 1, MinValue = 1, MaxValue = 3, Step = 1, Group = "Trade Management")]
@@ -117,7 +117,7 @@ namespace cAlgo.Robots
         [Parameter("=== RISK MANAGEMENT ===", DefaultValue = "")]
         public string RiskHeader { get; set; }
 
-        [Parameter("Enable Daily Loss Limit", DefaultValue = false, Group = "Risk Management")]
+        [Parameter("Enable Daily Loss Limit", DefaultValue = true, Group = "Risk Management")]
         public bool EnableDailyLossLimit { get; set; }
 
         [Parameter("Max Daily R Loss", DefaultValue = -3.0, MinValue = -10.0, MaxValue = -1.0, Step = 0.5, Group = "Risk Management")]
