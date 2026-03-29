@@ -68,7 +68,25 @@ Based on optimization runs with ADX FlipDirection mode:
 
 **Optimization File:** `Jcamp_1M_scalping, EURUSD m1_v4.1.2.optset`
 
-**Recommendation:** Re-optimize monthly using last 2-3 months of data.
+## Optimization Schedule
+
+| Parameter | Frequency | Range | Reason |
+|-----------|-----------|-------|--------|
+| ADX Threshold | Monthly | 15-25 | Market volatility changes often |
+| ADX Period | Monthly | 14-21 | Adapts to current conditions |
+| SMA Period | Quarterly | 200-300 | Core trend detection, keep stable |
+| Timeframe 2 | Quarterly | M2, M3, M4, M5 | Defines strategy structure |
+| Timeframe 3 | Quarterly | M10, M15, M30 | Defines strategy structure |
+
+**Keep Fixed (don't optimize):**
+- Risk Per Trade: 1%
+- Minimum RR Ratio: 5.0
+- Monthly DD Limit: 10%
+- Daily Loss Limit: -3R / 5 losses
+
+**Trigger-based Re-optimization:**
+- If monthly DD limit (10%) is hit → re-optimize immediately for next month
+- Use last 2-3 months of data for optimization
 
 ## Version History
 
