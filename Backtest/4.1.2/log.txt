@@ -1,0 +1,486 @@
+01/07/2023 00:00:00.000 | Info | CBot instance [Jcamp_1M_scalping, EURUSD, m1] started.
+02/07/2023 21:00:04.499 | Info | ========================================
+02/07/2023 21:00:04.499 | Info | Jcamp 1M Scalping v4.1.2 (2026-03-29)
+02/07/2023 21:00:04.499 | Info | Notes: Monthly Drawdown Limit + ADX Flip + Exhaustion
+02/07/2023 21:00:04.499 | Info | ========================================
+02/07/2023 21:00:04.499 | Info | [MTF-SMA] Initialized | M1 + Minute3 + Minute15 | SMA Period: 150
+02/07/2023 21:00:04.499 | Info | [ATR] Period: 16 | Multiplier: 2.00x
+02/07/2023 21:00:04.499 | Info | [ADX] Enabled | Period: 8 | Threshold: 30
+02/07/2023 21:00:04.499 | Info | [MONTHLY-DD] Enabled | Max DD: 10% | Start Equity: 500.00
+02/07/2023 21:00:04.499 | Info | Trading Enabled: True | Session Filter: True
+02/07/2023 21:00:04.499 | Info | ADX Filter: True | Exhaustion Exit: False
+02/07/2023 21:00:04.499 | Info | Daily Limit: True | Monthly DD Limit: True
+02/07/2023 21:00:04.499 | Info | Risk: 1.0% | Min RR: 5.0 | Max Positions: 1
+02/07/2023 21:00:04.499 | Info | ========================================
+03/07/2023 11:08:00.793 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 29.6 (low) | FLIP → SELL
+03/07/2023 11:08:00.793 | Info | [SELL] Entry: 1.08982 | SL: 1.09072 (9.0 pips) | TP: 1.08532 | Vol: 5000.00
+03/07/2023 11:08:00.793 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+03/07/2023 11:08:00.793 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID1
+03/07/2023 11:08:00.793 | Info | [SELL] SUCCESS | Position ID: 1
+03/07/2023 11:08:00.793 | Info | [CHANDELIER] Tracking position 1 | Activation: 1.08645
+04/07/2023 08:00:00.390 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 24.5 (low) | FLIP → BUY
+04/07/2023 08:00:00.390 | Info | [BUY] Entry: 1.09030 | SL: 1.08940 (9.0 pips) | TP: 1.09480 | Vol: 5000.00
+04/07/2023 08:00:00.390 | Trade | Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45)
+04/07/2023 08:00:00.390 | Trade | → Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID2
+04/07/2023 08:00:00.390 | Info | [BUY] SUCCESS | Position ID: 2
+04/07/2023 08:00:00.390 | Info | [CHANDELIER] Tracking position 2 | Activation: 1.09367
+04/07/2023 14:28:01.615 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 51.3 | ENTRY
+04/07/2023 14:28:01.615 | Info | [BUY] Entry: 1.09051 | SL: 1.08961 (9.0 pips) | TP: 1.09501 | Vol: 5000.00
+04/07/2023 14:28:01.615 | Trade | Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45)
+04/07/2023 14:28:01.615 | Trade | → Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID3
+04/07/2023 14:28:01.615 | Info | [BUY] SUCCESS | Position ID: 3
+04/07/2023 14:28:01.615 | Info | [CHANDELIER] Tracking position 3 | Activation: 1.09388
+04/07/2023 16:19:00.002 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 42.4 | ENTRY
+04/07/2023 16:19:00.002 | Info | [SELL] Entry: 1.08962 | SL: 1.09052 (9.0 pips) | TP: 1.08512 | Vol: 5000.00
+04/07/2023 16:19:00.002 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+04/07/2023 16:19:00.002 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID4
+04/07/2023 16:19:00.002 | Info | [SELL] SUCCESS | Position ID: 4
+04/07/2023 16:19:00.002 | Info | [CHANDELIER] Tracking position 4 | Activation: 1.08625
+05/07/2023 09:58:01.332 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 25.4 (low) | FLIP → SELL
+05/07/2023 09:58:01.332 | Info | [SELL] Entry: 1.08953 | SL: 1.09043 (9.0 pips) | TP: 1.08503 | Vol: 5000.00
+05/07/2023 09:58:01.332 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+05/07/2023 09:58:01.332 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID5
+05/07/2023 09:58:01.332 | Info | [SELL] SUCCESS | Position ID: 5
+05/07/2023 09:58:01.332 | Info | [CHANDELIER] Tracking position 5 | Activation: 1.08616
+05/07/2023 16:08:00.786 | Info | [CHANDELIER] ACTIVATED | Position 5 | Price: 1.08615
+05/07/2023 16:08:00.786 | Trade | Modifying position PID5 (SL: 1.09043, TP: null)
+05/07/2023 16:08:00.786 | Trade | → Modifying position PID5 (SL: 1.09043, TP: null) SUCCEEDED, Position PID5
+05/07/2023 16:08:00.786 | Trade | Modifying position PID5 (SL: 1.08703, TP: null)
+05/07/2023 16:08:00.786 | Trade | → Modifying position PID5 (SL: 1.08703, TP: null) SUCCEEDED, Position PID5
+05/07/2023 16:08:00.786 | Info | [CHANDELIER] Trail #6 | New SL: 1.08703 | Move Count: 1
+05/07/2023 16:58:02.311 | Trade | Modifying position PID5 (SL: 1.08653, TP: null)
+05/07/2023 16:58:02.311 | Trade | → Modifying position PID5 (SL: 1.08653, TP: null) SUCCEEDED, Position PID5
+05/07/2023 16:58:02.311 | Info | [CHANDELIER] Trail #7 | New SL: 1.08653 | Move Count: 2
+06/07/2023 08:18:00.934 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 41.9 | ENTRY
+06/07/2023 08:18:00.934 | Info | [SELL] Entry: 1.08493 | SL: 1.08583 (9.0 pips) | TP: 1.08043 | Vol: 5000.00
+06/07/2023 08:18:00.934 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+06/07/2023 08:18:00.934 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID6
+06/07/2023 08:18:00.934 | Info | [SELL] SUCCESS | Position ID: 6
+06/07/2023 08:18:00.934 | Info | [CHANDELIER] Tracking position 6 | Activation: 1.08156
+06/07/2023 10:15:00.000 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 35.2 | ENTRY
+06/07/2023 10:15:00.000 | Info | [BUY] Entry: 1.08695 | SL: 1.08605 (9.0 pips) | TP: 1.09145 | Vol: 5000.00
+06/07/2023 10:15:00.000 | Trade | Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45)
+06/07/2023 10:15:00.000 | Trade | → Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID7
+06/07/2023 10:15:00.000 | Info | [BUY] SUCCESS | Position ID: 7
+06/07/2023 10:15:00.000 | Info | [CHANDELIER] Tracking position 7 | Activation: 1.09032
+06/07/2023 13:12:01.542 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 21.9 (low) | FLIP → BUY
+06/07/2023 13:12:01.542 | Info | [BUY] Entry: 1.08689 | SL: 1.08576 (11.3 pips) | TP: 1.09254 | Vol: 4000.00
+06/07/2023 13:12:01.542 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 11.3, TP: 56.5)
+06/07/2023 13:12:01.542 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 11.3, TP: 56.5) SUCCEEDED, Position PID8
+06/07/2023 13:12:01.542 | Info | [BUY] SUCCESS | Position ID: 8
+06/07/2023 13:12:01.542 | Info | [CHANDELIER] Tracking position 8 | Activation: 1.09113
+06/07/2023 14:56:00.531 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 62.7 | ENTRY
+06/07/2023 14:56:00.531 | Info | [BUY] Entry: 1.08709 | SL: 1.08598 (11.1 pips) | TP: 1.09263 | Vol: 4000.00
+06/07/2023 14:56:00.531 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 11.1, TP: 55.4)
+06/07/2023 14:56:00.531 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 11.1, TP: 55.4) SUCCEEDED, Position PID9
+06/07/2023 14:56:00.531 | Info | [BUY] SUCCESS | Position ID: 9
+06/07/2023 14:56:00.531 | Info | [CHANDELIER] Tracking position 9 | Activation: 1.09124
+06/07/2023 15:26:24.639 | Info | [RISK] Daily limit reached | R Loss: -3.96 | Losses: 4
+07/07/2023 08:03:00.676 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 61.6 | ENTRY
+07/07/2023 08:03:00.676 | Info | [SELL] Entry: 1.08705 | SL: 1.08795 (9.0 pips) | TP: 1.08255 | Vol: 5000.00
+07/07/2023 08:03:00.676 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+07/07/2023 08:03:00.676 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID10
+07/07/2023 08:03:00.676 | Info | [SELL] SUCCESS | Position ID: 10
+07/07/2023 08:03:00.676 | Info | [CHANDELIER] Tracking position 10 | Activation: 1.08368
+07/07/2023 09:49:02.265 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 45.7 | ENTRY
+07/07/2023 09:49:02.265 | Info | [BUY] Entry: 1.08873 | SL: 1.08783 (9.0 pips) | TP: 1.09323 | Vol: 5000.00
+07/07/2023 09:49:02.265 | Trade | Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45)
+07/07/2023 09:49:02.265 | Trade | → Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID11
+07/07/2023 09:49:02.265 | Info | [BUY] SUCCESS | Position ID: 11
+07/07/2023 09:49:02.265 | Info | [CHANDELIER] Tracking position 11 | Activation: 1.09210
+11/07/2023 11:54:01.527 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 72.7 | ENTRY
+11/07/2023 11:54:01.527 | Info | [SELL] Entry: 1.09838 | SL: 1.09928 (9.0 pips) | TP: 1.09388 | Vol: 5000.00
+11/07/2023 11:54:01.527 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+11/07/2023 11:54:01.527 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID12
+11/07/2023 11:54:01.527 | Info | [SELL] SUCCESS | Position ID: 12
+11/07/2023 11:54:01.527 | Info | [CHANDELIER] Tracking position 12 | Activation: 1.09501
+11/07/2023 16:16:00.153 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 27.1 (low) | FLIP → SELL
+11/07/2023 16:16:00.153 | Info | [SELL] Entry: 1.09952 | SL: 1.10042 (9.0 pips) | TP: 1.09502 | Vol: 5000.00
+11/07/2023 16:16:00.153 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+11/07/2023 16:16:00.153 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID13
+11/07/2023 16:16:00.153 | Info | [SELL] SUCCESS | Position ID: 13
+11/07/2023 16:16:00.153 | Info | [CHANDELIER] Tracking position 13 | Activation: 1.09615
+17/07/2023 13:11:00.377 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 26.0 (low) | FLIP → BUY
+17/07/2023 13:11:00.377 | Info | [BUY] Entry: 1.12294 | SL: 1.12204 (9.0 pips) | TP: 1.12744 | Vol: 5000.00
+17/07/2023 13:11:00.377 | Trade | Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45)
+17/07/2023 13:11:00.377 | Trade | → Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID14
+17/07/2023 13:11:00.377 | Info | [BUY] SUCCESS | Position ID: 14
+17/07/2023 13:11:00.377 | Info | [CHANDELIER] Tracking position 14 | Activation: 1.12631
+17/07/2023 15:24:05.467 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 20.6 (low) | FLIP → SELL
+17/07/2023 15:24:05.467 | Info | [SELL] Entry: 1.12330 | SL: 1.12420 (9.0 pips) | TP: 1.11880 | Vol: 5000.00
+17/07/2023 15:24:05.467 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+17/07/2023 15:24:05.467 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID15
+17/07/2023 15:24:05.467 | Info | [SELL] SUCCESS | Position ID: 15
+17/07/2023 15:24:05.467 | Info | [CHANDELIER] Tracking position 15 | Activation: 1.11993
+17/07/2023 15:35:01.155 | Info | [MONTHLY-DD] LIMIT REACHED | DD: 10.1% | Start: 500.00 | Current: 449.60
+17/07/2023 15:35:01.155 | Info | [MONTHLY-DD] Trading paused until next month. Re-optimize parameters.
+01/08/2023 00:00:01.464 | Info | [MONTHLY-DD] New month started | Reset equity baseline: 447.25
+01/08/2023 08:00:00.223 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 16.1 (low) | FLIP → BUY
+01/08/2023 08:00:00.223 | Info | [BUY] Entry: 1.09798 | SL: 1.09708 (9.0 pips) | TP: 1.10248 | Vol: 4000.00
+01/08/2023 08:00:00.223 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+01/08/2023 08:00:00.223 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID16
+01/08/2023 08:00:00.223 | Info | [BUY] SUCCESS | Position ID: 16
+01/08/2023 08:00:00.223 | Info | [CHANDELIER] Tracking position 16 | Activation: 1.10135
+02/08/2023 08:00:00.206 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 22.9 (low) | FLIP → SELL
+02/08/2023 08:00:00.206 | Info | [SELL] Entry: 1.09902 | SL: 1.09992 (9.0 pips) | TP: 1.09452 | Vol: 4000.00
+02/08/2023 08:00:00.206 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+02/08/2023 08:00:00.206 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID17
+02/08/2023 08:00:00.206 | Info | [SELL] SUCCESS | Position ID: 17
+02/08/2023 08:00:00.206 | Info | [CHANDELIER] Tracking position 17 | Activation: 1.09565
+02/08/2023 13:06:00.082 | Info | [CHANDELIER] ACTIVATED | Position 17 | Price: 1.09545
+02/08/2023 13:06:00.082 | Trade | Modifying position PID17 (SL: 1.09992, TP: null)
+02/08/2023 13:06:00.082 | Trade | → Modifying position PID17 (SL: 1.09992, TP: null) SUCCEEDED, Position PID17
+02/08/2023 13:06:00.082 | Trade | Modifying position PID17 (SL: 1.09602, TP: null)
+02/08/2023 13:06:00.082 | Trade | → Modifying position PID17 (SL: 1.09602, TP: null) SUCCEEDED, Position PID17
+02/08/2023 13:06:00.082 | Info | [CHANDELIER] Trail #7 | New SL: 1.09602 | Move Count: 1
+02/08/2023 13:12:00.488 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 29.4 (low) | FLIP → BUY
+02/08/2023 13:12:00.488 | Info | [BUY] Entry: 1.09591 | SL: 1.09501 (9.0 pips) | TP: 1.10041 | Vol: 5000.00
+02/08/2023 13:12:00.488 | Trade | Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45)
+02/08/2023 13:12:00.488 | Trade | → Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID18
+02/08/2023 13:12:00.488 | Info | [BUY] SUCCESS | Position ID: 18
+02/08/2023 13:12:00.488 | Info | [CHANDELIER] Tracking position 18 | Activation: 1.09928
+03/08/2023 15:18:00.368 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 53.5 | ENTRY
+03/08/2023 15:18:00.368 | Info | [BUY] Entry: 1.09514 | SL: 1.09424 (9.0 pips) | TP: 1.09964 | Vol: 5000.00
+03/08/2023 15:18:00.368 | Trade | Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45)
+03/08/2023 15:18:00.368 | Trade | → Executing Market Order to Buy 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID19
+03/08/2023 15:18:00.368 | Info | [BUY] SUCCESS | Position ID: 19
+03/08/2023 15:18:00.368 | Info | [CHANDELIER] Tracking position 19 | Activation: 1.09851
+04/08/2023 08:41:00.233 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 46.9 | ENTRY
+04/08/2023 08:41:00.233 | Info | [SELL] Entry: 1.09412 | SL: 1.09502 (9.0 pips) | TP: 1.08962 | Vol: 4000.00
+04/08/2023 08:41:00.233 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+04/08/2023 08:41:00.233 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID20
+04/08/2023 08:41:00.233 | Info | [SELL] SUCCESS | Position ID: 20
+04/08/2023 08:41:00.233 | Info | [CHANDELIER] Tracking position 20 | Activation: 1.09075
+04/08/2023 13:00:00.000 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 51.8 | ENTRY
+04/08/2023 13:00:00.000 | Info | [BUY] Entry: 1.09892 | SL: 1.09759 (13.3 pips) | TP: 1.10557 | Vol: 3000.00
+04/08/2023 13:00:00.000 | Trade | Executing Market Order to Buy 3000 EURUSD (SL: 13.3, TP: 66.5)
+04/08/2023 13:00:00.000 | Trade | → Executing Market Order to Buy 3000 EURUSD (SL: 13.3, TP: 66.5) SUCCEEDED, Position PID21
+04/08/2023 13:00:00.000 | Info | [BUY] SUCCESS | Position ID: 21
+04/08/2023 13:00:00.000 | Info | [CHANDELIER] Tracking position 21 | Activation: 1.10391
+04/08/2023 15:23:00.297 | Info | [CHANDELIER] ACTIVATED | Position 21 | Price: 1.10398
+04/08/2023 15:23:00.297 | Trade | Modifying position PID21 (SL: 1.09759, TP: null)
+04/08/2023 15:23:00.297 | Trade | → Modifying position PID21 (SL: 1.09759, TP: null) SUCCEEDED, Position PID21
+04/08/2023 15:23:00.297 | Trade | Modifying position PID21 (SL: 1.10342, TP: null)
+04/08/2023 15:23:00.297 | Trade | → Modifying position PID21 (SL: 1.10342, TP: null) SUCCEEDED, Position PID21
+04/08/2023 15:23:00.297 | Info | [CHANDELIER] Trail #10 | New SL: 1.10342 | Move Count: 1
+07/08/2023 08:32:00.150 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 34.6 | ENTRY
+07/08/2023 08:32:00.150 | Info | [SELL] Entry: 1.09801 | SL: 1.09891 (9.0 pips) | TP: 1.09351 | Vol: 5000.00
+07/08/2023 08:32:00.150 | Trade | Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45)
+07/08/2023 08:32:00.150 | Trade | → Executing Market Order to Sell 5000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID22
+07/08/2023 08:32:00.150 | Info | [SELL] SUCCESS | Position ID: 22
+07/08/2023 08:32:00.150 | Info | [CHANDELIER] Tracking position 22 | Activation: 1.09464
+07/08/2023 13:00:00.052 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 68.4 | ENTRY
+07/08/2023 13:00:00.052 | Info | [BUY] Entry: 1.09957 | SL: 1.09867 (9.0 pips) | TP: 1.10407 | Vol: 4000.00
+07/08/2023 13:00:00.052 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+07/08/2023 13:00:00.052 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID23
+07/08/2023 13:00:00.052 | Info | [BUY] SUCCESS | Position ID: 23
+07/08/2023 13:00:00.052 | Info | [CHANDELIER] Tracking position 23 | Activation: 1.10294
+08/08/2023 08:00:00.065 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 15.2 (low) | FLIP → BUY
+08/08/2023 08:00:00.065 | Info | [BUY] Entry: 1.09786 | SL: 1.09696 (9.0 pips) | TP: 1.10236 | Vol: 4000.00
+08/08/2023 08:00:00.065 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+08/08/2023 08:00:00.065 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID24
+08/08/2023 08:00:00.065 | Info | [BUY] SUCCESS | Position ID: 24
+08/08/2023 08:00:00.065 | Info | [CHANDELIER] Tracking position 24 | Activation: 1.10123
+09/08/2023 08:00:00.661 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 40.5 | ENTRY
+09/08/2023 08:00:00.661 | Info | [BUY] Entry: 1.09842 | SL: 1.09752 (9.0 pips) | TP: 1.10292 | Vol: 4000.00
+09/08/2023 08:00:00.661 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+09/08/2023 08:00:00.661 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID25
+09/08/2023 08:00:00.661 | Info | [BUY] SUCCESS | Position ID: 25
+09/08/2023 08:00:00.661 | Info | [CHANDELIER] Tracking position 25 | Activation: 1.10179
+11/08/2023 09:21:00.862 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 50.7 | ENTRY
+11/08/2023 09:21:00.862 | Info | [SELL] Entry: 1.09910 | SL: 1.10000 (9.0 pips) | TP: 1.09460 | Vol: 4000.00
+11/08/2023 09:21:00.862 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+11/08/2023 09:21:00.862 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID26
+11/08/2023 09:21:00.862 | Info | [SELL] SUCCESS | Position ID: 26
+11/08/2023 09:21:00.862 | Info | [CHANDELIER] Tracking position 26 | Activation: 1.09573
+11/08/2023 11:44:00.228 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 38.1 | ENTRY
+11/08/2023 11:44:00.228 | Info | [BUY] Entry: 1.10024 | SL: 1.09934 (9.0 pips) | TP: 1.10474 | Vol: 4000.00
+11/08/2023 11:44:00.228 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+11/08/2023 11:44:00.228 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID27
+11/08/2023 11:44:00.228 | Info | [BUY] SUCCESS | Position ID: 27
+11/08/2023 11:44:00.228 | Info | [CHANDELIER] Tracking position 27 | Activation: 1.10361
+11/08/2023 13:00:00.005 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 38.1 | ENTRY
+11/08/2023 13:00:00.005 | Info | [SELL] Entry: 1.09682 | SL: 1.09786 (10.4 pips) | TP: 1.09160 | Vol: 4000.00
+11/08/2023 13:00:00.005 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 10.4, TP: 52.2)
+11/08/2023 13:00:00.005 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 10.4, TP: 52.2) SUCCEEDED, Position PID28
+11/08/2023 13:00:00.005 | Info | [SELL] SUCCESS | Position ID: 28
+11/08/2023 13:00:00.005 | Info | [CHANDELIER] Tracking position 28 | Activation: 1.09290
+15/08/2023 08:10:00.487 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 17.4 (low) | FLIP → SELL
+15/08/2023 08:10:00.487 | Info | [SELL] Entry: 1.09254 | SL: 1.09344 (9.0 pips) | TP: 1.08804 | Vol: 4000.00
+15/08/2023 08:10:00.487 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+15/08/2023 08:10:00.487 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID29
+15/08/2023 08:10:00.487 | Info | [SELL] SUCCESS | Position ID: 29
+15/08/2023 08:10:00.487 | Info | [CHANDELIER] Tracking position 29 | Activation: 1.08917
+15/08/2023 13:00:00.158 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 15.0 (low) | FLIP → BUY
+15/08/2023 13:00:00.158 | Info | [BUY] Entry: 1.09220 | SL: 1.09108 (11.2 pips) | TP: 1.09780 | Vol: 3000.00
+15/08/2023 13:00:00.158 | Trade | Executing Market Order to Buy 3000 EURUSD (SL: 11.2, TP: 56)
+15/08/2023 13:00:00.158 | Trade | → Executing Market Order to Buy 3000 EURUSD (SL: 11.2, TP: 56) SUCCEEDED, Position PID30
+15/08/2023 13:00:00.158 | Info | [BUY] SUCCESS | Position ID: 30
+15/08/2023 13:00:00.158 | Info | [CHANDELIER] Tracking position 30 | Activation: 1.09640
+16/08/2023 08:00:00.016 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 23.5 (low) | FLIP → SELL
+16/08/2023 08:00:00.016 | Info | [SELL] Entry: 1.09234 | SL: 1.09324 (9.0 pips) | TP: 1.08784 | Vol: 4000.00
+16/08/2023 08:00:00.016 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+16/08/2023 08:00:00.016 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID31
+16/08/2023 08:00:00.016 | Info | [SELL] SUCCESS | Position ID: 31
+16/08/2023 08:00:00.016 | Info | [CHANDELIER] Tracking position 31 | Activation: 1.08897
+16/08/2023 11:11:00.318 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 20.0 (low) | FLIP → BUY
+16/08/2023 11:11:00.318 | Info | [BUY] Entry: 1.09156 | SL: 1.09066 (9.0 pips) | TP: 1.09606 | Vol: 4000.00
+16/08/2023 11:11:00.318 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+16/08/2023 11:11:00.318 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID32
+16/08/2023 11:11:00.318 | Info | [BUY] SUCCESS | Position ID: 32
+16/08/2023 11:11:00.318 | Info | [CHANDELIER] Tracking position 32 | Activation: 1.09493
+16/08/2023 13:38:00.094 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 42.0 | ENTRY
+16/08/2023 13:38:00.094 | Info | [BUY] Entry: 1.09200 | SL: 1.09095 (10.5 pips) | TP: 1.09724 | Vol: 3000.00
+16/08/2023 13:38:00.094 | Trade | Executing Market Order to Buy 3000 EURUSD (SL: 10.5, TP: 52.4)
+16/08/2023 13:38:00.094 | Trade | → Executing Market Order to Buy 3000 EURUSD (SL: 10.5, TP: 52.4) SUCCEEDED, Position PID33
+16/08/2023 13:38:00.094 | Info | [BUY] SUCCESS | Position ID: 33
+16/08/2023 13:38:00.094 | Info | [CHANDELIER] Tracking position 33 | Activation: 1.09593
+16/08/2023 13:57:00.118 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 36.6 | ENTRY
+16/08/2023 13:57:00.118 | Info | [SELL] Entry: 1.09103 | SL: 1.09193 (9.0 pips) | TP: 1.08653 | Vol: 4000.00
+16/08/2023 13:57:00.118 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+16/08/2023 13:57:00.118 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID34
+16/08/2023 13:57:00.118 | Info | [SELL] SUCCESS | Position ID: 34
+16/08/2023 13:57:00.118 | Info | [CHANDELIER] Tracking position 34 | Activation: 1.08766
+16/08/2023 14:06:04.183 | Info | [RISK] Daily limit reached | R Loss: -3.66 | Losses: 4
+17/08/2023 11:57:00.197 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 38.6 | ENTRY
+17/08/2023 11:57:00.197 | Info | [BUY] Entry: 1.08942 | SL: 1.08852 (9.0 pips) | TP: 1.09392 | Vol: 4000.00
+17/08/2023 11:57:00.197 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+17/08/2023 11:57:00.197 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID35
+17/08/2023 11:57:00.197 | Info | [BUY] SUCCESS | Position ID: 35
+17/08/2023 11:57:00.197 | Info | [CHANDELIER] Tracking position 35 | Activation: 1.09279
+17/08/2023 12:02:00.003 | Info | [MONTHLY-DD] LIMIT REACHED | DD: 10.0% | Start: 447.25 | Current: 402.44
+17/08/2023 12:02:00.003 | Info | [MONTHLY-DD] Trading paused until next month. Re-optimize parameters.
+01/09/2023 00:00:00.416 | Info | [MONTHLY-DD] New month started | Reset equity baseline: 399.40
+01/09/2023 10:02:00.815 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 38.3 | ENTRY
+01/09/2023 10:02:00.815 | Info | [SELL] Entry: 1.08444 | SL: 1.08534 (9.0 pips) | TP: 1.07994 | Vol: 4000.00
+01/09/2023 10:02:00.815 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+01/09/2023 10:02:00.815 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID36
+01/09/2023 10:02:00.815 | Info | [SELL] SUCCESS | Position ID: 36
+01/09/2023 10:02:00.815 | Info | [CHANDELIER] Tracking position 36 | Activation: 1.08107
+01/09/2023 13:11:00.051 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 28.8 (low) | FLIP → SELL
+01/09/2023 13:11:00.051 | Info | [SELL] Entry: 1.08684 | SL: 1.08821 (13.7 pips) | TP: 1.07997 | Vol: 2000.00
+01/09/2023 13:11:00.051 | Trade | Executing Market Order to Sell 2000 EURUSD (SL: 13.7, TP: 68.7)
+01/09/2023 13:11:00.051 | Trade | → Executing Market Order to Sell 2000 EURUSD (SL: 13.7, TP: 68.7) SUCCEEDED, Position PID37
+01/09/2023 13:11:00.051 | Info | [SELL] SUCCESS | Position ID: 37
+01/09/2023 13:11:00.051 | Info | [CHANDELIER] Tracking position 37 | Activation: 1.08169
+01/09/2023 14:30:00.196 | Info | [CHANDELIER] ACTIVATED | Position 37 | Price: 1.08155
+01/09/2023 14:30:00.196 | Trade | Modifying position PID37 (SL: 1.08821, TP: null)
+01/09/2023 14:30:00.196 | Trade | → Modifying position PID37 (SL: 1.08821, TP: null) SUCCEEDED, Position PID37
+01/09/2023 14:30:00.196 | Trade | Modifying position PID37 (SL: 1.08234, TP: null)
+01/09/2023 14:30:00.196 | Trade | → Modifying position PID37 (SL: 1.08234, TP: null) SUCCEEDED, Position PID37
+01/09/2023 14:30:00.196 | Info | [CHANDELIER] Trail #10 | New SL: 1.08234 | Move Count: 1
+01/09/2023 14:32:00.101 | Trade | Modifying position PID37 (SL: 1.08184, TP: null)
+01/09/2023 14:32:00.101 | Trade | → Modifying position PID37 (SL: 1.08184, TP: null) SUCCEEDED, Position PID37
+01/09/2023 14:32:00.101 | Info | [CHANDELIER] Trail #11 | New SL: 1.08184 | Move Count: 2
+01/09/2023 14:49:00.017 | Trade | Modifying position PID37 (SL: 1.08134, TP: null)
+01/09/2023 14:49:00.017 | Trade | → Modifying position PID37 (SL: 1.08134, TP: null) SUCCEEDED, Position PID37
+01/09/2023 14:49:00.017 | Info | [CHANDELIER] Trail #12 | New SL: 1.08134 | Move Count: 3
+01/09/2023 14:52:00.316 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 31.5 | ENTRY
+01/09/2023 14:52:00.316 | Info | [SELL] Entry: 1.08110 | SL: 1.08217 (10.7 pips) | TP: 1.07574 | Vol: 3000.00
+01/09/2023 14:52:00.316 | Trade | Executing Market Order to Sell 3000 EURUSD (SL: 10.7, TP: 53.6)
+01/09/2023 14:52:00.316 | Trade | → Executing Market Order to Sell 3000 EURUSD (SL: 10.7, TP: 53.6) SUCCEEDED, Position PID38
+01/09/2023 14:52:00.316 | Info | [SELL] SUCCESS | Position ID: 38
+01/09/2023 14:52:00.316 | Info | [CHANDELIER] Tracking position 38 | Activation: 1.07708
+05/09/2023 06:28:00.204 | Info | [CHANDELIER] ACTIVATED | Position 38 | Price: 1.07666
+05/09/2023 06:28:00.204 | Trade | Modifying position PID38 (SL: 1.08217, TP: null)
+05/09/2023 06:28:00.204 | Trade | → Modifying position PID38 (SL: 1.08217, TP: null) SUCCEEDED, Position PID38
+05/09/2023 06:28:00.204 | Trade | Modifying position PID38 (SL: 1.0776, TP: null)
+05/09/2023 06:28:00.204 | Trade | → Modifying position PID38 (SL: 1.0776, TP: null) SUCCEEDED, Position PID38
+05/09/2023 06:28:00.204 | Info | [CHANDELIER] Trail #8 | New SL: 1.07760 | Move Count: 1
+05/09/2023 06:33:01.403 | Trade | Modifying position PID38 (SL: 1.0771, TP: null)
+05/09/2023 06:33:01.403 | Trade | → Modifying position PID38 (SL: 1.0771, TP: null) SUCCEEDED, Position PID38
+05/09/2023 06:33:01.403 | Info | [CHANDELIER] Trail #9 | New SL: 1.07710 | Move Count: 2
+05/09/2023 06:36:00.153 | Trade | Modifying position PID38 (SL: 1.0766, TP: null)
+05/09/2023 06:36:00.153 | Trade | → Modifying position PID38 (SL: 1.0766, TP: null) SUCCEEDED, Position PID38
+05/09/2023 06:36:00.153 | Info | [CHANDELIER] Trail #10 | New SL: 1.07660 | Move Count: 3
+06/09/2023 11:16:01.522 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 52.7 | ENTRY
+06/09/2023 11:16:01.522 | Info | [BUY] Entry: 1.07456 | SL: 1.07366 (9.0 pips) | TP: 1.07906 | Vol: 4000.00
+06/09/2023 11:16:01.522 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+06/09/2023 11:16:01.522 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID39
+06/09/2023 11:16:01.522 | Info | [BUY] SUCCESS | Position ID: 39
+06/09/2023 11:16:01.522 | Info | [CHANDELIER] Tracking position 39 | Activation: 1.07793
+06/09/2023 13:01:00.578 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 14.9 (low) | FLIP → BUY
+06/09/2023 13:01:00.578 | Info | [BUY] Entry: 1.07334 | SL: 1.07244 (9.0 pips) | TP: 1.07784 | Vol: 4000.00
+06/09/2023 13:01:00.578 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+06/09/2023 13:01:00.578 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID40
+06/09/2023 13:01:00.578 | Info | [BUY] SUCCESS | Position ID: 40
+06/09/2023 13:01:00.578 | Info | [CHANDELIER] Tracking position 40 | Activation: 1.07671
+08/09/2023 08:30:00.156 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 45.1 | ENTRY
+08/09/2023 08:30:00.156 | Info | [BUY] Entry: 1.07169 | SL: 1.07079 (9.0 pips) | TP: 1.07619 | Vol: 4000.00
+08/09/2023 08:30:00.156 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+08/09/2023 08:30:00.156 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID41
+08/09/2023 08:30:00.156 | Info | [BUY] SUCCESS | Position ID: 41
+08/09/2023 08:30:00.156 | Info | [CHANDELIER] Tracking position 41 | Activation: 1.07506
+08/09/2023 09:04:00.576 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 31.2 | ENTRY
+08/09/2023 09:04:00.576 | Info | [SELL] Entry: 1.07061 | SL: 1.07151 (9.0 pips) | TP: 1.06611 | Vol: 4000.00
+08/09/2023 09:04:00.576 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+08/09/2023 09:04:00.576 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID42
+08/09/2023 09:04:00.576 | Info | [SELL] SUCCESS | Position ID: 42
+08/09/2023 09:04:00.576 | Info | [CHANDELIER] Tracking position 42 | Activation: 1.06724
+08/09/2023 13:32:00.914 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 56.4 | ENTRY
+08/09/2023 13:32:00.914 | Info | [BUY] Entry: 1.07158 | SL: 1.07068 (9.0 pips) | TP: 1.07608 | Vol: 4000.00
+08/09/2023 13:32:00.914 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+08/09/2023 13:32:00.914 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID43
+08/09/2023 13:32:00.914 | Info | [BUY] SUCCESS | Position ID: 43
+08/09/2023 13:32:00.914 | Info | [CHANDELIER] Tracking position 43 | Activation: 1.07495
+08/09/2023 15:56:03.891 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 36.0 | ENTRY
+08/09/2023 15:56:03.891 | Info | [SELL] Entry: 1.07072 | SL: 1.07162 (9.0 pips) | TP: 1.06622 | Vol: 4000.00
+08/09/2023 15:56:03.891 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+08/09/2023 15:56:03.891 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID44
+08/09/2023 15:56:03.891 | Info | [SELL] SUCCESS | Position ID: 44
+08/09/2023 15:56:03.891 | Info | [CHANDELIER] Tracking position 44 | Activation: 1.06735
+10/09/2023 21:00:04.897 | Info | [RISK] Daily limit reached | R Loss: -4.35 | Losses: 4
+11/09/2023 08:22:01.839 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 39.4 | ENTRY
+11/09/2023 08:22:01.839 | Info | [BUY] Entry: 1.07295 | SL: 1.07205 (9.0 pips) | TP: 1.07745 | Vol: 4000.00
+11/09/2023 08:22:01.839 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+11/09/2023 08:22:01.839 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID45
+11/09/2023 08:22:01.839 | Info | [BUY] SUCCESS | Position ID: 45
+11/09/2023 08:22:01.839 | Info | [CHANDELIER] Tracking position 45 | Activation: 1.07632
+12/09/2023 08:00:00.663 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 56.3 | ENTRY
+12/09/2023 08:00:00.663 | Info | [SELL] Entry: 1.07134 | SL: 1.07224 (9.0 pips) | TP: 1.06684 | Vol: 4000.00
+12/09/2023 08:00:00.663 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+12/09/2023 08:00:00.663 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID46
+12/09/2023 08:00:00.663 | Info | [SELL] SUCCESS | Position ID: 46
+12/09/2023 08:00:00.663 | Info | [CHANDELIER] Tracking position 46 | Activation: 1.06797
+12/09/2023 16:15:02.310 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 49.8 | ENTRY
+12/09/2023 16:15:02.310 | Info | [BUY] Entry: 1.07343 | SL: 1.07253 (9.0 pips) | TP: 1.07793 | Vol: 4000.00
+12/09/2023 16:15:02.310 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+12/09/2023 16:15:02.310 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID47
+12/09/2023 16:15:02.310 | Info | [BUY] SUCCESS | Position ID: 47
+12/09/2023 16:15:02.310 | Info | [CHANDELIER] Tracking position 47 | Activation: 1.07680
+13/09/2023 08:49:00.512 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 27.6 (low) | FLIP → BUY
+13/09/2023 08:49:00.512 | Info | [BUY] Entry: 1.07371 | SL: 1.07281 (9.0 pips) | TP: 1.07821 | Vol: 4000.00
+13/09/2023 08:49:00.512 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+13/09/2023 08:49:00.512 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID48
+13/09/2023 08:49:00.512 | Info | [BUY] SUCCESS | Position ID: 48
+13/09/2023 08:49:00.512 | Info | [CHANDELIER] Tracking position 48 | Activation: 1.07708
+13/09/2023 13:00:00.002 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 24.2 (low) | FLIP → SELL
+13/09/2023 13:00:00.002 | Info | [SELL] Entry: 1.07478 | SL: 1.07641 (16.2 pips) | TP: 1.06666 | Vol: 2000.00
+13/09/2023 13:00:00.002 | Trade | Executing Market Order to Sell 2000 EURUSD (SL: 16.2, TP: 81.2)
+13/09/2023 13:00:00.002 | Trade | → Executing Market Order to Sell 2000 EURUSD (SL: 16.2, TP: 81.2) SUCCEEDED, Position PID49
+13/09/2023 13:00:00.002 | Info | [SELL] SUCCESS | Position ID: 49
+13/09/2023 13:00:00.002 | Info | [CHANDELIER] Tracking position 49 | Activation: 1.06869
+14/09/2023 12:31:00.136 | Info | [CHANDELIER] ACTIVATED | Position 49 | Price: 1.06706
+14/09/2023 12:31:00.136 | Trade | Modifying position PID49 (SL: 1.0764, TP: null)
+14/09/2023 12:31:00.136 | Trade | → Modifying position PID49 (SL: 1.0764, TP: null) SUCCEEDED, Position PID49
+14/09/2023 12:31:00.136 | Trade | Modifying position PID49 (SL: 1.06778, TP: null)
+14/09/2023 12:31:00.136 | Trade | → Modifying position PID49 (SL: 1.06778, TP: null) SUCCEEDED, Position PID49
+14/09/2023 12:31:00.136 | Info | [CHANDELIER] Trail #15 | New SL: 1.06778 | Move Count: 1
+14/09/2023 12:32:00.459 | Trade | Modifying position PID49 (SL: 1.06678, TP: null)
+14/09/2023 12:32:00.459 | Trade | → Modifying position PID49 (SL: 1.06678, TP: null) SUCCEEDED, Position PID49
+14/09/2023 12:32:00.459 | Info | [CHANDELIER] Trail #17 | New SL: 1.06678 | Move Count: 2
+14/09/2023 13:00:00.122 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 18.7 (low) | FLIP → BUY
+14/09/2023 13:00:00.122 | Info | [BUY] Entry: 1.06767 | SL: 1.06621 (14.6 pips) | TP: 1.07496 | Vol: 2000.00
+14/09/2023 13:00:00.122 | Trade | Executing Market Order to Buy 2000 EURUSD (SL: 14.6, TP: 72.9)
+14/09/2023 13:00:00.122 | Trade | → Executing Market Order to Buy 2000 EURUSD (SL: 14.6, TP: 72.9) SUCCEEDED, Position PID50
+14/09/2023 13:00:00.122 | Info | [BUY] SUCCESS | Position ID: 50
+14/09/2023 13:00:00.122 | Info | [CHANDELIER] Tracking position 50 | Activation: 1.07314
+15/09/2023 14:03:00.276 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 48.3 | ENTRY
+15/09/2023 14:03:00.276 | Info | [BUY] Entry: 1.06814 | SL: 1.06701 (11.3 pips) | TP: 1.07377 | Vol: 3000.00
+15/09/2023 14:03:00.276 | Trade | Executing Market Order to Buy 3000 EURUSD (SL: 11.3, TP: 56.3)
+15/09/2023 14:03:00.276 | Trade | → Executing Market Order to Buy 3000 EURUSD (SL: 11.3, TP: 56.3) SUCCEEDED, Position PID51
+15/09/2023 14:03:00.276 | Info | [BUY] SUCCESS | Position ID: 51
+15/09/2023 14:03:00.276 | Info | [CHANDELIER] Tracking position 51 | Activation: 1.07236
+15/09/2023 15:07:01.116 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 22.7 (low) | FLIP → BUY
+15/09/2023 15:07:01.116 | Info | [BUY] Entry: 1.06622 | SL: 1.06532 (9.0 pips) | TP: 1.07072 | Vol: 4000.00
+15/09/2023 15:07:01.116 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+15/09/2023 15:07:01.116 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID52
+15/09/2023 15:07:01.116 | Info | [BUY] SUCCESS | Position ID: 52
+15/09/2023 15:07:01.116 | Info | [CHANDELIER] Tracking position 52 | Activation: 1.06959
+18/09/2023 15:48:00.171 | Info | [CHANDELIER] ACTIVATED | Position 52 | Price: 1.06981
+18/09/2023 15:48:00.171 | Trade | Modifying position PID52 (SL: 1.06532, TP: null)
+18/09/2023 15:48:00.171 | Trade | → Modifying position PID52 (SL: 1.06532, TP: null) SUCCEEDED, Position PID52
+18/09/2023 15:48:00.171 | Trade | Modifying position PID52 (SL: 1.06922, TP: null)
+18/09/2023 15:48:00.171 | Trade | → Modifying position PID52 (SL: 1.06922, TP: null) SUCCEEDED, Position PID52
+18/09/2023 15:48:00.171 | Info | [CHANDELIER] Trail #7 | New SL: 1.06922 | Move Count: 1
+18/09/2023 16:02:00.361 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 34.9 | ENTRY
+18/09/2023 16:02:00.361 | Info | [BUY] Entry: 1.06923 | SL: 1.06833 (9.0 pips) | TP: 1.07373 | Vol: 4000.00
+18/09/2023 16:02:00.361 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+18/09/2023 16:02:00.361 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID53
+18/09/2023 16:02:00.361 | Info | [BUY] SUCCESS | Position ID: 53
+18/09/2023 16:02:00.361 | Info | [CHANDELIER] Tracking position 53 | Activation: 1.07260
+19/09/2023 15:24:00.318 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 42.7 | ENTRY
+19/09/2023 15:24:00.318 | Info | [SELL] Entry: 1.06808 | SL: 1.06898 (9.0 pips) | TP: 1.06358 | Vol: 4000.00
+19/09/2023 15:24:00.318 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+19/09/2023 15:24:00.318 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID54
+19/09/2023 15:24:00.318 | Info | [SELL] SUCCESS | Position ID: 54
+19/09/2023 15:24:00.318 | Info | [CHANDELIER] Tracking position 54 | Activation: 1.06471
+20/09/2023 08:00:01.068 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 26.2 (low) | FLIP → SELL
+20/09/2023 08:00:01.068 | Info | [SELL] Entry: 1.06904 | SL: 1.06994 (9.0 pips) | TP: 1.06454 | Vol: 4000.00
+20/09/2023 08:00:01.068 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+20/09/2023 08:00:01.068 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID55
+20/09/2023 08:00:01.068 | Info | [SELL] SUCCESS | Position ID: 55
+20/09/2023 08:00:01.068 | Info | [CHANDELIER] Tracking position 55 | Activation: 1.06567
+21/09/2023 11:03:00.665 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 50.1 | ENTRY
+21/09/2023 11:03:00.665 | Info | [SELL] Entry: 1.06452 | SL: 1.06544 (9.2 pips) | TP: 1.05991 | Vol: 4000.00
+21/09/2023 11:03:00.665 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9.2, TP: 46.1)
+21/09/2023 11:03:00.665 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9.2, TP: 46.1) SUCCEEDED, Position PID56
+21/09/2023 11:03:00.665 | Info | [SELL] SUCCESS | Position ID: 56
+21/09/2023 11:03:00.665 | Info | [CHANDELIER] Tracking position 56 | Activation: 1.06107
+21/09/2023 14:37:00.467 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 63.1 | ENTRY
+21/09/2023 14:37:00.467 | Info | [BUY] Entry: 1.06727 | SL: 1.06633 (9.4 pips) | TP: 1.07199 | Vol: 4000.00
+21/09/2023 14:37:00.467 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9.4, TP: 47.2)
+21/09/2023 14:37:00.467 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9.4, TP: 47.2) SUCCEEDED, Position PID57
+21/09/2023 14:37:00.467 | Info | [BUY] SUCCESS | Position ID: 57
+21/09/2023 14:37:00.467 | Info | [CHANDELIER] Tracking position 57 | Activation: 1.07081
+22/09/2023 08:00:00.015 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 22.7 (low) | FLIP → BUY
+22/09/2023 08:00:00.015 | Info | [BUY] Entry: 1.06467 | SL: 1.06377 (9.0 pips) | TP: 1.06917 | Vol: 4000.00
+22/09/2023 08:00:00.015 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+22/09/2023 08:00:00.015 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID58
+22/09/2023 08:00:00.015 | Info | [BUY] SUCCESS | Position ID: 58
+22/09/2023 08:00:00.015 | Info | [CHANDELIER] Tracking position 58 | Activation: 1.06804
+22/09/2023 13:00:02.667 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 27.2 (low) | FLIP → SELL
+22/09/2023 13:00:02.667 | Info | [SELL] Entry: 1.06554 | SL: 1.06644 (9.0 pips) | TP: 1.06104 | Vol: 4000.00
+22/09/2023 13:00:02.667 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+22/09/2023 13:00:02.667 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID59
+22/09/2023 13:00:02.667 | Info | [SELL] SUCCESS | Position ID: 59
+22/09/2023 13:00:02.667 | Info | [CHANDELIER] Tracking position 59 | Activation: 1.06217
+25/09/2023 08:00:00.121 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 37.7 | ENTRY
+25/09/2023 08:00:00.121 | Info | [SELL] Entry: 1.06380 | SL: 1.06470 (9.0 pips) | TP: 1.05930 | Vol: 4000.00
+25/09/2023 08:00:00.121 | Trade | Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45)
+25/09/2023 08:00:00.121 | Trade | → Executing Market Order to Sell 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID60
+25/09/2023 08:00:00.121 | Info | [SELL] SUCCESS | Position ID: 60
+25/09/2023 08:00:00.121 | Info | [CHANDELIER] Tracking position 60 | Activation: 1.06043
+25/09/2023 13:34:01.918 | Info | [CHANDELIER] ACTIVATED | Position 60 | Price: 1.06037
+25/09/2023 13:34:01.918 | Trade | Modifying position PID60 (SL: 1.0647, TP: null)
+25/09/2023 13:34:01.918 | Trade | → Modifying position PID60 (SL: 1.0647, TP: null) SUCCEEDED, Position PID60
+25/09/2023 13:34:01.918 | Trade | Modifying position PID60 (SL: 1.0613, TP: null)
+25/09/2023 13:34:01.918 | Trade | → Modifying position PID60 (SL: 1.0613, TP: null) SUCCEEDED, Position PID60
+25/09/2023 13:34:01.918 | Info | [CHANDELIER] Trail #6 | New SL: 1.06130 | Move Count: 1
+25/09/2023 13:36:00.042 | Trade | Modifying position PID60 (SL: 1.0608, TP: null)
+25/09/2023 13:36:00.042 | Trade | → Modifying position PID60 (SL: 1.0608, TP: null) SUCCEEDED, Position PID60
+25/09/2023 13:36:00.042 | Info | [CHANDELIER] Trail #7 | New SL: 1.06080 | Move Count: 2
+25/09/2023 13:45:00.106 | Trade | Modifying position PID60 (SL: 1.0603, TP: null)
+25/09/2023 13:45:00.106 | Trade | → Modifying position PID60 (SL: 1.0603, TP: null) SUCCEEDED, Position PID60
+25/09/2023 13:45:00.106 | Info | [CHANDELIER] Trail #8 | New SL: 1.06030 | Move Count: 3
+28/09/2023 09:43:01.318 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 39.3 | ENTRY
+28/09/2023 09:43:01.318 | Info | [BUY] Entry: 1.05328 | SL: 1.05238 (9.0 pips) | TP: 1.05778 | Vol: 4000.00
+28/09/2023 09:43:01.318 | Trade | Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45)
+28/09/2023 09:43:01.318 | Trade | → Executing Market Order to Buy 4000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID61
+28/09/2023 09:43:01.318 | Info | [BUY] SUCCESS | Position ID: 61
+28/09/2023 09:43:01.318 | Info | [CHANDELIER] Tracking position 61 | Activation: 1.05665
+28/09/2023 13:00:00.038 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 48.2 | ENTRY
+28/09/2023 13:00:00.038 | Info | [SELL] Entry: 1.05182 | SL: 1.05308 (12.6 pips) | TP: 1.04551 | Vol: 3000.00
+28/09/2023 13:00:00.038 | Trade | Executing Market Order to Sell 3000 EURUSD (SL: 12.6, TP: 63.1)
+28/09/2023 13:00:00.038 | Trade | → Executing Market Order to Sell 3000 EURUSD (SL: 12.6, TP: 63.1) SUCCEEDED, Position PID62
+28/09/2023 13:00:00.038 | Info | [SELL] SUCCESS | Position ID: 62
+28/09/2023 13:00:00.038 | Info | [CHANDELIER] Tracking position 62 | Activation: 1.04709
+28/09/2023 13:08:00.130 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 36.6 | ENTRY
+28/09/2023 13:08:00.130 | Info | [BUY] Entry: 1.05392 | SL: 1.05271 (12.1 pips) | TP: 1.05999 | Vol: 3000.00
+28/09/2023 13:08:00.130 | Trade | Executing Market Order to Buy 3000 EURUSD (SL: 12.1, TP: 60.7)
+28/09/2023 13:08:00.130 | Trade | → Executing Market Order to Buy 3000 EURUSD (SL: 12.1, TP: 60.7) SUCCEEDED, Position PID63
+28/09/2023 13:08:00.130 | Info | [BUY] SUCCESS | Position ID: 63
+28/09/2023 13:08:00.130 | Info | [CHANDELIER] Tracking position 63 | Activation: 1.05847
+29/09/2023 06:10:00.452 | Info | [CHANDELIER] ACTIVATED | Position 63 | Price: 1.05857
+29/09/2023 06:10:00.452 | Trade | Modifying position PID63 (SL: 1.05271, TP: null)
+29/09/2023 06:10:00.452 | Trade | → Modifying position PID63 (SL: 1.05271, TP: null) SUCCEEDED, Position PID63
+29/09/2023 06:10:00.452 | Trade | Modifying position PID63 (SL: 1.05792, TP: null)
+29/09/2023 06:10:00.452 | Trade | → Modifying position PID63 (SL: 1.05792, TP: null) SUCCEEDED, Position PID63
+29/09/2023 06:10:00.452 | Info | [CHANDELIER] Trail #9 | New SL: 1.05792 | Move Count: 1
+29/09/2023 06:20:05.156 | Trade | Modifying position PID63 (SL: 1.05842, TP: null)
+29/09/2023 06:20:05.156 | Trade | → Modifying position PID63 (SL: 1.05842, TP: null) SUCCEEDED, Position PID63
+29/09/2023 06:20:05.156 | Info | [CHANDELIER] Trail #10 | New SL: 1.05842 | Move Count: 2
+29/09/2023 20:59:01.001 | Info | ========================================
+29/09/2023 20:59:01.001 | Info | Jcamp 1M Scalping v4.1.2 STOPPED
+29/09/2023 20:59:01.001 | Info | ========================================
+29/09/2023 20:59:01.001 | Info | CBot instance [Jcamp_1M_scalping, EURUSD, m1] stopped.

@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.1.2";
+        private const string BOT_VERSION = "4.1.3";
         private const string VERSION_DATE = "2026-03-29";
-        private const string VERSION_NOTES = "Monthly Drawdown Limit + ADX Flip + Exhaustion";
+        private const string VERSION_NOTES = "Consecutive Loss Limit + Monthly DD + ADX Flip";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -166,6 +166,12 @@ namespace cAlgo.Robots
         [Parameter("Max Daily Losing Trades", DefaultValue = 5, MinValue = 1, MaxValue = 20, Step = 1, Group = "Risk Management")]
         public int MaxDailyLosingTrades { get; set; }
 
+        [Parameter("Enable Consecutive Loss Limit", DefaultValue = false, Group = "Risk Management")]
+        public bool EnableConsecutiveLossLimit { get; set; }
+
+        [Parameter("Max Consecutive Losses", DefaultValue = 9, MinValue = 5, MaxValue = 20, Step = 1, Group = "Risk Management")]
+        public int MaxConsecutiveLosses { get; set; }
+
         [Parameter("Enable Monthly DD Limit", DefaultValue = true, Group = "Risk Management")]
         public bool EnableMonthlyDrawdownLimit { get; set; }
 
@@ -242,6 +248,10 @@ namespace cAlgo.Robots
         private int _dailyLosingTrades = 0;
         private DateTime _lastTradingDay = DateTime.MinValue;
         private bool _dailyLimitReached = false;
+
+        // Consecutive loss tracking
+        private int _consecutiveLosses = 0;
+        private bool _consecutiveLimitReached = false;
 
         // Monthly drawdown tracking
         private double _monthStartEquity = 0.0;
@@ -342,12 +352,26 @@ namespace cAlgo.Robots
                     MaxMonthlyDrawdownPercent, _monthStartEquity);
             }
 
+            // Initialize daily loss limit
+            if (EnableDailyLossLimit)
+            {
+                Print("[DAILY-LIMIT] Enabled | Max R Loss: {0:F1} | Max Losing Trades: {1}",
+                    MaxDailyRLoss, MaxDailyLosingTrades);
+            }
+
+            // Initialize consecutive loss limit
+            if (EnableConsecutiveLossLimit)
+            {
+                Print("[CONSECUTIVE-LOSS] Enabled | Max Consecutive Losses: {0} (Warning: Re-optimize or switch pair)",
+                    MaxConsecutiveLosses);
+            }
+
             // Subscribe to position events
             Positions.Closed += OnPositionClosedHandler;
 
             Print("Trading Enabled: {0} | Session Filter: {1}", EnableTrading, EnableSessionFilter);
             Print("ADX Filter: {0} | Exhaustion Exit: {1}", EnableADXFilter, EnableExhaustionExit);
-            Print("Daily Limit: {0} | Monthly DD Limit: {1}", EnableDailyLossLimit, EnableMonthlyDrawdownLimit);
+            Print("Daily Limit: {0} | Consecutive Loss Limit: {1} | Monthly DD Limit: {2}", EnableDailyLossLimit, EnableConsecutiveLossLimit, EnableMonthlyDrawdownLimit);
             Print("Risk: {0:F1}% | Min RR: {1:F1} | Max Positions: {2}", RiskPercent, MinimumRRRatio, MaxPositions);
             Print("========================================");
         }
@@ -1131,8 +1155,15 @@ namespace cAlgo.Robots
 
         private bool IsDailyLimitReached()
         {
-            if (!EnableDailyLossLimit) return false;
-            return _dailyLimitReached;
+            // Check daily loss limit
+            if (EnableDailyLossLimit && _dailyLimitReached)
+                return true;
+
+            // Check consecutive loss limit
+            if (EnableConsecutiveLossLimit && _consecutiveLimitReached)
+                return true;
+
+            return false;
         }
 
         private void CheckDailyReset()
@@ -1195,6 +1226,25 @@ namespace cAlgo.Robots
             // Remove chandelier state
             if (_chandelierStates.ContainsKey(position.Id))
                 _chandelierStates.Remove(position.Id);
+
+            // Track consecutive losses
+            if (EnableConsecutiveLossLimit)
+            {
+                if (position.NetProfit < 0)
+                {
+                    _consecutiveLosses++;
+                    if (_consecutiveLosses >= MaxConsecutiveLosses)
+                    {
+                        _consecutiveLimitReached = true;
+                        Print("[RISK] CONSECUTIVE LOSS LIMIT | {0} losses in a row | Re-optimize parameters or switch pair", _consecutiveLosses);
+                    }
+                }
+                else if (position.NetProfit > 0)
+                {
+                    // Reset on winning trade
+                    _consecutiveLosses = 0;
+                }
+            }
 
             // Track daily losses
             if (EnableDailyLossLimit && position.NetProfit < 0)

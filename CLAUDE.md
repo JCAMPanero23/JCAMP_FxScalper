@@ -1,6 +1,6 @@
-# JCAMP FxScalper v4.1.2
+# JCAMP FxScalper v4.1.3
 
-MTF SMA Alignment Strategy with ADX FlipDirection mode.
+MTF SMA Alignment Strategy with ADX FlipDirection mode and Consecutive Loss Protection.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs
 cp "D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs" "C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs"
 ```
 
-## Current Parameters (v4.1.2)
+## Current Parameters (v4.1.3)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
@@ -23,10 +23,36 @@ cp "D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs" "C:\Users\Jcamp_Laptop\Documents\cA
 | ADX Period | 18 | |
 | ADX Threshold | 15 | Below = flip direction |
 | Minimum RR | 5.0 | High-quality setups only |
-| Daily Loss Limit | -3R / 5 losses | |
+| Daily Loss Limit | -3R | Stops trading for the day |
+| Consecutive Loss Limit | 9 losses | Strategy degradation warning |
 | Monthly DD Limit | 10% | Stop and re-optimize |
 
 **Optimization File:** `Jcamp_1M_scalping, EURUSD m1_v4.1.2.optset`
+
+## Risk Management (3 Layers)
+
+### Layer 1: Daily Loss Limit
+- **Trigger**: `-3R` loss in a single day
+- **Action**: Stop trading for rest of day
+- **Purpose**: Protect against bad trading days
+- **Reset**: Automatically at midnight UTC
+- **For Optimization**: Keep enabled
+
+### Layer 2: Consecutive Loss Limit
+- **Trigger**: `9 consecutive losses` (no wins between)
+- **Action**: Stop trading until manual restart
+- **Purpose**: Detect strategy degradation / market regime change
+- **Reset**: Only on winning trade OR manual bot restart
+- **For Optimization**: **DISABLE** (set to false)
+- **Backtest Data**: 15 consecutive losses occurred (9 would have warned mid-streak)
+- **Response**: Re-optimize parameters OR switch to another currency pair
+
+### Layer 3: Monthly Drawdown Limit
+- **Trigger**: `10%` drawdown from month start equity
+- **Action**: Stop trading until next month
+- **Purpose**: Prevent catastrophic monthly losses
+- **Reset**: First day of new month
+- **For Optimization**: Keep enabled
 
 ## Backtest Results (Nov 2025 - Feb 2026)
 
@@ -79,7 +105,13 @@ If monthly DD limit (10%) hit → re-optimize immediately.
 
 ## Version History
 
-### v4.1.2 (Current)
+### v4.1.3 (Current)
+- Consecutive loss limit (default: 9 losses)
+- Warns when strategy degradation detected
+- Designed for Chandelier-based strategies
+- Independent from daily loss count
+
+### v4.1.2
 - Monthly drawdown limit (10% from month start)
 - Saved 5% in Feb 2026 backtest
 
