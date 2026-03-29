@@ -1,0 +1,172 @@
+01/02/2026 00:00:00.000 | Info | CBot instance [Jcamp_1M_scalping, EURUSD, m1] started.
+01/02/2026 22:00:00.222 | Info | ========================================
+01/02/2026 22:00:00.222 | Info | Jcamp 1M Scalping v4.1.1 (2026-03-29)
+01/02/2026 22:00:00.222 | Info | Notes: ADX FlipDirection mode + Exhaustion Exit
+01/02/2026 22:00:00.222 | Info | ========================================
+01/02/2026 22:00:00.222 | Info | [MTF-SMA] Initialized | M1 + Minute4 + Minute15 | SMA Period: 275
+01/02/2026 22:00:00.222 | Info | [ATR] Period: 14 | Multiplier: 2.00x
+01/02/2026 22:00:00.222 | Info | [ADX] Enabled | Period: 18 | Threshold: 15
+01/02/2026 22:00:00.222 | Info | Trading Enabled: True | Session Filter: True
+01/02/2026 22:00:00.222 | Info | ADX Filter: True | Exhaustion Exit: False
+01/02/2026 22:00:00.222 | Info | Risk: 1.0% | Min RR: 5.0 | Max Positions: 1
+01/02/2026 22:00:00.222 | Info | ========================================
+04/02/2026 08:09:00.277 | Info | [MTF-SMA] All TFs aligned BUY | ADX: 14.2 (low) | FLIP → SELL
+04/02/2026 08:09:00.277 | Info | [SELL] Entry: 1.18325 | SL: 1.18415 (9.0 pips) | TP: 1.17875 | Vol: 55000.00
+04/02/2026 08:09:00.277 | Trade | Executing Market Order to Sell 55000 EURUSD (SL: 9, TP: 45)
+04/02/2026 08:09:00.277 | Trade | → Executing Market Order to Sell 55000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID1
+04/02/2026 08:09:00.277 | Info | [SELL] SUCCESS | Position ID: 1
+04/02/2026 08:09:00.277 | Info | [CHANDELIER] Tracking position 1 | Activation: 1.17988
+04/02/2026 15:56:00.323 | Info | [CHANDELIER] ACTIVATED | Position 1 | Price: 1.17968
+04/02/2026 15:56:00.323 | Trade | Modifying position PID1 (SL: 1.18415, TP: null)
+04/02/2026 15:56:00.323 | Trade | → Modifying position PID1 (SL: 1.18415, TP: null) SUCCEEDED, Position PID1
+04/02/2026 15:56:00.323 | Trade | Modifying position PID1 (SL: 1.18025, TP: null)
+04/02/2026 15:56:00.323 | Trade | → Modifying position PID1 (SL: 1.18025, TP: null) SUCCEEDED, Position PID1
+04/02/2026 15:56:00.323 | Info | [CHANDELIER] Trail #7 | New SL: 1.18025 | Move Count: 1
+04/02/2026 16:19:00.025 | Trade | Modifying position PID1 (SL: 1.17975, TP: null)
+04/02/2026 16:19:00.025 | Trade | → Modifying position PID1 (SL: 1.17975, TP: null) SUCCEEDED, Position PID1
+04/02/2026 16:19:00.025 | Info | [CHANDELIER] Trail #8 | New SL: 1.17975 | Move Count: 2
+04/02/2026 16:28:00.009 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 24.4 | ENTRY
+04/02/2026 16:28:00.009 | Info | [SELL] Entry: 1.17988 | SL: 1.18078 (9.0 pips) | TP: 1.17538 | Vol: 57000.00
+04/02/2026 16:28:00.009 | Trade | Executing Market Order to Sell 57000 EURUSD (SL: 9, TP: 45)
+04/02/2026 16:28:00.009 | Trade | → Executing Market Order to Sell 57000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID2
+04/02/2026 16:28:00.009 | Info | [SELL] SUCCESS | Position ID: 2
+04/02/2026 16:28:00.009 | Info | [CHANDELIER] Tracking position 2 | Activation: 1.17651
+05/02/2026 13:31:00.051 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 15.5 | ENTRY
+05/02/2026 13:31:00.051 | Info | [BUY] Entry: 1.18076 | SL: 1.17984 (9.2 pips) | TP: 1.18538 | Vol: 55000.00
+05/02/2026 13:31:00.051 | Trade | Executing Market Order to Buy 55000 EURUSD (SL: 9.2, TP: 46.2)
+05/02/2026 13:31:00.051 | Trade | → Executing Market Order to Buy 55000 EURUSD (SL: 9.2, TP: 46.2) SUCCEEDED, Position PID3
+05/02/2026 13:31:00.051 | Info | [BUY] SUCCESS | Position ID: 3
+05/02/2026 13:31:00.051 | Info | [CHANDELIER] Tracking position 3 | Activation: 1.18423
+05/02/2026 14:59:00.627 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 19.5 | ENTRY
+05/02/2026 14:59:00.627 | Info | [SELL] Entry: 1.17968 | SL: 1.18060 (9.2 pips) | TP: 1.17509 | Vol: 55000.00
+05/02/2026 14:59:00.627 | Trade | Executing Market Order to Sell 55000 EURUSD (SL: 9.2, TP: 45.9)
+05/02/2026 14:59:00.627 | Trade | → Executing Market Order to Sell 55000 EURUSD (SL: 9.2, TP: 45.9) SUCCEEDED, Position PID4
+05/02/2026 14:59:00.627 | Info | [SELL] SUCCESS | Position ID: 4
+05/02/2026 14:59:00.627 | Info | [CHANDELIER] Tracking position 4 | Activation: 1.17624
+05/02/2026 15:01:00.510 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 18.1 | ENTRY
+05/02/2026 15:01:00.510 | Info | [BUY] Entry: 1.18085 | SL: 1.17977 (10.8 pips) | TP: 1.18624 | Vol: 46000.00
+05/02/2026 15:01:00.510 | Trade | Executing Market Order to Buy 46000 EURUSD (SL: 10.8, TP: 53.9)
+05/02/2026 15:01:00.510 | Trade | → Executing Market Order to Buy 46000 EURUSD (SL: 10.8, TP: 53.9) SUCCEEDED, Position PID5
+05/02/2026 15:01:00.510 | Info | [BUY] SUCCESS | Position ID: 5
+05/02/2026 15:01:00.510 | Info | [CHANDELIER] Tracking position 5 | Activation: 1.18489
+05/02/2026 15:24:08.493 | Info | [RISK] Daily limit reached | R Loss: -3.44 | Losses: 3
+06/02/2026 08:01:05.689 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 15.0 (low) | FLIP → BUY
+06/02/2026 08:01:05.689 | Info | [BUY] Entry: 1.17901 | SL: 1.17811 (9.0 pips) | TP: 1.18351 | Vol: 55000.00
+06/02/2026 08:01:05.689 | Trade | Executing Market Order to Buy 55000 EURUSD (SL: 9, TP: 45)
+06/02/2026 08:01:05.689 | Trade | → Executing Market Order to Buy 55000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID6
+06/02/2026 08:01:05.689 | Info | [BUY] SUCCESS | Position ID: 6
+06/02/2026 08:01:05.689 | Info | [CHANDELIER] Tracking position 6 | Activation: 1.18238
+06/02/2026 14:43:00.833 | Info | [CHANDELIER] ACTIVATED | Position 6 | Price: 1.18246
+06/02/2026 14:43:00.833 | Trade | Modifying position PID6 (SL: 1.17811, TP: null)
+06/02/2026 14:43:00.833 | Trade | → Modifying position PID6 (SL: 1.17811, TP: null) SUCCEEDED, Position PID6
+06/02/2026 14:43:00.833 | Trade | Modifying position PID6 (SL: 1.18151, TP: null)
+06/02/2026 14:43:00.833 | Trade | → Modifying position PID6 (SL: 1.18151, TP: null) SUCCEEDED, Position PID6
+06/02/2026 14:43:00.833 | Info | [CHANDELIER] Trail #6 | New SL: 1.18151 | Move Count: 1
+06/02/2026 15:12:01.632 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 21.2 | ENTRY
+06/02/2026 15:12:01.632 | Info | [BUY] Entry: 1.18151 | SL: 1.18060 (9.1 pips) | TP: 1.18604 | Vol: 56000.00
+06/02/2026 15:12:01.632 | Trade | Executing Market Order to Buy 56000 EURUSD (SL: 9.1, TP: 45.3)
+06/02/2026 15:12:01.632 | Trade | → Executing Market Order to Buy 56000 EURUSD (SL: 9.1, TP: 45.3) SUCCEEDED, Position PID7
+06/02/2026 15:12:01.632 | Info | [BUY] SUCCESS | Position ID: 7
+06/02/2026 15:12:01.632 | Info | [CHANDELIER] Tracking position 7 | Activation: 1.18491
+11/02/2026 13:31:00.063 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 20.5 | ENTRY
+11/02/2026 13:31:00.063 | Info | [SELL] Entry: 1.18453 | SL: 1.18615 (16.2 pips) | TP: 1.17645 | Vol: 31000.00
+11/02/2026 13:31:00.063 | Trade | Executing Market Order to Sell 31000 EURUSD (SL: 16.2, TP: 80.8)
+11/02/2026 13:31:00.063 | Trade | → Executing Market Order to Sell 31000 EURUSD (SL: 16.2, TP: 80.8) SUCCEEDED, Position PID8
+11/02/2026 13:31:00.063 | Info | [SELL] SUCCESS | Position ID: 8
+11/02/2026 13:31:00.063 | Info | [CHANDELIER] Tracking position 8 | Activation: 1.17847
+13/02/2026 13:31:00.033 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 16.0 | ENTRY
+13/02/2026 13:31:00.033 | Info | [BUY] Entry: 1.18807 | SL: 1.18696 (11.1 pips) | TP: 1.19362 | Vol: 44000.00
+13/02/2026 13:31:00.033 | Trade | Executing Market Order to Buy 44000 EURUSD (SL: 11.1, TP: 55.5)
+13/02/2026 13:31:00.033 | Trade | → Executing Market Order to Buy 44000 EURUSD (SL: 11.1, TP: 55.5) SUCCEEDED, Position PID9
+13/02/2026 13:31:00.033 | Info | [BUY] SUCCESS | Position ID: 9
+13/02/2026 13:31:00.033 | Info | [CHANDELIER] Tracking position 9 | Activation: 1.19223
+13/02/2026 14:54:00.138 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 12.2 (low) | FLIP → BUY
+13/02/2026 14:54:00.138 | Info | [BUY] Entry: 1.18608 | SL: 1.18518 (9.0 pips) | TP: 1.19058 | Vol: 54000.00
+13/02/2026 14:54:00.138 | Trade | Executing Market Order to Buy 54000 EURUSD (SL: 9, TP: 45)
+13/02/2026 14:54:00.138 | Trade | → Executing Market Order to Buy 54000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID10
+13/02/2026 14:54:00.138 | Info | [BUY] SUCCESS | Position ID: 10
+13/02/2026 14:54:00.138 | Info | [CHANDELIER] Tracking position 10 | Activation: 1.18945
+20/02/2026 15:16:00.111 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 32.6 | ENTRY
+20/02/2026 15:16:00.111 | Info | [BUY] Entry: 1.17988 | SL: 1.17793 (19.5 pips) | TP: 1.18961 | Vol: 25000.00
+20/02/2026 15:16:00.111 | Trade | Executing Market Order to Buy 25000 EURUSD (SL: 19.5, TP: 97.3)
+20/02/2026 15:16:00.111 | Trade | → Executing Market Order to Buy 25000 EURUSD (SL: 19.5, TP: 97.3) SUCCEEDED, Position PID11
+20/02/2026 15:16:00.111 | Info | [BUY] SUCCESS | Position ID: 11
+20/02/2026 15:16:00.111 | Info | [CHANDELIER] Tracking position 11 | Activation: 1.18718
+23/02/2026 11:31:00.003 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 32.1 | ENTRY
+23/02/2026 11:31:00.003 | Info | [SELL] Entry: 1.17849 | SL: 1.17939 (9.0 pips) | TP: 1.17399 | Vol: 53000.00
+23/02/2026 11:31:00.003 | Trade | Executing Market Order to Sell 53000 EURUSD (SL: 9, TP: 45)
+23/02/2026 11:31:00.003 | Trade | → Executing Market Order to Sell 53000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID12
+23/02/2026 11:31:00.003 | Info | [SELL] SUCCESS | Position ID: 12
+23/02/2026 11:31:00.003 | Info | [CHANDELIER] Tracking position 12 | Activation: 1.17512
+23/02/2026 15:11:00.110 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 16.6 | ENTRY
+23/02/2026 15:11:00.110 | Info | [BUY] Entry: 1.18097 | SL: 1.18007 (9.0 pips) | TP: 1.18547 | Vol: 53000.00
+23/02/2026 15:11:00.110 | Trade | Executing Market Order to Buy 53000 EURUSD (SL: 9, TP: 45)
+23/02/2026 15:11:00.110 | Trade | → Executing Market Order to Buy 53000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID13
+23/02/2026 15:11:00.110 | Info | [BUY] SUCCESS | Position ID: 13
+23/02/2026 15:11:00.110 | Info | [CHANDELIER] Tracking position 13 | Activation: 1.18434
+24/02/2026 08:07:01.195 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 18.0 | ENTRY
+24/02/2026 08:07:01.195 | Info | [SELL] Entry: 1.17743 | SL: 1.17833 (9.0 pips) | TP: 1.17293 | Vol: 52000.00
+24/02/2026 08:07:01.195 | Trade | Executing Market Order to Sell 52000 EURUSD (SL: 9, TP: 45)
+24/02/2026 08:07:01.195 | Trade | → Executing Market Order to Sell 52000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID14
+24/02/2026 08:07:01.195 | Info | [SELL] SUCCESS | Position ID: 14
+24/02/2026 08:07:01.195 | Info | [CHANDELIER] Tracking position 14 | Activation: 1.17406
+24/02/2026 08:25:01.122 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 18.9 | ENTRY
+24/02/2026 08:25:01.122 | Info | [BUY] Entry: 1.17880 | SL: 1.17790 (9.0 pips) | TP: 1.18330 | Vol: 51000.00
+24/02/2026 08:25:01.122 | Trade | Executing Market Order to Buy 51000 EURUSD (SL: 9, TP: 45)
+24/02/2026 08:25:01.122 | Trade | → Executing Market Order to Buy 51000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID15
+24/02/2026 08:25:01.122 | Info | [BUY] SUCCESS | Position ID: 15
+24/02/2026 08:25:01.122 | Info | [CHANDELIER] Tracking position 15 | Activation: 1.18217
+24/02/2026 13:00:00.545 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 23.8 | ENTRY
+24/02/2026 13:00:00.545 | Info | [SELL] Entry: 1.17814 | SL: 1.17904 (9.0 pips) | TP: 1.17364 | Vol: 51000.00
+24/02/2026 13:00:00.545 | Trade | Executing Market Order to Sell 51000 EURUSD (SL: 9, TP: 45)
+24/02/2026 13:00:00.545 | Trade | → Executing Market Order to Sell 51000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID16
+24/02/2026 13:00:00.545 | Info | [SELL] SUCCESS | Position ID: 16
+24/02/2026 13:00:00.545 | Info | [CHANDELIER] Tracking position 16 | Activation: 1.17477
+25/02/2026 08:01:00.063 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 23.7 | ENTRY
+25/02/2026 08:01:00.063 | Info | [BUY] Entry: 1.18000 | SL: 1.17910 (9.0 pips) | TP: 1.18450 | Vol: 50000.00
+25/02/2026 08:01:00.063 | Trade | Executing Market Order to Buy 50000 EURUSD (SL: 9, TP: 45)
+25/02/2026 08:01:00.063 | Trade | → Executing Market Order to Buy 50000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID17
+25/02/2026 08:01:00.063 | Info | [BUY] SUCCESS | Position ID: 17
+25/02/2026 08:01:00.063 | Info | [CHANDELIER] Tracking position 17 | Activation: 1.18337
+25/02/2026 10:02:00.929 | Info | [MTF-SMA] All TFs aligned SELL | ADX: 10.7 (low) | FLIP → BUY
+25/02/2026 10:02:00.929 | Info | [BUY] Entry: 1.17855 | SL: 1.17765 (9.0 pips) | TP: 1.18305 | Vol: 50000.00
+25/02/2026 10:02:00.929 | Trade | Executing Market Order to Buy 50000 EURUSD (SL: 9, TP: 45)
+25/02/2026 10:02:00.929 | Trade | → Executing Market Order to Buy 50000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID18
+25/02/2026 10:02:00.929 | Info | [BUY] SUCCESS | Position ID: 18
+25/02/2026 10:02:00.929 | Info | [CHANDELIER] Tracking position 18 | Activation: 1.18192
+25/02/2026 11:17:56.030 | Info | [RISK] Daily limit reached | R Loss: -3.24 | Losses: 3
+26/02/2026 13:07:00.384 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 29.1 | ENTRY
+26/02/2026 13:07:00.384 | Info | [BUY] Entry: 1.18110 | SL: 1.18020 (9.0 pips) | TP: 1.18560 | Vol: 49000.00
+26/02/2026 13:07:00.384 | Trade | Executing Market Order to Buy 49000 EURUSD (SL: 9, TP: 45)
+26/02/2026 13:07:00.384 | Trade | → Executing Market Order to Buy 49000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID19
+26/02/2026 13:07:00.384 | Info | [BUY] SUCCESS | Position ID: 19
+26/02/2026 13:07:00.384 | Info | [CHANDELIER] Tracking position 19 | Activation: 1.18447
+26/02/2026 15:26:00.045 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 35.0 | ENTRY
+26/02/2026 15:26:00.045 | Info | [SELL] Entry: 1.17878 | SL: 1.17973 (9.5 pips) | TP: 1.17402 | Vol: 46000.00
+26/02/2026 15:26:00.045 | Trade | Executing Market Order to Sell 46000 EURUSD (SL: 9.5, TP: 47.6)
+26/02/2026 15:26:00.045 | Trade | → Executing Market Order to Sell 46000 EURUSD (SL: 9.5, TP: 47.6) SUCCEEDED, Position PID20
+26/02/2026 15:26:00.045 | Info | [SELL] SUCCESS | Position ID: 20
+26/02/2026 15:26:00.045 | Info | [CHANDELIER] Tracking position 20 | Activation: 1.17521
+27/02/2026 08:00:00.060 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 48.8 | ENTRY
+27/02/2026 08:00:00.060 | Info | [BUY] Entry: 1.18154 | SL: 1.18064 (9.0 pips) | TP: 1.18604 | Vol: 48000.00
+27/02/2026 08:00:00.060 | Trade | Executing Market Order to Buy 48000 EURUSD (SL: 9, TP: 45)
+27/02/2026 08:00:00.060 | Trade | → Executing Market Order to Buy 48000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID21
+27/02/2026 08:00:00.060 | Info | [BUY] SUCCESS | Position ID: 21
+27/02/2026 08:00:00.060 | Info | [CHANDELIER] Tracking position 21 | Activation: 1.18491
+27/02/2026 09:57:00.267 | Info | [MTF-SMA] All TFs aligned SELL | M1 crossover | ADX: 23.2 | ENTRY
+27/02/2026 09:57:00.267 | Info | [SELL] Entry: 1.17968 | SL: 1.18058 (9.0 pips) | TP: 1.17518 | Vol: 48000.00
+27/02/2026 09:57:00.267 | Trade | Executing Market Order to Sell 48000 EURUSD (SL: 9, TP: 45)
+27/02/2026 09:57:00.267 | Trade | → Executing Market Order to Sell 48000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID22
+27/02/2026 09:57:00.267 | Info | [SELL] SUCCESS | Position ID: 22
+27/02/2026 09:57:00.267 | Info | [CHANDELIER] Tracking position 22 | Activation: 1.17631
+27/02/2026 13:08:00.368 | Info | [MTF-SMA] All TFs aligned BUY | M1 crossover | ADX: 20.0 | ENTRY
+27/02/2026 13:08:00.368 | Info | [BUY] Entry: 1.18049 | SL: 1.17959 (9.0 pips) | TP: 1.18499 | Vol: 47000.00
+27/02/2026 13:08:00.368 | Trade | Executing Market Order to Buy 47000 EURUSD (SL: 9, TP: 45)
+27/02/2026 13:08:00.368 | Trade | → Executing Market Order to Buy 47000 EURUSD (SL: 9, TP: 45) SUCCEEDED, Position PID23
+27/02/2026 13:08:00.368 | Info | [BUY] SUCCESS | Position ID: 23
+27/02/2026 13:08:00.368 | Info | [CHANDELIER] Tracking position 23 | Activation: 1.18386
+27/02/2026 13:30:02.516 | Info | [RISK] Daily limit reached | R Loss: -3.46 | Losses: 3
+27/02/2026 21:58:59.834 | Info | ========================================
+27/02/2026 21:58:59.834 | Info | Jcamp 1M Scalping v4.1.1 STOPPED
+27/02/2026 21:58:59.834 | Info | ========================================
+27/02/2026 21:58:59.834 | Info | CBot instance [Jcamp_1M_scalping, EURUSD, m1] stopped.

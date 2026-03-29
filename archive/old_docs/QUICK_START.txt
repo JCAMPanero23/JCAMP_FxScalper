@@ -1,0 +1,150 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║         JCAMP_FxScalper v1.00 - QUICK START GUIDE                   ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+✅ FILES INSTALLED SUCCESSFULLY
+═════════════════════════════════════════════════════════════════════════
+
+MT5 Installation Path:
+C:\Users\Jcamp_Laptop\AppData\Roaming\MetaQuotes\Terminal\
+D0E8209F77C8CF37AD8BF550E51FF075\MQL5\
+
+Installed Files:
+✓ JCAMP_FxScalper_v1.mq5 (Main EA)
+✓ JC_Utils.mqh
+✓ JC_RiskManager.mqh
+✓ JC_MarketStructure.mqh
+✓ JC_EntryLogic.mqh
+✓ JC_TradeManager.mqh
+✓ JCAMP_FxScalper_EURUSD.set (Preset)
+
+═════════════════════════════════════════════════════════════════════════
+🚀 COMPILE THE EA NOW (2 MINUTES)
+═════════════════════════════════════════════════════════════════════════
+
+1. Open MT5 Terminal
+2. Press F4 → Opens MetaEditor
+3. Navigator → Experts → JCAMP_FxScalper_v1.mq5
+4. Press F7 → Compile
+5. Expected: "0 error(s), 0 warning(s)"
+
+═════════════════════════════════════════════════════════════════════════
+📊 RUN FIRST BACKTEST (30 MINUTES)
+═════════════════════════════════════════════════════════════════════════
+
+1. In MT5: Press Ctrl+R → Opens Strategy Tester
+2. Select Expert: JCAMP_FxScalper_v1
+3. Symbol: EURUSD
+4. Period: M5
+5. Dates: 2025-10-01 to 2026-01-01
+6. Model: Every tick based on real ticks
+7. Deposit: 500
+8. Leverage: 1:500
+9. Click "Inputs" tab → Load → JCAMP_FxScalper_EURUSD.set
+10. Click "Start"
+
+Target Results:
+✓ Profit Factor ≥ 1.5
+✓ Win Rate: 40-50%
+✓ Max Drawdown < 10%
+✓ Total Trades: 20-40
+
+═════════════════════════════════════════════════════════════════════════
+✏️ EDITING WORKFLOW
+═════════════════════════════════════════════════════════════════════════
+
+METHOD 1: Edit in MetaEditor
+- Edit files in MetaEditor
+- Save changes
+- Run: sync_from_mt5.bat (copies changes to source)
+- Compile (F7)
+
+METHOD 2: Edit in VS Code
+- Edit files in D:\JCAMP_FxScalper\MQL5\
+- Save changes
+- Run: sync_to_mt5.bat (copies changes to MT5)
+- Open MetaEditor and compile (F7)
+
+═════════════════════════════════════════════════════════════════════════
+📚 DOCUMENTATION
+═════════════════════════════════════════════════════════════════════════
+
+README.md                 → Installation & parameter guide
+TESTING_GUIDE.md          → Comprehensive test procedures
+IMPLEMENTATION_LOG.md     → Technical details & formulas
+SYNC_INSTRUCTIONS.md      → File sync workflow details
+IMPLEMENTATION_COMPLETE.md → Summary & next steps
+
+═════════════════════════════════════════════════════════════════════════
+⚙️ KEY INPUT PARAMETERS
+═════════════════════════════════════════════════════════════════════════
+
+Risk Management:
+- RiskPercent: 1.0% (conservative start)
+- MaxDailyLoss: 3.0%
+- MaxGlobalPositions: 1
+
+Sessions (Toggle ON/OFF):
+- TradeLondon: true (08:00-16:30 GMT)
+- TradeNewYork: false
+- TradeAsian: false
+- TradeTokyo: false
+
+Enhanced Filters:
+- EnableTPValidation: true (abort if TP crosses H1 level)
+- EnableSLSnapping: true (align SL to H1 structure)
+
+═════════════════════════════════════════════════════════════════════════
+🎯 SUCCESS CRITERIA
+═════════════════════════════════════════════════════════════════════════
+
+Backtest (6 months):
+✓ Profit Factor ≥ 1.5
+✓ Win Rate: 40-50%
+✓ Max DD < 10%
+
+Forward Demo (2-4 weeks):
+✓ Win Rate within 10% of backtest
+✓ Profit Factor ≥ 1.2
+✓ Partials execute correctly
+
+═════════════════════════════════════════════════════════════════════════
+⚠️ IMPORTANT REMINDERS
+═════════════════════════════════════════════════════════════════════════
+
+1. ALWAYS compile after editing (F7 in MetaEditor)
+2. Use sync scripts after editing to keep files synchronized
+3. Test on DEMO account for 2-4 weeks before live
+4. Review logs in Experts tab for all trade decisions
+5. Position sizes <0.05 lot will exit 100% at TP (no partials)
+
+═════════════════════════════════════════════════════════════════════════
+🔧 TROUBLESHOOTING
+═════════════════════════════════════════════════════════════════════════
+
+"Cannot open include file JC_Utils.mqh"
+→ Run sync_to_mt5.bat and recompile
+
+"EA not showing in Navigator"
+→ Press F5 to refresh Navigator in MetaEditor
+
+"No trades in backtest"
+→ Check date range has London session hours
+→ Verify EURUSD trending during test period
+→ Review Experts tab logs for rejection reasons
+
+═════════════════════════════════════════════════════════════════════════
+📞 SUPPORT
+═════════════════════════════════════════════════════════════════════════
+
+All documentation in D:\JCAMP_FxScalper\Docs\
+Sync scripts in D:\JCAMP_FxScalper\
+Source code in D:\JCAMP_FxScalper\MQL5\
+
+═════════════════════════════════════════════════════════════════════════
+
+           ✅ READY TO COMPILE AND TEST! ✅
+
+═════════════════════════════════════════════════════════════════════════

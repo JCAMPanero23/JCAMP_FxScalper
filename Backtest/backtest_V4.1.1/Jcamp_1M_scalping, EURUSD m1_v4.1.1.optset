@@ -1,0 +1,784 @@
+﻿{
+  "parameters": [
+    {
+      "name": "c02b25309272471b89a4de3831c473c5",
+      "value": "m1",
+      "parameterType": "TimeFrame",
+      "metadata": null,
+      "optimize": false,
+      "values": [
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6",
+        "m7",
+        "m8",
+        "m9",
+        "m10",
+        "m15",
+        "m20",
+        "m30",
+        "m45",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h6",
+        "h8",
+        "h12",
+        "D1",
+        "D2",
+        "D3",
+        "W1",
+        "Month1"
+      ]
+    },
+    {
+      "name": "MTFHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "MTFHeader",
+        "friendlyName": "=== MTF SMA ALIGNMENT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableMTFSMAEntry",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableMTFSMAEntry",
+        "friendlyName": "Enable MTF SMA Entry",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MTFSMAPeriod",
+      "value": "275",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 50,
+        "maxValue": 350,
+        "step": 25,
+        "defaultValue": 275,
+        "parameterType": "Integer",
+        "propertyName": "MTFSMAPeriod",
+        "friendlyName": "MTF SMA Period",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "min": "50",
+      "max": "300",
+      "step": "50"
+    },
+    {
+      "name": "Timeframe2",
+      "value": "m4",
+      "parameterType": "TimeFrame",
+      "metadata": {
+        "defaultValue": "m4",
+        "parameterType": "TimeFrame",
+        "propertyName": "Timeframe2",
+        "friendlyName": "Timeframe 2",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "values": [
+        "m2",
+        "m3",
+        "m5",
+        "m6"
+      ]
+    },
+    {
+      "name": "Timeframe3",
+      "value": "m15",
+      "parameterType": "TimeFrame",
+      "metadata": {
+        "defaultValue": "m15",
+        "parameterType": "TimeFrame",
+        "propertyName": "Timeframe3",
+        "friendlyName": "Timeframe 3",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "values": [
+        "m7",
+        "m10",
+        "m15",
+        "m20",
+        "m30"
+      ]
+    },
+    {
+      "name": "RequireAllTFsAligned",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "RequireAllTFsAligned",
+        "friendlyName": "Require All TFs Aligned",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ATRPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 10,
+        "maxValue": 20,
+        "step": 2,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ATRPeriod",
+        "friendlyName": "ATR Period",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "10",
+      "max": "20",
+      "step": "2"
+    },
+    {
+      "name": "SLATRMultiplier",
+      "value": "2",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 1.0,
+        "maxValue": 3.0,
+        "step": 0.25,
+        "defaultValue": 2.0,
+        "parameterType": "Double",
+        "propertyName": "SLATRMultiplier",
+        "friendlyName": "SL ATR Multiplier",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "2.5",
+      "step": "0.25"
+    },
+    {
+      "name": "MinimumSLPips",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3.0,
+        "maxValue": 15.0,
+        "step": 1.0,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "MinimumSLPips",
+        "friendlyName": "Minimum SL (pips)",
+        "groupName": "MTF SMA Alignment",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "10",
+      "step": "1"
+    },
+    {
+      "name": "ADXHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "ADXHeader",
+        "friendlyName": "=== ADX FILTER ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableADXFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "EnableADXFilter",
+        "friendlyName": "Enable ADX Filter",
+        "groupName": "ADX Filter",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ADXMode",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "BlockEntry"
+          },
+          {
+            "value": 1,
+            "name": "FlipDirection"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ADXMode",
+        "friendlyName": "ADX Mode",
+        "groupName": "ADX Filter",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "ADXPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 7,
+        "maxValue": 28,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ADXPeriod",
+        "friendlyName": "ADX Period",
+        "groupName": "ADX Filter",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "7",
+      "max": "28",
+      "step": "1"
+    },
+    {
+      "name": "ADXMinThreshold",
+      "value": "20",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 15.0,
+        "maxValue": 35.0,
+        "step": 5.0,
+        "defaultValue": 20.0,
+        "parameterType": "Double",
+        "propertyName": "ADXMinThreshold",
+        "friendlyName": "ADX Min Threshold",
+        "groupName": "ADX Filter",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "15",
+      "max": "35",
+      "step": "5"
+    },
+    {
+      "name": "TradeHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "TradeHeader",
+        "friendlyName": "=== TRADE MANAGEMENT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableTrading",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "EnableTrading",
+        "friendlyName": "Enable Trading",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "RiskPercent",
+      "value": "1",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.5,
+        "maxValue": 3.0,
+        "step": 0.25,
+        "defaultValue": 1.0,
+        "parameterType": "Double",
+        "propertyName": "RiskPercent",
+        "friendlyName": "Risk Per Trade %",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0.5",
+      "max": "2",
+      "step": "0.25"
+    },
+    {
+      "name": "SLBufferPips",
+      "value": "4",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 1.0,
+        "maxValue": 6.0,
+        "step": 0.5,
+        "defaultValue": 4.0,
+        "parameterType": "Double",
+        "propertyName": "SLBufferPips",
+        "friendlyName": "SL Buffer Pips",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "4",
+      "step": "0.5"
+    },
+    {
+      "name": "MinimumRRRatio",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 1.5,
+        "maxValue": 7.0,
+        "step": 0.5,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "MinimumRRRatio",
+        "friendlyName": "Minimum RR Ratio",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "2",
+      "max": "3",
+      "step": "0.5"
+    },
+    {
+      "name": "MaxPositions",
+      "value": "1",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 3,
+        "step": 1,
+        "defaultValue": 1,
+        "parameterType": "Integer",
+        "propertyName": "MaxPositions",
+        "friendlyName": "Max Positions",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "3",
+      "step": "1"
+    },
+    {
+      "name": "MagicNumber",
+      "value": "100001",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": -2147483648,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 100001,
+        "parameterType": "Integer",
+        "propertyName": "MagicNumber",
+        "friendlyName": "Magic Number",
+        "groupName": "Trade Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "99996",
+      "max": "100006",
+      "step": "1"
+    },
+    {
+      "name": "SessionHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "SessionHeader",
+        "friendlyName": "=== SESSION MANAGEMENT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableSessionFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableSessionFilter",
+        "friendlyName": "Enable Session Filter",
+        "groupName": "Session Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ShowSessionBoxes",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "ShowSessionBoxes",
+        "friendlyName": "Show Session Boxes",
+        "groupName": "Session Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ChandelierHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "ChandelierHeader",
+        "friendlyName": "=== CHANDELIER SL ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableChandelierSL",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableChandelierSL",
+        "friendlyName": "Enable Chandelier SL",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "ChandelierActivationRR",
+      "value": "0.75",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.5,
+        "maxValue": 1.0,
+        "step": 0.05,
+        "defaultValue": 0.75,
+        "parameterType": "Double",
+        "propertyName": "ChandelierActivationRR",
+        "friendlyName": "Activation RR Fraction",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0.5",
+      "max": "0.85",
+      "step": "0.05"
+    },
+    {
+      "name": "TrailIncrementPips",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3.0,
+        "maxValue": 20.0,
+        "step": 1.0,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "TrailIncrementPips",
+        "friendlyName": "Trail Increment (pips)",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "20",
+      "step": "1"
+    },
+    {
+      "name": "TPModeSelection",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "KeepOriginal"
+          },
+          {
+            "value": 1,
+            "name": "RemoveTP"
+          },
+          {
+            "value": 2,
+            "name": "TrailingTP"
+          }
+        ],
+        "defaultValue": 1,
+        "parameterType": "Enum",
+        "propertyName": "TPModeSelection",
+        "friendlyName": "TP Mode",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2"
+      ]
+    },
+    {
+      "name": "MinChandelierDistance",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3.0,
+        "maxValue": 10.0,
+        "step": 1.0,
+        "defaultValue": 5.0,
+        "parameterType": "Double",
+        "propertyName": "MinChandelierDistance",
+        "friendlyName": "Min SL Distance (pips)",
+        "groupName": "Chandelier SL",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "5",
+      "step": "1"
+    },
+    {
+      "name": "ExhaustionHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "ExhaustionHeader",
+        "friendlyName": "=== EXHAUSTION EXIT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableExhaustionExit",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "EnableExhaustionExit",
+        "friendlyName": "Enable Exhaustion Exit",
+        "groupName": "Exhaustion Exit",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MinChandelierMovesBeforeExit",
+      "value": "2",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 5,
+        "step": 1,
+        "defaultValue": 2,
+        "parameterType": "Integer",
+        "propertyName": "MinChandelierMovesBeforeExit",
+        "friendlyName": "Min Chandelier Moves",
+        "groupName": "Exhaustion Exit",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "5",
+      "step": "1"
+    },
+    {
+      "name": "ExhaustionSwingBars",
+      "value": "8",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 3,
+        "maxValue": 15,
+        "step": 1,
+        "defaultValue": 8,
+        "parameterType": "Integer",
+        "propertyName": "ExhaustionSwingBars",
+        "friendlyName": "Swing Lookback Bars",
+        "groupName": "Exhaustion Exit",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "15",
+      "step": "1"
+    },
+    {
+      "name": "ExhaustionRSIPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 6,
+        "maxValue": 21,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ExhaustionRSIPeriod",
+        "friendlyName": "RSI Period",
+        "groupName": "Exhaustion Exit",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "6",
+      "max": "21",
+      "step": "1"
+    },
+    {
+      "name": "RiskHeader",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "RiskHeader",
+        "friendlyName": "=== RISK MANAGEMENT ===",
+        "groupName": null,
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableDailyLossLimit",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableDailyLossLimit",
+        "friendlyName": "Enable Daily Loss Limit",
+        "groupName": "Risk Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MaxDailyRLoss",
+      "value": "-3",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": -10.0,
+        "maxValue": -1.0,
+        "step": 0.5,
+        "defaultValue": -3.0,
+        "parameterType": "Double",
+        "propertyName": "MaxDailyRLoss",
+        "friendlyName": "Max Daily R Loss",
+        "groupName": "Risk Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "-10",
+      "max": "-1",
+      "step": "0.5"
+    },
+    {
+      "name": "MaxDailyLosingTrades",
+      "value": "5",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 20,
+        "step": 1,
+        "defaultValue": 5,
+        "parameterType": "Integer",
+        "propertyName": "MaxDailyLosingTrades",
+        "friendlyName": "Max Daily Losing Trades",
+        "groupName": "Risk Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "20",
+      "step": "1"
+    }
+  ]
+}

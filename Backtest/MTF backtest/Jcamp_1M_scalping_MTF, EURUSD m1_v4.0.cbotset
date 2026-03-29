@@ -1,0 +1,37 @@
+﻿{
+  "Chart": {
+    "Symbol": "EURUSD",
+    "Period": "m1"
+  },
+  "Parameters": {
+    "MTFHeader": "",
+    "EnableMTFSMAEntry": true,
+    "MTFSMAPeriod": 275,
+    "Timeframe2": "m4",
+    "Timeframe3": "m15",
+    "RequireAllTFsAligned": true,
+    "ATRPeriod": 14,
+    "SLATRMultiplier": 2.0,
+    "MinimumSLPips": 5.0,
+    "TradeHeader": "",
+    "EnableTrading": true,
+    "RiskPercent": 1.0,
+    "SLBufferPips": 4.0,
+    "MinimumRRRatio": 5.0,
+    "MaxPositions": 1,
+    "MagicNumber": 100001,
+    "SessionHeader": "",
+    "EnableSessionFilter": true,
+    "ShowSessionBoxes": false,
+    "ChandelierHeader": "",
+    "EnableChandelierSL": true,
+    "ChandelierActivationRR": 0.75,
+    "TrailIncrementPips": 5.0,
+    "TPModeSelection": 1,
+    "MinChandelierDistance": 5.0,
+    "RiskHeader": "",
+    "EnableDailyLossLimit": true,
+    "MaxDailyRLoss": -2.0,
+    "MaxDailyLosingTrades": 4
+  }
+}

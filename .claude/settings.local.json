@@ -71,7 +71,11 @@
       "Bash(then mkdir -p \"docs/superpowers/specs\")",
       "Bash(Dual SMA filter failed\" repeatedly\n- Only yellow pre-zones visible, never armed\n\nFIX #2: Relax Dual SMA to SMA200 only\n- BUY: currentPrice > sma200Value \\(trend direction\\)\n- SELL: currentPrice < sma200Value \\(trend direction\\)\n- Allows pullbacks to Fast SMA \\(where FVG zones form\\)\n\nEXPECTED IMPACT:\n- Smaller stop losses \\(zone edge, not beyond\\)\n- Better R:R ratios\n- Zones will arm properly \\(blue/green zones will appear\\)\n- Actual rejection-based entries as designed\n\nTEST RESULTS: Baseline backtest showed 422 trades with -$3,767 loss\ndue to these bugs. Visual inspection confirmed orders outside zones.\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git diff:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(dir:*)",
+      "Bash(grep:*)",
+      "Bash(findstr:*)",
+      "Bash(git branch:*)"
     ]
   }
 }
