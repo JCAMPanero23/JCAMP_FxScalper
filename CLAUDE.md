@@ -88,6 +88,25 @@ Based on optimization runs with ADX FlipDirection mode:
 - If monthly DD limit (10%) is hit → re-optimize immediately for next month
 - Use last 2-3 months of data for optimization
 
+## Optimization Target Priority
+
+| Priority | Metric | Target | Why |
+|----------|--------|--------|-----|
+| **1st** | Profit Factor | 1.3 - 2.0 | Best risk-adjusted measure |
+| **2nd** | Max Drawdown | < 20% | Survivability |
+| **3rd** | Net Profit | Positive | Confirms profitability |
+| 4th | Win Rate | 25-45% | Sanity check (RR 5.0 system) |
+
+**Overfitting Warning Signs:**
+- Profit Factor > 3.0 (too good, won't hold live)
+- Win Rate > 60% (unusual for RR 5.0 system)
+- < 30 trades (not enough data)
+- 1-2 trades = most profit (lucky, not systematic)
+
+**cTrader Optimization Settings:**
+- Optimize by: Profit Factor
+- Constraints: Min 30 trades, Max DD < 20%, Net Profit > 0
+
 ## Version History
 
 ### v4.1.2 (2026-03-29)
