@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.2.1-WFO";
+        private const string BOT_VERSION = "4.3.0-WFO";
         private const string VERSION_DATE = "2026-03-31";
-        private const string VERSION_NOTES = "WFO + Session Config + ADX Range Filter + Trade Logging";
+        private const string VERSION_NOTES = "WFO + Advanced Filters (Hour/Day/Direction) + Session + ADX Range + Logging";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -123,6 +123,57 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Hour Filter
+
+        [Parameter("=== HOUR FILTER ===", DefaultValue = "")]
+        public string HourFilterHeader { get; set; }
+
+        [Parameter("Enable Hour Filter", DefaultValue = false, Group = "Hour Filter")]
+        public bool EnableHourFilter { get; set; }
+
+        [Parameter("Start Hour (UTC)", DefaultValue = 8, MinValue = 0, MaxValue = 23, Step = 1, Group = "Hour Filter")]
+        public int StartHour { get; set; }
+
+        [Parameter("End Hour (UTC)", DefaultValue = 12, MinValue = 0, MaxValue = 23, Step = 1, Group = "Hour Filter")]
+        public int EndHour { get; set; }
+
+        #endregion
+
+        #region Parameters - Day Filter
+
+        [Parameter("=== DAY FILTER ===", DefaultValue = "")]
+        public string DayFilterHeader { get; set; }
+
+        [Parameter("Enable Day Filter", DefaultValue = false, Group = "Day Filter")]
+        public bool EnableDayFilter { get; set; }
+
+        [Parameter("Trade Monday", DefaultValue = true, Group = "Day Filter")]
+        public bool TradeMonday { get; set; }
+
+        [Parameter("Trade Tuesday", DefaultValue = true, Group = "Day Filter")]
+        public bool TradeTuesday { get; set; }
+
+        [Parameter("Trade Wednesday", DefaultValue = true, Group = "Day Filter")]
+        public bool TradeWednesday { get; set; }
+
+        [Parameter("Trade Thursday", DefaultValue = true, Group = "Day Filter")]
+        public bool TradeThursday { get; set; }
+
+        [Parameter("Trade Friday", DefaultValue = true, Group = "Day Filter")]
+        public bool TradeFriday { get; set; }
+
+        #endregion
+
+        #region Parameters - Direction Filter
+
+        [Parameter("=== DIRECTION FILTER ===", DefaultValue = "")]
+        public string DirectionFilterHeader { get; set; }
+
+        [Parameter("Direction Filter", DefaultValue = DirectionFilterMode.All, Group = "Direction Filter")]
+        public DirectionFilterMode DirectionFilter { get; set; }
+
+        #endregion
+
         #region Parameters - Chandelier Trailing Stop
 
         [Parameter("=== CHANDELIER SL ===", DefaultValue = "")]
@@ -218,6 +269,14 @@ namespace cAlgo.Robots
         {
             BlockEntry,      // Low ADX = skip entry (original)
             FlipDirection    // Low ADX = reverse direction (contrarian)
+        }
+
+        public enum DirectionFilterMode
+        {
+            All,             // Trade both BUY and SELL
+            BuyOnly,         // Only BUY trades
+            SellOnly,        // Only SELL trades
+            BuyBias          // Prefer BUY (2:1 ratio)
         }
 
         public enum OptimalPeriod
@@ -617,6 +676,54 @@ namespace cAlgo.Robots
                 }
             }
 
+            // Check hour filter
+            if (EnableHourFilter)
+            {
+                int currentHour = Server.Time.Hour;
+                bool hourAllowed = false;
+
+                if (StartHour <= EndHour)
+                {
+                    // Normal range (e.g., 9-11)
+                    hourAllowed = (currentHour >= StartHour && currentHour < EndHour);
+                }
+                else
+                {
+                    // Overnight range (e.g., 22-2)
+                    hourAllowed = (currentHour >= StartHour || currentHour < EndHour);
+                }
+
+                if (!hourAllowed)
+                {
+                    if (showDiagnostics) Print("[DIAGNOSTIC] Hour blocked | Current: {0:D2}:XX UTC | Range: {1:D2}:00-{2:D2}:00",
+                        currentHour, StartHour, EndHour);
+                    return;
+                }
+            }
+
+            // Check day of week filter
+            if (EnableDayFilter)
+            {
+                DayOfWeek currentDay = Server.Time.DayOfWeek;
+                bool dayAllowed = false;
+
+                switch (currentDay)
+                {
+                    case DayOfWeek.Monday: dayAllowed = TradeMonday; break;
+                    case DayOfWeek.Tuesday: dayAllowed = TradeTuesday; break;
+                    case DayOfWeek.Wednesday: dayAllowed = TradeWednesday; break;
+                    case DayOfWeek.Thursday: dayAllowed = TradeThursday; break;
+                    case DayOfWeek.Friday: dayAllowed = TradeFriday; break;
+                    default: dayAllowed = false; break; // Saturday/Sunday
+                }
+
+                if (!dayAllowed)
+                {
+                    if (showDiagnostics) Print("[DIAGNOSTIC] Day blocked | Current: {0}", currentDay);
+                    return;
+                }
+            }
+
             // Check ADX filter
             bool flipDirection = false;
             double adxValue = 0;
@@ -695,6 +802,44 @@ namespace cAlgo.Robots
                         Print("[MTF-SMA] All TFs aligned {0} | M1 crossover | ADX: {1:F1} | ENTRY",
                             tradeDirection, adxValue);
                     }
+
+                    // Apply direction filter
+                    bool directionAllowed = true;
+                    switch (DirectionFilter)
+                    {
+                        case DirectionFilterMode.BuyOnly:
+                            if (tradeDirection == "SELL")
+                            {
+                                if (showDiagnostics) Print("[DIAGNOSTIC] Direction blocked | SELL not allowed (BuyOnly mode)");
+                                directionAllowed = false;
+                            }
+                            break;
+
+                        case DirectionFilterMode.SellOnly:
+                            if (tradeDirection == "BUY")
+                            {
+                                if (showDiagnostics) Print("[DIAGNOSTIC] Direction blocked | BUY not allowed (SellOnly mode)");
+                                directionAllowed = false;
+                            }
+                            break;
+
+                        case DirectionFilterMode.BuyBias:
+                            // Skip SELL 2 out of 3 times (keep every 3rd SELL)
+                            if (tradeDirection == "SELL" && (History.Count % 3) != 0)
+                            {
+                                if (showDiagnostics) Print("[DIAGNOSTIC] Direction blocked | SELL skipped (BuyBias mode, keep 1/3)");
+                                directionAllowed = false;
+                            }
+                            break;
+
+                        case DirectionFilterMode.All:
+                        default:
+                            directionAllowed = true;
+                            break;
+                    }
+
+                    if (!directionAllowed)
+                        return;
 
                     if (tradeDirection == "BUY")
                         ExecuteBuyTrade(alignmentDirection, flipDirection, adxValue);
