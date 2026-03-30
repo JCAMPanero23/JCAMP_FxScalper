@@ -180,6 +180,19 @@ namespace cAlgo.Robots
 
         #endregion
 
+        #region Parameters - Diagnostics
+
+        [Parameter("=== DIAGNOSTICS ===", DefaultValue = "")]
+        public string DiagnosticsHeader { get; set; }
+
+        [Parameter("Enable Diagnostics", DefaultValue = false, Group = "Diagnostics")]
+        public bool EnableDiagnostics { get; set; }
+
+        [Parameter("Diagnostic Interval (bars)", DefaultValue = 60, MinValue = 5, MaxValue = 240, Step = 5, Group = "Diagnostics")]
+        public int DiagnosticIntervalBars { get; set; }
+
+        #endregion
+
         #region Enums
 
         public enum ChandelierTPMode
@@ -373,6 +386,7 @@ namespace cAlgo.Robots
             Print("ADX Filter: {0} | Exhaustion Exit: {1}", EnableADXFilter, EnableExhaustionExit);
             Print("Daily Limit: {0} | Consecutive Loss Limit: {1} | Monthly DD Limit: {2}", EnableDailyLossLimit, EnableConsecutiveLossLimit, EnableMonthlyDrawdownLimit);
             Print("Risk: {0:F1}% | Min RR: {1:F1} | Max Positions: {2}", RiskPercent, MinimumRRRatio, MaxPositions);
+            Print("Diagnostics: {0} | Interval: {1} bars ({2} min on M1)", EnableDiagnostics, DiagnosticIntervalBars, DiagnosticIntervalBars);
             Print("========================================");
         }
 
@@ -382,6 +396,13 @@ namespace cAlgo.Robots
 
         protected override void OnBar()
         {
+            // DIAGNOSTIC: Log heartbeat to verify cBot is running
+            if (EnableDiagnostics && Bars.Count % DiagnosticIntervalBars == 0)
+            {
+                Print("[DIAGNOSTIC] cBot is running | Time: {0} | Equity: {1:F2}",
+                    Server.Time, Account.Equity);
+            }
+
             // Check daily reset
             CheckDailyReset();
 
@@ -395,6 +416,10 @@ namespace cAlgo.Robots
             if (EnableMTFSMAEntry)
             {
                 ProcessMTFSMAEntry();
+            }
+            else if (EnableDiagnostics && Bars.Count % DiagnosticIntervalBars == 0)
+            {
+                Print("[DIAGNOSTIC] MTF SMA Entry is DISABLED in parameters");
             }
 
             // Process chandelier trailing stops
@@ -486,24 +511,51 @@ namespace cAlgo.Robots
 
         private void ProcessMTFSMAEntry()
         {
+            // DIAGNOSTIC: Show why entries are blocked
+            bool showDiagnostics = EnableDiagnostics && (Bars.Count % DiagnosticIntervalBars == 0);
+
+            if (showDiagnostics)
+            {
+                Print("[DIAGNOSTIC] ProcessMTFSMAEntry called - checking entry conditions...");
+            }
+
             // Skip if trading disabled or position open
-            if (!EnableTrading || HasOpenPosition())
+            if (!EnableTrading)
+            {
+                if (showDiagnostics) Print("[DIAGNOSTIC] Trading is DISABLED");
                 return;
+            }
+
+            if (HasOpenPosition())
+            {
+                if (showDiagnostics) Print("[DIAGNOSTIC] Position already open");
+                return;
+            }
 
             // Check daily loss limit
             if (IsDailyLimitReached())
+            {
+                if (showDiagnostics) Print("[DIAGNOSTIC] Daily limit reached | R Loss: {0:F2} | Losses: {1}",
+                    _dailyRLoss, _dailyLosingTrades);
                 return;
+            }
 
             // Check monthly drawdown limit
             if (IsMonthlyLimitReached())
+            {
+                if (showDiagnostics) Print("[DIAGNOSTIC] Monthly limit reached");
                 return;
+            }
 
             // Check session filter
             if (EnableSessionFilter)
             {
                 var period = GetOptimalPeriod(Server.Time);
                 if (period != OptimalPeriod.BestOverlap && period != OptimalPeriod.GoodLondonOpen)
+                {
+                    if (showDiagnostics) Print("[DIAGNOSTIC] Outside trading hours | Current: {0}", period);
                     return;
+                }
             }
 
             // Check ADX filter
@@ -517,19 +569,44 @@ namespace cAlgo.Robots
                     if (ADXMode == ADXFilterMode.BlockEntry)
                     {
                         // Ranging market, skip entry
+                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter blocking entry | ADX: {0:F1} < Threshold: {1:F1} | Mode: BlockEntry",
+                            adxValue, ADXMinThreshold);
                         return;
                     }
                     else if (ADXMode == ADXFilterMode.FlipDirection)
                     {
                         // Ranging market, flip direction (contrarian)
                         flipDirection = true;
+                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter will flip direction | ADX: {0:F1} < Threshold: {1:F1}",
+                            adxValue, ADXMinThreshold);
                     }
+                }
+                else if (showDiagnostics)
+                {
+                    Print("[DIAGNOSTIC] ADX filter passed | ADX: {0:F1} >= Threshold: {1:F1}", adxValue, ADXMinThreshold);
                 }
             }
 
             // Check MTF alignment
             if (!CheckMTFAlignment(out string alignmentDirection))
+            {
+                if (showDiagnostics)
+                {
+                    string m1 = GetSMAAlignment(m1Bars);
+                    string tf2 = GetSMAAlignment(tf2Bars);
+                    string tf3 = GetSMAAlignment(tf3Bars);
+                    Print("[DIAGNOSTIC] MTF not aligned | M1: {0} | TF2: {1} | TF3: {2}", m1, tf2, tf3);
+                }
                 return;
+            }
+            else if (showDiagnostics)
+            {
+                string m1 = GetSMAAlignment(m1Bars);
+                string tf2 = GetSMAAlignment(tf2Bars);
+                string tf3 = GetSMAAlignment(tf3Bars);
+                Print("[DIAGNOSTIC] MTF aligned {0} | M1: {1} | TF2: {2} | TF3: {3} | Waiting for M1 crossover...",
+                    alignmentDirection, m1, tf2, tf3);
+            }
 
             // Check for M1 crossover
             if (DetectM1Crossover(out string m1Direction))
@@ -1096,8 +1173,21 @@ namespace cAlgo.Robots
                 DateTime periodEnd = GetPeriodEnd(currentPeriod, currentTime);
                 Color periodColor = GetPeriodColor(currentPeriod);
 
+                // Calculate Y-range from recent price action to span the visible chart
+                // Get high/low from last 1000 bars to ensure box spans entire visible area
+                int lookback = Math.Min(1000, m1Bars.Count - 1);
+                double highest = m1Bars.HighPrices.Maximum(lookback);
+                double lowest = m1Bars.LowPrices.Minimum(lookback);
+                double range = highest - lowest;
+
+                // Extend the range significantly for full chart coverage
+                double yTop = highest + (range * 10);
+                double yBottom = lowest - (range * 10);
+
                 string name = string.Format("Session_{0}_{1}", currentPeriod, periodStart.ToString("yyyyMMdd_HHmm"));
-                Chart.DrawRectangle(name, periodStart, Symbol.Bid * 0.999, periodEnd, Symbol.Bid * 1.001, periodColor);
+                var rect = Chart.DrawRectangle(name, periodStart, yBottom, periodEnd, yTop, periodColor);
+                rect.IsFilled = true;
+                rect.Thickness = 0;
 
                 _lastDrawnPeriod = currentPeriod;
             }
