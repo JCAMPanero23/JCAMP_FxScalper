@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.1.3";
-        private const string VERSION_DATE = "2026-03-29";
-        private const string VERSION_NOTES = "Consecutive Loss Limit + Monthly DD + ADX Flip";
+        private const string BOT_VERSION = "4.2.0-WFO";
+        private const string VERSION_DATE = "2026-03-30";
+        private const string VERSION_NOTES = "WFO Trade Logging + Session Analysis + Consecutive Loss Limit + Monthly DD + ADX Flip";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -277,6 +277,30 @@ namespace cAlgo.Robots
 
         // Session colors
         private readonly Color ColorBestTime = Color.FromArgb(50, 0, 255, 0);
+
+        // Trade logging for WFO analysis
+        private string _tradeLogPath;
+        private bool _logHeaderWritten = false;
+
+        // Track entry context for each position
+        private class TradeContext
+        {
+            public DateTime EntryTime { get; set; }
+            public OptimalPeriod Session { get; set; }
+            public double ADXValue { get; set; }
+            public ADXFilterMode ADXMode { get; set; }
+            public bool FlipDirectionUsed { get; set; }
+            public double EntryPrice { get; set; }
+            public double StopLoss { get; set; }
+            public double TakeProfit { get; set; }
+            public string MTFAlignment { get; set; }
+            public TradeType Direction { get; set; }
+            public int Hour { get; set; }
+            public int Minute { get; set; }
+            public string DayOfWeek { get; set; }
+        }
+
+        private Dictionary<long, TradeContext> _tradeContexts = new Dictionary<long, TradeContext>();
         private readonly Color ColorGoodTime = Color.FromArgb(45, 255, 215, 0);
         private readonly Color ColorDangerZone = Color.FromArgb(40, 255, 0, 0);
 
@@ -381,6 +405,19 @@ namespace cAlgo.Robots
 
             // Subscribe to position events
             Positions.Closed += OnPositionClosedHandler;
+
+            // Initialize trade log file for WFO analysis
+            _tradeLogPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "cAlgo", "Trade_Logs", string.Format("TradeLog_{0}_{1}_{2}.csv",
+                SymbolName, Account.Number, DateTime.Now.ToString("yyyyMMdd_HHmmss")));
+
+            // Create directory if it doesn't exist
+            string logDir = System.IO.Path.GetDirectoryName(_tradeLogPath);
+            if (!System.IO.Directory.Exists(logDir))
+                System.IO.Directory.CreateDirectory(logDir);
+
+            Print("[WFO-LOG] Trade log initialized: {0}", _tradeLogPath);
+            WriteLogHeader();
 
             Print("Trading Enabled: {0} | Session Filter: {1}", EnableTrading, EnableSessionFilter);
             Print("ADX Filter: {0} | Exhaustion Exit: {1}", EnableADXFilter, EnableExhaustionExit);
@@ -628,9 +665,9 @@ namespace cAlgo.Robots
                     }
 
                     if (tradeDirection == "BUY")
-                        ExecuteBuyTrade();
+                        ExecuteBuyTrade(alignmentDirection, flipDirection, adxValue);
                     else
-                        ExecuteSellTrade();
+                        ExecuteSellTrade(alignmentDirection, flipDirection, adxValue);
                 }
             }
         }
@@ -639,7 +676,7 @@ namespace cAlgo.Robots
 
         #region Trade Execution
 
-        private void ExecuteBuyTrade()
+        private void ExecuteBuyTrade(string alignmentDirection, bool flipDirection, double adxValue)
         {
             double entryPrice = Symbol.Ask;
 
@@ -677,6 +714,25 @@ namespace cAlgo.Robots
             {
                 Print("[BUY] SUCCESS | Position ID: {0}", result.Position.Id);
                 InitializeChandelierState(result.Position, entryPrice, stopLoss, takeProfit);
+
+                // Log trade entry context for WFO analysis
+                var context = new TradeContext
+                {
+                    EntryTime = Server.Time,
+                    Session = GetOptimalPeriod(Server.Time),
+                    ADXValue = adxValue,
+                    ADXMode = ADXMode,
+                    FlipDirectionUsed = flipDirection,
+                    EntryPrice = entryPrice,
+                    StopLoss = stopLoss,
+                    TakeProfit = takeProfit,
+                    MTFAlignment = alignmentDirection,
+                    Direction = TradeType.Buy,
+                    Hour = Server.Time.Hour,
+                    Minute = Server.Time.Minute,
+                    DayOfWeek = Server.Time.DayOfWeek.ToString()
+                };
+                LogTradeEntry(result.Position, context);
             }
             else
             {
@@ -684,7 +740,7 @@ namespace cAlgo.Robots
             }
         }
 
-        private void ExecuteSellTrade()
+        private void ExecuteSellTrade(string alignmentDirection, bool flipDirection, double adxValue)
         {
             double entryPrice = Symbol.Bid;
 
@@ -722,6 +778,25 @@ namespace cAlgo.Robots
             {
                 Print("[SELL] SUCCESS | Position ID: {0}", result.Position.Id);
                 InitializeChandelierState(result.Position, entryPrice, stopLoss, takeProfit);
+
+                // Log trade entry context for WFO analysis
+                var context = new TradeContext
+                {
+                    EntryTime = Server.Time,
+                    Session = GetOptimalPeriod(Server.Time),
+                    ADXValue = adxValue,
+                    ADXMode = ADXMode,
+                    FlipDirectionUsed = flipDirection,
+                    EntryPrice = entryPrice,
+                    StopLoss = stopLoss,
+                    TakeProfit = takeProfit,
+                    MTFAlignment = alignmentDirection,
+                    Direction = TradeType.Sell,
+                    Hour = Server.Time.Hour,
+                    Minute = Server.Time.Minute,
+                    DayOfWeek = Server.Time.DayOfWeek.ToString()
+                };
+                LogTradeEntry(result.Position, context);
             }
             else
             {
@@ -1313,6 +1388,9 @@ namespace cAlgo.Robots
             var position = args.Position;
             if (position.Label != MagicNumber.ToString()) return;
 
+            // Log trade exit for WFO analysis
+            LogTradeExit(position);
+
             // Remove chandelier state
             if (_chandelierStates.ContainsKey(position.Id))
                 _chandelierStates.Remove(position.Id);
@@ -1350,6 +1428,150 @@ namespace cAlgo.Robots
                     Print("[RISK] Daily limit reached | R Loss: {0:F2} | Losses: {1}", _dailyRLoss, _dailyLosingTrades);
                 }
             }
+        }
+
+        #endregion
+
+        #region Trade Logging for WFO Analysis
+
+        private void WriteLogHeader()
+        {
+            if (_logHeaderWritten) return;
+
+            var header = string.Join(",", new string[]
+            {
+                // Trade Identification
+                "TradeID", "PositionID",
+
+                // Time Dimensions
+                "EntryDate", "EntryTime", "EntryHour", "EntryMinute", "EntryDayOfWeek",
+                "ExitDate", "ExitTime", "ExitHour", "ExitMinute",
+                "DurationMinutes",
+
+                // Session & Market Context
+                "Session", "IsLondonSession", "IsNYSession", "IsAsianSession",
+
+                // Trade Details
+                "Direction", "EntryPrice", "ExitPrice", "StopLoss", "TakeProfit",
+                "Volume", "ProfitPips", "ProfitCurrency", "ProfitPercent",
+
+                // ADX Context
+                "ADXValue", "ADXPeriod", "ADXThreshold", "ADXMode",
+                "FlipDirectionUsed", "ADXTrending",
+
+                // MTF Alignment
+                "MTFAlignment", "M1Direction", "TF2Direction", "TF3Direction",
+
+                // Parameters Snapshot
+                "SMAPeriod", "Timeframe2", "Timeframe3", "MinRR", "RiskPercent",
+
+                // Risk Context
+                "DailyRLoss", "ConsecutiveLosses", "AccountBalance", "AccountEquity",
+
+                // Outcome
+                "Result", "RMultiple", "WinningTrade"
+            });
+
+            System.IO.File.WriteAllText(_tradeLogPath, header + Environment.NewLine);
+            _logHeaderWritten = true;
+        }
+
+        private void LogTradeEntry(Position position, TradeContext context)
+        {
+            // Store context for when position closes
+            if (!_tradeContexts.ContainsKey(position.Id))
+                _tradeContexts.Add(position.Id, context);
+
+            Print("[WFO-LOG] Trade #{0} logged | {1} | Session: {2} | ADX: {3:F1} | Flip: {4}",
+                position.Id, context.Direction, context.Session, context.ADXValue, context.FlipDirectionUsed);
+        }
+
+        private void LogTradeExit(Position position)
+        {
+            if (!_tradeContexts.ContainsKey(position.Id))
+            {
+                Print("[WFO-LOG] Warning: No entry context found for position {0}", position.Id);
+                return;
+            }
+
+            TradeContext ctx = _tradeContexts[position.Id];
+            DateTime exitTime = Server.Time;
+
+            // Calculate metrics
+            double profitPips = position.Pips;
+            double profitPercent = (position.NetProfit / Account.Balance) * 100;
+            double riskAmount = Account.Balance * (RiskPercent / 100.0);
+            double rMultiple = position.NetProfit / riskAmount;
+            bool isWin = position.NetProfit > 0;
+
+            // Session flags
+            bool isLondon = (ctx.Session == OptimalPeriod.GoodLondonOpen);
+            bool isNY = (ctx.Session == OptimalPeriod.BestOverlap);
+            bool isAsian = (ctx.Session == OptimalPeriod.DangerDeadZone || ctx.Session == OptimalPeriod.DangerLateNY);
+
+            // ADX trending flag
+            bool adxTrending = ctx.ADXValue >= ADXMinThreshold;
+
+            // Duration
+            double durationMinutes = (exitTime - ctx.EntryTime).TotalMinutes;
+
+            // Build CSV row
+            var row = string.Join(",", new object[]
+            {
+                // Trade Identification
+                History.Count, position.Id,
+
+                // Time Dimensions
+                ctx.EntryTime.ToString("yyyy-MM-dd"), ctx.EntryTime.ToString("HH:mm:ss"),
+                ctx.Hour, ctx.Minute, ctx.DayOfWeek,
+                exitTime.ToString("yyyy-MM-dd"), exitTime.ToString("HH:mm:ss"),
+                exitTime.Hour, exitTime.Minute,
+                Math.Round(durationMinutes, 1),
+
+                // Session & Market Context
+                ctx.Session, isLondon, isNY, isAsian,
+
+                // Trade Details
+                ctx.Direction, ctx.EntryPrice, position.EntryPrice, // Use actual filled price
+                ctx.StopLoss, ctx.TakeProfit,
+                position.VolumeInUnits,
+                Math.Round(profitPips, 1),
+                Math.Round(position.NetProfit, 2),
+                Math.Round(profitPercent, 4),
+
+                // ADX Context
+                Math.Round(ctx.ADXValue, 2), ADXPeriod, ADXMinThreshold,
+                ctx.ADXMode, ctx.FlipDirectionUsed, adxTrending,
+
+                // MTF Alignment
+                ctx.MTFAlignment,
+                GetSMAAlignment(m1Bars), GetSMAAlignment(tf2Bars), GetSMAAlignment(tf3Bars),
+
+                // Parameters Snapshot
+                MTFSMAPeriod, Timeframe2, Timeframe3, MinimumRRRatio, RiskPercent,
+
+                // Risk Context
+                Math.Round(_dailyRLoss, 2), _consecutiveLosses,
+                Math.Round(Account.Balance, 2), Math.Round(Account.Equity, 2),
+
+                // Outcome
+                isWin ? "WIN" : "LOSS", Math.Round(rMultiple, 2), isWin
+            });
+
+            // Append to CSV file
+            try
+            {
+                System.IO.File.AppendAllText(_tradeLogPath, row + Environment.NewLine);
+                Print("[WFO-LOG] Trade #{0} exit logged | Profit: {1:F2} ({2:F2}R) | Duration: {3:F0}m",
+                    position.Id, position.NetProfit, rMultiple, durationMinutes);
+            }
+            catch (Exception ex)
+            {
+                Print("[WFO-LOG] Error writing to log: {0}", ex.Message);
+            }
+
+            // Clean up context
+            _tradeContexts.Remove(position.Id);
         }
 
         #endregion
