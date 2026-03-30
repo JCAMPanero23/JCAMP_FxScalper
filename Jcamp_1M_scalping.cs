@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.2.0-WFO";
-        private const string VERSION_DATE = "2026-03-30";
-        private const string VERSION_NOTES = "WFO Trade Logging + Session Analysis + Consecutive Loss Limit + Monthly DD + ADX Flip";
+        private const string BOT_VERSION = "4.2.1-WFO";
+        private const string VERSION_DATE = "2026-03-31";
+        private const string VERSION_NOTES = "WFO + Session Config + ADX Range Filter + Trade Logging";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -68,8 +68,11 @@ namespace cAlgo.Robots
         [Parameter("ADX Period", DefaultValue = 14, MinValue = 7, MaxValue = 28, Step = 1, Group = "ADX Filter")]
         public int ADXPeriod { get; set; }
 
-        [Parameter("ADX Min Threshold", DefaultValue = 20.0, MinValue = 15.0, MaxValue = 35.0, Step = 5.0, Group = "ADX Filter")]
+        [Parameter("ADX Min Threshold", DefaultValue = 20.0, MinValue = 10.0, MaxValue = 35.0, Step = 1.0, Group = "ADX Filter")]
         public double ADXMinThreshold { get; set; }
+
+        [Parameter("ADX Max Threshold (0 = disabled)", DefaultValue = 0.0, MinValue = 0.0, MaxValue = 50.0, Step = 1.0, Group = "ADX Filter")]
+        public double ADXMaxThreshold { get; set; }
 
         #endregion
 
@@ -105,6 +108,15 @@ namespace cAlgo.Robots
 
         [Parameter("Enable Session Filter", DefaultValue = true, Group = "Session Management")]
         public bool EnableSessionFilter { get; set; }
+
+        [Parameter("Enable London Session (08:00-12:00)", DefaultValue = true, Group = "Session Management")]
+        public bool EnableLondonSession { get; set; }
+
+        [Parameter("Enable NY Overlap (13:00-17:00)", DefaultValue = true, Group = "Session Management")]
+        public bool EnableNYSession { get; set; }
+
+        [Parameter("Enable Asian Session (04:00-08:00, 20:00-04:00)", DefaultValue = false, Group = "Session Management")]
+        public bool EnableAsianSession { get; set; }
 
         [Parameter("Show Session Boxes", DefaultValue = false, Group = "Session Management")]
         public bool ShowSessionBoxes { get; set; }
@@ -588,9 +600,19 @@ namespace cAlgo.Robots
             if (EnableSessionFilter)
             {
                 var period = GetOptimalPeriod(Server.Time);
-                if (period != OptimalPeriod.BestOverlap && period != OptimalPeriod.GoodLondonOpen)
+                bool sessionAllowed = false;
+
+                if (period == OptimalPeriod.GoodLondonOpen && EnableLondonSession)
+                    sessionAllowed = true;
+                if (period == OptimalPeriod.BestOverlap && EnableNYSession)
+                    sessionAllowed = true;
+                if ((period == OptimalPeriod.DangerDeadZone || period == OptimalPeriod.DangerLateNY) && EnableAsianSession)
+                    sessionAllowed = true;
+
+                if (!sessionAllowed)
                 {
-                    if (showDiagnostics) Print("[DIAGNOSTIC] Outside trading hours | Current: {0}", period);
+                    if (showDiagnostics) Print("[DIAGNOSTIC] Session blocked | Current: {0} | London: {1} | NY: {2} | Asian: {3}",
+                        period, EnableLondonSession, EnableNYSession, EnableAsianSession);
                     return;
                 }
             }
@@ -601,12 +623,22 @@ namespace cAlgo.Robots
             if (EnableADXFilter && adxIndicator != null)
             {
                 adxValue = adxIndicator.ADX.LastValue;
+
+                // Check ADX Max Threshold (block if ADX too high)
+                if (ADXMaxThreshold > 0 && adxValue > ADXMaxThreshold)
+                {
+                    if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter blocking entry | ADX: {0:F1} > Max Threshold: {1:F1}",
+                        adxValue, ADXMaxThreshold);
+                    return;
+                }
+
+                // Check ADX Min Threshold
                 if (adxValue < ADXMinThreshold)
                 {
                     if (ADXMode == ADXFilterMode.BlockEntry)
                     {
                         // Ranging market, skip entry
-                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter blocking entry | ADX: {0:F1} < Threshold: {1:F1} | Mode: BlockEntry",
+                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter blocking entry | ADX: {0:F1} < Min Threshold: {1:F1} | Mode: BlockEntry",
                             adxValue, ADXMinThreshold);
                         return;
                     }
@@ -614,13 +646,13 @@ namespace cAlgo.Robots
                     {
                         // Ranging market, flip direction (contrarian)
                         flipDirection = true;
-                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter will flip direction | ADX: {0:F1} < Threshold: {1:F1}",
+                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter will flip direction | ADX: {0:F1} < Min Threshold: {1:F1}",
                             adxValue, ADXMinThreshold);
                     }
                 }
                 else if (showDiagnostics)
                 {
-                    Print("[DIAGNOSTIC] ADX filter passed | ADX: {0:F1} >= Threshold: {1:F1}", adxValue, ADXMinThreshold);
+                    Print("[DIAGNOSTIC] ADX filter passed | ADX: {0:F1} >= Min Threshold: {1:F1}", adxValue, ADXMinThreshold);
                 }
             }
 
