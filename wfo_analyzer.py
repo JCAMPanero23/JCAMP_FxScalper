@@ -42,7 +42,7 @@ class WFOAnalyzer:
         self.df['ExitDate'] = pd.to_datetime(self.df['ExitDate'])
         self.df['WinningTrade'] = self.df['WinningTrade'].astype(bool)
 
-        print(f"✓ Loaded {len(self.df)} trades")
+        print(f"[OK] Loaded {len(self.df)} trades")
         print(f"  Date range: {self.df['EntryDate'].min().date()} to {self.df['EntryDate'].max().date()}")
         print(f"  Total profit: ${self.df['ProfitCurrency'].sum():.2f}")
         print(f"  Win rate: {self.df['WinningTrade'].mean()*100:.1f}%")
@@ -104,7 +104,7 @@ class WFOAnalyzer:
         # Determine best session
         if len(session_stats) > 0:
             best_session = max(session_stats, key=lambda x: float(x['Total R'].replace('R', '')))
-            print(f"🏆 BEST SESSION: {best_session['Session']}")
+            print(f">>> BEST SESSION: {best_session['Session']}")
             print(f"   Total R: {best_session['Total R']} | Win Rate: {best_session['Win Rate']}")
 
             self.results['best_session'] = best_session
@@ -148,7 +148,7 @@ class WFOAnalyzer:
         ].sort_values('Total R', ascending=False)
 
         if len(best_hours) > 0:
-            print(f"🏆 BEST HOURS (min 5 trades):")
+            print(f">>> BEST HOURS (min 5 trades):")
             for hour, row in best_hours.head(5).iterrows():
                 print(f"   {hour:02d}:00 UTC - {row['Total R']:.2f}R ({int(row['Trades'])} trades)")
 
@@ -273,7 +273,7 @@ class WFOAnalyzer:
         optimal_threshold_data = adx_threshold[adx_threshold['Trades'] >= 10]
         if len(optimal_threshold_data) > 0:
             best_threshold = optimal_threshold_data['Total R'].idxmax()
-            print(f"🏆 BEST ADX RANGE: {best_threshold}")
+            print(f">>> BEST ADX RANGE: {best_threshold}")
             print(f"   Total R: {optimal_threshold_data.loc[best_threshold, 'Total R']:.2f}R")
             print(f"   Win Rate: {optimal_threshold_data.loc[best_threshold, 'Win Rate']:.1f}%")
 
@@ -332,13 +332,13 @@ class WFOAnalyzer:
                 recommendations['parameters']['EnableLondonSession'] = True
                 recommendations['parameters']['EnableNYSession'] = False
                 recommendations['parameters']['EnableAsianSession'] = False
-                print(f"✓ SESSION: London Only (08:00-12:00 UTC)")
+                print(f"[OK] SESSION: London Only (08:00-12:00 UTC)")
                 print(f"  Reason: {best['Total R']} total return, {best['Win Rate']} win rate")
             elif 'NY' in session_name:
                 recommendations['parameters']['EnableLondonSession'] = False
                 recommendations['parameters']['EnableNYSession'] = True
                 recommendations['parameters']['EnableAsianSession'] = False
-                print(f"✓ SESSION: NY Overlap Only (13:00-17:00 UTC)")
+                print(f"[OK] SESSION: NY Overlap Only (13:00-17:00 UTC)")
                 print(f"  Reason: {best['Total R']} total return, {best['Win Rate']} win rate")
 
         # ADX Mode recommendation
@@ -349,7 +349,7 @@ class WFOAnalyzer:
 
         best_mode = max(adx_modes, key=adx_modes.get)
         recommendations['parameters']['ADXMode'] = best_mode
-        print(f"\n✓ ADX MODE: {best_mode}")
+        print(f"\n[OK] ADX MODE: {best_mode}")
         print(f"  Reason: {adx_modes[best_mode]:+.2f}R total return")
 
         # ADX Threshold recommendation
@@ -366,7 +366,7 @@ class WFOAnalyzer:
             }
             recommended_threshold = threshold_map.get(adx_range, 18)
             recommendations['parameters']['ADXMinThreshold'] = recommended_threshold
-            print(f"\n✓ ADX THRESHOLD: {recommended_threshold}")
+            print(f"\n[OK] ADX THRESHOLD: {recommended_threshold}")
             print(f"  Reason: {adx_range} range performed best")
 
         # ADX Period (analyze if varied in backtest)
@@ -381,7 +381,7 @@ class WFOAnalyzer:
             if period_performance:
                 best_period = max(period_performance, key=period_performance.get)
                 recommendations['parameters']['ADXPeriod'] = int(best_period)
-                print(f"\n✓ ADX PERIOD: {best_period}")
+                print(f"\n[OK] ADX PERIOD: {best_period}")
                 print(f"  Reason: {period_performance[best_period]:+.2f}R total return")
         else:
             recommendations['parameters']['ADXPeriod'] = int(adx_periods[0])
@@ -391,7 +391,7 @@ class WFOAnalyzer:
         if len(flip_trades) > 0:
             flip_r = flip_trades['RMultiple'].sum()
             flip_wr = flip_trades['WinningTrade'].mean() * 100
-            print(f"\n✓ FLIP DIRECTION: Effective")
+            print(f"\n[OK] FLIP DIRECTION: Effective")
             print(f"  Stats: {flip_r:+.2f}R total, {flip_wr:.1f}% win rate, {len(flip_trades)} trades")
 
         # Calculate expected performance with recommended settings
@@ -453,7 +453,7 @@ class WFOAnalyzer:
         json_file = output_dir / f'recommended_settings_{timestamp}.json'
         with open(json_file, 'w') as f:
             json.dump(self.recommendations, f, indent=2)
-        print(f"✓ Saved: {json_file.name}")
+        print(f"[OK] Saved: {json_file.name}")
 
         # CSV export (simple format for cAlgo)
         csv_data = []
@@ -462,7 +462,7 @@ class WFOAnalyzer:
 
         csv_file = output_dir / f'recommended_settings_{timestamp}.csv'
         pd.DataFrame(csv_data).to_csv(csv_file, index=False)
-        print(f"✓ Saved: {csv_file.name}")
+        print(f"[OK] Saved: {csv_file.name}")
 
         # Human-readable text file
         txt_file = output_dir / f'recommended_settings_{timestamp}.txt'
@@ -483,8 +483,8 @@ class WFOAnalyzer:
             for metric, value in self.recommendations['performance'].items():
                 f.write(f"  {metric}: {value}\n")
 
-        print(f"✓ Saved: {txt_file.name}")
-        print(f"\n📁 Output directory: {output_dir}")
+        print(f"[OK] Saved: {txt_file.name}")
+        print(f"\n>>> Output directory: {output_dir}")
         print()
 
         return self
@@ -606,7 +606,7 @@ class WFOAnalyzer:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         chart_file = output_dir / f'analysis_dashboard_{timestamp}.png'
         plt.savefig(chart_file, dpi=150, bbox_inches='tight')
-        print(f"✓ Saved: {chart_file.name}")
+        print(f"[OK] Saved: {chart_file.name}")
 
         plt.close()
 

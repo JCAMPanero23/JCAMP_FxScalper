@@ -1,0 +1,146 @@
+
+======================================================================
+Loading trade log: TradeLog_EURUSD_1092444_20260331_010813.csv
+======================================================================
+
+[OK] Loaded 34 trades
+  Date range: 2026-01-05 to 2026-03-25
+  Total profit: $-18.18
+  Win rate: 20.6%
+
+
+======================================================================
+SESSION ANALYSIS
+======================================================================
+
+                             Session  Trades Win Rate  Avg R Total R  Profit Factor Avg Duration
+Asian (04:00-08:00, 20:00-04:00 UTC)      34    20.6% -0.13R  -4.32R           0.87         441m
+
+>>> BEST SESSION: Asian (04:00-08:00, 20:00-04:00 UTC)
+   Total R: -4.32R | Win Rate: 20.6%
+
+======================================================================
+HOURLY ANALYSIS
+======================================================================
+
+           Trades Win Rate   Avg R Total R  Profit $
+EntryHour                                           
+0               2     0.0%  -1.02R  -2.04R     -9.73
+1               2    50.0%   1.25R   2.51R     12.27
+2               3    67.0%   1.63R   4.89R     24.23
+3               3     0.0%  -1.01R  -3.02R    -14.72
+4               1     0.0%   -1.0R   -1.0R     -4.84
+6               1     0.0%  -0.98R  -0.98R     -4.84
+7               1   100.0%   4.78R   4.78R     23.29
+20             13    23.0%  -0.08R  -0.98R     -3.22
+21              2     0.0%   -1.1R  -2.19R    -10.63
+22              4     0.0%  -1.06R  -4.22R    -20.26
+23              2     0.0%  -1.04R  -2.07R     -9.73
+
+
+======================================================================
+DIRECTION ANALYSIS (BUY vs SELL)
+======================================================================
+
+Direction  Trades Win Rate  Avg R Total R  Profit Factor Avg Duration
+      BUY      17    17.6% -0.35R  -5.94R           0.62         618m
+     SELL      17    23.5%  0.10R   1.62R           1.14         263m
+
+DIRECTION PERFORMANCE BY SESSION:
+
+
+======================================================================
+ADX FILTER ANALYSIS
+======================================================================
+
+ADX MODE PERFORMANCE:
+
+  FlipDirection:
+    Win Rate: 20.6% | Total R: -4.32R | PF: 0.87 | Trades: 34
+
+FLIP DIRECTION ANALYSIS:
+
+
+  Normal Direction Trades: 34
+    Win Rate: 20.6%
+    Avg R: -0.13R
+    Total R: -4.32R
+    Profit Factor: 0.87
+
+ADX THRESHOLD RANGES:
+
+            Trades  Win Rate  Total R
+ADX_Bucket                           
+<15              3      33.3     0.95
+15-18           12      16.7    -2.78
+18-20           19      21.1    -2.49
+20-22            0       NaN     0.00
+22-25            0       NaN     0.00
+>25              0       NaN     0.00
+
+>>> BEST ADX RANGE: 18-20
+   Total R: -2.49R
+   Win Rate: 21.1%
+
+======================================================================
+DAY OF WEEK ANALYSIS
+======================================================================
+
+                Trades Win Rate  Avg R  Total R
+EntryDayOfWeek                                 
+Monday               8    25.0%  -0.03    -0.21
+Tuesday              3     0.0%  -0.99    -2.97
+Wednesday            9    22.0%   0.08     0.75
+Thursday             6    17.0%  -0.30    -1.83
+Friday               6    33.0%   0.35     2.12
+
+
+======================================================================
+RECOMMENDED PARAMETER SETTINGS
+======================================================================
+
+
+[OK] ADX MODE: FlipDirection
+  Reason: -4.32R total return
+
+[OK] ADX THRESHOLD: 19
+  Reason: 18-20 range performed best
+
+======================================================================
+EXPECTED PERFORMANCE (With Recommended Settings)
+======================================================================
+
+  Total Trades: 34
+  Win Rate: 20.6%
+  Average R: -0.13R
+  Total R: -4.32R
+  Profit Factor: 0.87
+
+
+======================================================================
+EXPORTING OPTIMIZED SETTINGS
+======================================================================
+
+[OK] Saved: recommended_settings_20260331_011555.json
+[OK] Saved: recommended_settings_20260331_011555.csv
+[OK] Saved: recommended_settings_20260331_011555.txt
+
+>>> Output directory: C:\Users\Jcamp_Laptop\Documents\cAlgo\Data\cBots\Jcamp_1M_scalping\cAlgo\Trade_Logs\wfo_results
+
+
+======================================================================
+GENERATING VISUALIZATIONS
+======================================================================
+
+[OK] Saved: analysis_dashboard_20260331_011556.png
+
+======================================================================
+ANALYSIS COMPLETE!
+======================================================================
+
+Next steps:
+1. Review the recommended settings in wfo_results/
+2. Apply settings to your cBot in cAlgo
+3. Run out-of-sample backtest to validate
+4. If validated, deploy to demo with monitoring
+

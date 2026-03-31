@@ -1,0 +1,167 @@
+
+======================================================================
+Loading trade log: TradeLog_EURUSD_1092444_20260331_011104.csv
+======================================================================
+
+[OK] Loaded 50 trades
+  Date range: 2026-01-05 to 2026-03-25
+  Total profit: $1.23
+  Win rate: 22.0%
+
+
+======================================================================
+SESSION ANALYSIS
+======================================================================
+
+                             Session  Trades Win Rate  Avg R Total R  Profit Factor Avg Duration
+            London (08:00-12:00 UTC)      12    33.3%  0.37R   4.42R           1.59         337m
+        NY Overlap (13:00-17:00 UTC)      18    22.2%  0.10R   1.76R           1.14         274m
+Asian (04:00-08:00, 20:00-04:00 UTC)      20    15.0% -0.34R  -6.85R           0.62         240m
+
+>>> BEST SESSION: London (08:00-12:00 UTC)
+   Total R: 4.42R | Win Rate: 33.3%
+
+======================================================================
+HOURLY ANALYSIS
+======================================================================
+
+           Trades Win Rate   Avg R Total R  Profit $
+EntryHour                                           
+0               3     0.0%   -1.0R   -3.0R    -14.57
+1               1     0.0%  -0.92R  -0.92R     -4.89
+2               3    67.0%   1.62R   4.85R     24.23
+3               3     0.0%   -1.0R   -3.0R    -14.72
+4               1     0.0%  -0.92R  -0.92R     -4.84
+6               1     0.0%  -0.95R  -0.95R     -4.84
+7               1   100.0%   4.48R   4.48R     23.29
+8               4    25.0%  -0.02R  -0.08R     -1.20
+9               3    33.0%   0.32R   0.95R      5.61
+10              3    33.0%   0.28R   0.83R      4.12
+11              2    50.0%   1.36R   2.72R     15.30
+13              4     0.0%   -1.0R  -3.99R    -20.40
+14              6    17.0%  -0.16R  -0.98R     -4.88
+15              5    60.0%   1.94R    9.7R     50.30
+16              3     0.0%  -0.99R  -2.97R    -14.82
+20              3     0.0%  -1.03R  -3.08R    -15.50
+21              2     0.0%  -1.15R   -2.3R    -11.23
+23              2     0.0%   -1.0R  -2.01R     -9.73
+
+>>> BEST HOURS (min 5 trades):
+   15:00 UTC - 9.70R (5 trades)
+
+======================================================================
+DIRECTION ANALYSIS (BUY vs SELL)
+======================================================================
+
+Direction  Trades Win Rate  Avg R Total R  Profit Factor Avg Duration
+      BUY      25    20.0% -0.17R  -4.19R           0.82         183m
+     SELL      25    24.0%  0.14R   3.52R           1.21         368m
+
+DIRECTION PERFORMANCE BY SESSION:
+
+  London:
+    BUY: 20.0% WR | -0.29R | 5 trades
+    SELL: 42.9% WR | +4.71R | 7 trades
+
+  NY Overlap:
+    BUY: 30.0% WR | +3.26R | 10 trades
+    SELL: 12.5% WR | -1.50R | 8 trades
+
+
+======================================================================
+ADX FILTER ANALYSIS
+======================================================================
+
+ADX MODE PERFORMANCE:
+
+  FlipDirection:
+    Win Rate: 22.0% | Total R: -0.67R | PF: 1.01 | Trades: 50
+
+FLIP DIRECTION ANALYSIS:
+
+
+  Normal Direction Trades: 50
+    Win Rate: 22.0%
+    Avg R: -0.01R
+    Total R: -0.67R
+    Profit Factor: 1.01
+
+ADX THRESHOLD RANGES:
+
+            Trades  Win Rate  Total R
+ADX_Bucket                           
+<15              6      16.7    -1.25
+15-18           15      26.7     4.06
+18-20           29      20.7    -3.48
+20-22            0       NaN     0.00
+22-25            0       NaN     0.00
+>25              0       NaN     0.00
+
+>>> BEST ADX RANGE: 15-18
+   Total R: 4.06R
+   Win Rate: 26.7%
+
+======================================================================
+DAY OF WEEK ANALYSIS
+======================================================================
+
+                Trades Win Rate  Avg R  Total R
+EntryDayOfWeek                                 
+Monday               8    25.0%   0.03     0.21
+Tuesday              9    22.0%   0.15     1.39
+Wednesday           11    27.0%   0.22     2.39
+Thursday            12    25.0%   0.12     1.43
+Friday               9    11.0%  -0.56    -5.06
+
+
+======================================================================
+RECOMMENDED PARAMETER SETTINGS
+======================================================================
+
+[OK] SESSION: London Only (08:00-12:00 UTC)
+  Reason: 4.42R total return, 33.3% win rate
+
+[OK] ADX MODE: FlipDirection
+  Reason: -0.67R total return
+
+[OK] ADX THRESHOLD: 16
+  Reason: 15-18 range performed best
+
+======================================================================
+EXPECTED PERFORMANCE (With Recommended Settings)
+======================================================================
+
+  Total Trades: 12
+  Win Rate: 33.3%
+  Average R: 0.37R
+  Total R: +4.42R
+  Profit Factor: 1.59
+
+
+======================================================================
+EXPORTING OPTIMIZED SETTINGS
+======================================================================
+
+[OK] Saved: recommended_settings_20260331_011623.json
+[OK] Saved: recommended_settings_20260331_011623.csv
+[OK] Saved: recommended_settings_20260331_011623.txt
+
+>>> Output directory: C:\Users\Jcamp_Laptop\Documents\cAlgo\Data\cBots\Jcamp_1M_scalping\cAlgo\Trade_Logs\wfo_results
+
+
+======================================================================
+GENERATING VISUALIZATIONS
+======================================================================
+
+[OK] Saved: analysis_dashboard_20260331_011623.png
+
+======================================================================
+ANALYSIS COMPLETE!
+======================================================================
+
+Next steps:
+1. Review the recommended settings in wfo_results/
+2. Apply settings to your cBot in cAlgo
+3. Run out-of-sample backtest to validate
+4. If validated, deploy to demo with monitoring
+
