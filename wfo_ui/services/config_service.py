@@ -5,12 +5,26 @@ import json
 
 CONFIG_PATH = Path(__file__).parent.parent / "config.json"
 
+def detect_ctrader_path() -> str:
+    """Auto-detect cTrader logs directory"""
+    possible_paths = [
+        Path.home() / "Documents" / "cAlgo" / "Data" / "cBots" / "Jcamp_1M_scalping" / "cAlgo" / "Trade_Logs",
+        Path.home() / "Documents" / "cTrader" / "Trade_Logs",
+        Path.home() / "Documents" / "cAlgo" / "Trade_Logs",
+    ]
+
+    for path in possible_paths:
+        if path.exists():
+            return str(path)
+
+    return ""
+
 def get_default_config() -> Dict[str, Any]:
     """Return default configuration"""
     return {
         "version": "1.0.0",
         "paths": {
-            "ctrader_logs": "C:/Users/Jcamp_Laptop/Documents/cAlgo/Data/cBots/Jcamp_1M_scalping/cAlgo/Trade_Logs/",
+            "ctrader_logs": detect_ctrader_path() or "C:/Users/Jcamp_Laptop/Documents/cAlgo/Data/cBots/Jcamp_1M_scalping/cAlgo/Trade_Logs/",
             "archive": str(Path(__file__).parent.parent.parent / "data" / "backtest_archive"),
             "temp": str(Path(__file__).parent.parent.parent / "data" / "temp"),
             "analyzer_script": str(Path(__file__).parent.parent.parent / "wfo_analyzer.py")
@@ -54,14 +68,28 @@ def load_config() -> Dict[str, Any]:
         save_config(config)
         return config
 
-    with open(CONFIG_PATH, 'r') as f:
-        return json.load(f)
+    try:
+        with open(CONFIG_PATH, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        # Config file is corrupted, recreate with defaults
+        config = get_default_config()
+        save_config(config)
+        return config
 
 def save_config(config: Dict[str, Any]) -> None:
-    """Save config to disk"""
+    """Save configuration to file
+
+    Raises:
+        IOError: If unable to write config file
+    """
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(CONFIG_PATH, 'w') as f:
-        json.dump(config, f, indent=2)
+
+    try:
+        with open(CONFIG_PATH, 'w') as f:
+            json.dump(config, f, indent=2)
+    except IOError as e:
+        raise IOError(f"Failed to save config to {CONFIG_PATH}: {e}")
 
 def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """Validate configuration values
@@ -89,17 +117,3 @@ def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "valid": len(errors) == 0,
         "errors": errors
     }
-
-def detect_ctrader_path() -> str:
-    """Auto-detect cTrader logs directory"""
-    possible_paths = [
-        Path.home() / "Documents" / "cAlgo" / "Data" / "cBots" / "Jcamp_1M_scalping" / "cAlgo" / "Trade_Logs",
-        Path.home() / "Documents" / "cTrader" / "Trade_Logs",
-        Path.home() / "Documents" / "cAlgo" / "Trade_Logs",
-    ]
-
-    for path in possible_paths:
-        if path.exists():
-            return str(path)
-
-    return ""
