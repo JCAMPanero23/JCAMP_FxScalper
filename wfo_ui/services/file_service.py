@@ -3,7 +3,6 @@ import os
 import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
 
 
 # Log file location
@@ -58,8 +57,15 @@ def cleanup_temp_files() -> None:
     if not TEMP_DIR.exists():
         return
 
+    errors = []
     for item in TEMP_DIR.iterdir():
-        if item.is_file():
-            item.unlink()
-        elif item.is_dir():
-            shutil.rmtree(item)
+        try:
+            if item.is_file():
+                item.unlink()
+            elif item.is_dir():
+                shutil.rmtree(item)
+        except Exception as e:
+            errors.append(f"Failed to remove {item}: {e}")
+
+    if errors:
+        log_action(f"Cleanup completed with errors: {'; '.join(errors)}")
