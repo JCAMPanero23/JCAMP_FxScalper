@@ -27,3 +27,11 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# WFO UI data (not committed)
+data/
+wfo_ui/config.json
+
+# Python
+*.pyd
+.Python
