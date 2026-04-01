@@ -1,0 +1,4 @@
+PositionID,EntryDate,ExitDate,Direction,WinningTrade,RMultiple,ProfitCurrency,DurationMinutes,EntryHour,EntryDayOfWeek,IsLondonSession,IsNYSession,IsAsianSession,ADXMode,ADXValue,ADXPeriod,FlipDirectionUsed
+1,2026-01-06 08:30:00,2026-01-06 10:15:00,Buy,True,2.5,125.50,105,8,Tuesday,True,False,False,FlipDirection,18.5,18,False
+2,2026-01-06 09:45:00,2026-01-06 11:30:00,Sell,False,-1.0,-50.00,105,9,Tuesday,True,False,False,FlipDirection,16.2,18,False
+3,2026-01-07 08:00:00,2026-01-07 09:45:00,Buy,True,3.2,160.00,105,8,Wednesday,True,False,False,FlipDirection,19.1,18,True
