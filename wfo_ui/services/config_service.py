@@ -6,27 +6,44 @@ import json
 CONFIG_PATH = Path(__file__).parent.parent / "config.json"
 
 def get_default_config() -> Dict[str, Any]:
-    """Returns the default configuration"""
+    """Return default configuration"""
     return {
         "version": "1.0.0",
         "paths": {
-            "backtest_archive": str(Path(__file__).parent.parent.parent / "data" / "backtest_archive"),
-            "temp_dir": str(Path(__file__).parent.parent.parent / "data" / "temp"),
-            "ctrader_log_dir": detect_ctrader_path()
+            "ctrader_logs": "C:/Users/Jcamp_Laptop/Documents/cAlgo/Data/cBots/Jcamp_1M_scalping/cAlgo/Trade_Logs/",
+            "archive": str(Path(__file__).parent.parent.parent / "data" / "backtest_archive"),
+            "temp": str(Path(__file__).parent.parent.parent / "data" / "temp"),
+            "analyzer_script": str(Path(__file__).parent.parent.parent / "wfo_analyzer.py")
         },
         "behavior": {
-            "auto_delete_csv": True,
-            "delete_after_days": 7,
-            "auto_archive": True
+            "auto_cleanup": True,
+            "auto_open_browser": True,
+            "results_per_page": 20,
+            "dark_mode": False
         },
         "export": {
-            "default_format": "cbotset",
-            "include_comments": True
+            "default_filename_pattern": "Jcamp_1M_scalping_{period}_{session}.cbotset",
+            "include_timestamp": False
         },
-        "cbot_current_settings": {},
+        "cbot_current_settings": {
+            "EnableLondonSession": True,
+            "EnableNYSession": True,
+            "EnableAsianSession": False,
+            "ADXMode": "FlipDirection",
+            "ADXPeriod": 18,
+            "ADXMinThreshold": 15,
+            "MTF_SMA_Period": 275,
+            "Timeframe2": "M4",
+            "Timeframe3": "M15",
+            "MinimumRR": 5.0,
+            "DailyLossLimit": -3.0,
+            "ConsecutiveLossLimit": 9,
+            "MonthlyDDLimit": 10.0
+        },
         "ui": {
-            "default_view": "archive",
-            "items_per_page": 20
+            "theme": "light",
+            "chart_max_width": 1200,
+            "sidebar_width": 300
         }
     }
 
@@ -47,25 +64,38 @@ def save_config(config: Dict[str, Any]) -> None:
         json.dump(config, f, indent=2)
 
 def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate config and create missing directories"""
-    # Create missing directories
-    for path_key in ["backtest_archive", "temp_dir"]:
-        if path_key in config.get("paths", {}):
-            path = Path(config["paths"][path_key])
-            path.mkdir(parents=True, exist_ok=True)
+    """Validate configuration values
 
-    # Validate delete_after_days
-    delete_days = config.get("behavior", {}).get("delete_after_days", 7)
-    if delete_days < 0:
-        raise ValueError("delete_after_days must be >= 0")
+    Returns:
+        {"valid": bool, "errors": [str, ...]}
+    """
+    errors = []
 
-    return config
+    # Check paths exist
+    ctrader_path = config.get("paths", {}).get("ctrader_logs", "")
+    if ctrader_path and not Path(ctrader_path).exists():
+        errors.append(f"cTrader logs path does not exist: {ctrader_path}")
+
+    analyzer_path = config.get("paths", {}).get("analyzer_script", "")
+    if analyzer_path and not Path(analyzer_path).exists():
+        errors.append(f"wfo_analyzer.py not found: {analyzer_path}")
+
+    # Check numeric ranges
+    results_per_page = config.get("behavior", {}).get("results_per_page", 20)
+    if not (10 <= results_per_page <= 100):
+        errors.append("results_per_page must be between 10 and 100")
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors
+    }
 
 def detect_ctrader_path() -> str:
-    """Auto-detect cTrader log directory"""
+    """Auto-detect cTrader logs directory"""
     possible_paths = [
-        Path.home() / "Documents" / "cAlgo" / "Data" / "cBots",
-        Path.home() / "Documents" / "cTrader" / "Data" / "cBots"
+        Path.home() / "Documents" / "cAlgo" / "Data" / "cBots" / "Jcamp_1M_scalping" / "cAlgo" / "Trade_Logs",
+        Path.home() / "Documents" / "cTrader" / "Trade_Logs",
+        Path.home() / "Documents" / "cAlgo" / "Trade_Logs",
     ]
 
     for path in possible_paths:

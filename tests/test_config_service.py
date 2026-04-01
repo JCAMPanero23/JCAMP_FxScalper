@@ -27,36 +27,61 @@ def test_load_config_returns_existing_config(tmp_path, monkeypatch):
     config = config_service.load_config()
     assert config["paths"]["backtest_archive"] == "custom_path"
 
-def test_validate_config_creates_missing_directories(tmp_path, monkeypatch):
-    """Test that validate_config creates directories that don't exist"""
-    config_path = tmp_path / "config.json"
-    monkeypatch.setattr(config_service, "CONFIG_PATH", config_path)
-    config = config_service.get_default_config()
-    config["paths"]["backtest_archive"] = str(tmp_path / "archive")
-    config["paths"]["temp_dir"] = str(tmp_path / "temp")
-    validated = config_service.validate_config(config)
-    assert Path(validated["paths"]["backtest_archive"]).exists()
-    assert Path(validated["paths"]["temp_dir"]).exists()
+def test_validate_config_passes_valid_config():
+    """Test that validate_config accepts valid configuration"""
+    config = {
+        "paths": {
+            "ctrader_logs": str(Path.cwd()),  # Use current dir (always exists)
+            "analyzer_script": str(Path(__file__))  # Use this test file
+        },
+        "behavior": {
+            "results_per_page": 20
+        }
+    }
 
-def test_validate_config_accepts_valid_delete_after_days(tmp_path, monkeypatch):
-    """Test that validate_config accepts valid delete_after_days values"""
-    config_path = tmp_path / "config.json"
-    monkeypatch.setattr(config_service, "CONFIG_PATH", config_path)
-    config = config_service.get_default_config()
-    config["behavior"]["delete_after_days"] = 30
-    validated = config_service.validate_config(config)
-    assert validated["behavior"]["delete_after_days"] == 30
+    result = config_service.validate_config(config)
 
-def test_validate_config_rejects_invalid_delete_after_days(tmp_path, monkeypatch):
-    """Test that validate_config rejects delete_after_days < 0"""
-    config_path = tmp_path / "config.json"
-    monkeypatch.setattr(config_service, "CONFIG_PATH", config_path)
-    config = config_service.get_default_config()
-    config["behavior"]["delete_after_days"] = -5
-    with pytest.raises(ValueError, match="delete_after_days must be >= 0"):
-        config_service.validate_config(config)
+    assert result["valid"] is True
+    assert len(result.get("errors", [])) == 0
 
-def test_save_config_writes_valid_json(tmp_path, monkeypatch):
+
+def test_validate_config_fails_invalid_path():
+    """Test that validate_config rejects nonexistent paths"""
+    config = {
+        "paths": {
+            "ctrader_logs": "/nonexistent/path/",
+            "analyzer_script": "wfo_analyzer.py"
+        },
+        "behavior": {
+            "results_per_page": 20
+        }
+    }
+
+    result = config_service.validate_config(config)
+
+    assert result["valid"] is False
+    assert len(result["errors"]) > 0
+    assert "ctrader" in result["errors"][0].lower()
+
+
+def test_validate_config_fails_invalid_page_size():
+    """Test that validate_config rejects invalid results_per_page"""
+    config = {
+        "paths": {
+            "ctrader_logs": str(Path.cwd()),
+            "analyzer_script": str(Path(__file__))
+        },
+        "behavior": {
+            "results_per_page": 200  # Max is 100
+        }
+    }
+
+    result = config_service.validate_config(config)
+
+    assert result["valid"] is False
+    assert "results_per_page" in str(result["errors"]).lower()
+
+def test_save_config_writes_json(tmp_path, monkeypatch):
     """Test that save_config writes valid JSON to disk"""
     config_path = tmp_path / "config.json"
     monkeypatch.setattr(config_service, "CONFIG_PATH", config_path)
