@@ -320,6 +320,80 @@ def export(period, session):
         return redirect(url_for('index')), 500
 
 
+@app.route('/import')
+def import_page():
+    """Show import/new analysis page"""
+    try:
+        config = config_service.load_config()
+        ctrader_path = config.get('paths', {}).get('ctrader_logs', '')
+
+        # List available CSV files
+        available_csvs = []
+        if ctrader_path and Path(ctrader_path).exists():
+            csv_path = Path(ctrader_path)
+            for csv_file in sorted(csv_path.glob('TradeLog*.csv'), reverse=True):
+                available_csvs.append({
+                    'name': csv_file.name,
+                    'path': str(csv_file),
+                    'size': f"{csv_file.stat().st_size / 1024:.1f} KB",
+                    'date': csv_file.stat().st_mtime
+                })
+                # Format date
+                from datetime import datetime
+                available_csvs[-1]['date'] = datetime.fromtimestamp(
+                    available_csvs[-1]['date']
+                ).strftime('%Y-%m-%d %H:%M')
+
+        return render_template('import.html',
+                             available_csvs=available_csvs,
+                             ctrader_path=ctrader_path)
+    except Exception as e:
+        flash(f'Error loading import page: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+
+@app.route('/import/analyze', methods=['POST'])
+def import_analyze():
+    """Run WFO analysis and archive the results"""
+    try:
+        csv_path = request.form.get('csv_file')
+        period = request.form.get('period', '').strip()
+        session = request.form.get('session', '').strip()
+
+        if not csv_path or not period or not session:
+            flash('Please fill in all fields', 'error')
+            return redirect(url_for('import_page'))
+
+        if not Path(csv_path).exists():
+            flash('CSV file not found', 'error')
+            return redirect(url_for('import_page'))
+
+        # Run WFO analysis
+        flash('Running WFO analysis... this may take 1-2 minutes', 'info')
+        analysis_result = analysis_service.run_analysis(csv_path, period, session)
+
+        if not analysis_result.get('success'):
+            flash(f"Analysis failed: {analysis_result.get('error')}", 'error')
+            flash(f"Details: {analysis_result.get('details')}", 'error')
+            return redirect(url_for('import_page'))
+
+        # Archive the results
+        results_path = analysis_result.get('results_path')
+        archive_result = archive_service.create_archive_entry(
+            period=period,
+            session=session,
+            csv_path=csv_path,
+            results_path=results_path
+        )
+
+        flash(f'Successfully analyzed and archived: {period} / {session}', 'success')
+        return redirect(url_for('analysis', period=period, session=session))
+
+    except Exception as e:
+        flash(f'Error during import: {str(e)}', 'error')
+        return redirect(url_for('import_page'))
+
+
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""

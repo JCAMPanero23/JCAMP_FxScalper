@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}New Analysis - JCAMP WFO Analysis{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>New Analysis</h1>
+    <p class="subtitle">Import and analyze a new backtest from cTrader</p>
+
+    <div class="card">
+        <h2>Step 1: Select Backtest CSV</h2>
+
+        <form method="POST" action="/import/analyze">
+            <div class="form-group">
+                <label for="csv_file">Trade Log CSV File:</label>
+                <select name="csv_file" id="csv_file" required>
+                    <option value="">-- Select a backtest CSV --</option>
+                    {% for csv in available_csvs %}
+                    <option value="{{ csv.path }}">
+                        {{ csv.name }} ({{ csv.size }}, {{ csv.date }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <small>From: {{ ctrader_path }}</small>
+            </div>
+
+            {% if not available_csvs %}
+            <div class="alert alert-warning">
+                <strong>No CSV files found!</strong>
+                <p>Make sure you've run backtests in cTrader and the path is configured correctly.</p>
+                <p>Current path: <code>{{ ctrader_path }}</code></p>
+                <p><a href="/settings">Update path in Settings</a></p>
+            </div>
+            {% endif %}
+
+            <h2>Step 2: Archive Settings</h2>
+
+            <div class="form-group">
+                <label for="period">Period Name:</label>
+                <input type="text" name="period" id="period" placeholder="e.g., Q1_2026, Jan_Mar_2026" required>
+                <small>Use a descriptive name for the time period (e.g., Q1_2026, Jan_2026, etc.)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="session">Session Name:</label>
+                <input type="text" name="session" id="session" placeholder="e.g., london_only, ny_overlap, all_sessions" required>
+                <small>Describe which trading sessions were tested (e.g., london_only, ny_overlap, all_sessions)</small>
+            </div>
+
+            <h2>Step 3: Run Analysis</h2>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary" {% if not available_csvs %}disabled{% endif %}>
+                    Run WFO Analysis & Archive
+                </button>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>What happens next:</strong>
+                <ol>
+                    <li>The WFO analyzer will process your selected CSV file (may take 1-2 minutes)</li>
+                    <li>Results will be automatically archived to your D: drive</li>
+                    <li>You'll be redirected to view the analysis dashboard</li>
+                    <li>Original CSV will be cleaned up if auto-cleanup is enabled</li>
+                </ol>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.subtitle {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+
+.card h2 {
+    font-size: 1.25rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #007bff;
+}
+
+.card h2:first-child {
+    margin-top: 0;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-group select,
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.5rem;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.alert ol {
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}

@@ -14,6 +14,7 @@
             </div>
             <div class="nav-links">
                 <a href="/">Home</a>
+                <a href="/import">New Analysis</a>
                 <a href="/compare">Compare</a>
                 <a href="/settings">Settings</a>
             </div>
@@ -21,15 +22,17 @@
     </header>
 
     <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="alert-container">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.type }}">
-                {{ message.text }}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
             </div>
             {% endfor %}
         </div>
         {% endif %}
+        {% endwith %}
 
         {% block content %}{% endblock %}
     </main>
