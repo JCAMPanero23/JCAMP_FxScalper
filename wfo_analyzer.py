@@ -367,6 +367,12 @@ class WFOAnalyzer:
                 recommendations['parameters']['EnableAsianSession'] = False
                 print(f"[OK] SESSION: NY Overlap Only (13:00-17:00 UTC)")
                 print(f"  Reason: {best['Total R']} total return, {best['Win Rate']} win rate")
+            elif 'Asian' in session_name:
+                recommendations['parameters']['EnableLondonSession'] = False
+                recommendations['parameters']['EnableNYSession'] = False
+                recommendations['parameters']['EnableAsianSession'] = True
+                print(f"[OK] SESSION: Asian Only (04:00-08:00, 20:00-04:00 UTC)")
+                print(f"  Reason: {best['Total R']} total return, {best['Win Rate']} win rate")
 
         # ADX Mode recommendation
         adx_modes = {}
