@@ -114,34 +114,64 @@ data/
 4. `archive_service` copies results to organized archive structure
 5. Browser displays results with interactive visualizations
 
-### Known Issues
+### Updates (2026-04-03)
 
-#### Session Breakdown Display Issue
-- **Status**: Session breakdown data IS generated in JSON but NOT displaying in UI
-- **JSON Data**: Confirmed present in `session_breakdown` array with all session metrics
-- **Example Data**:
-  ```json
-  "session_breakdown": [
-    {
-      "Session": "London (08:00-12:00 UTC)",
-      "Trades": 18,
-      "Win Rate": "22.2%",
-      "Avg R": "-0.14R",
-      "Total R": "-2.50R",
-      "Profit Factor": 0.89,
-      "Avg Duration": "81m"
-    },
-    ...
-  ]
-  ```
-- **Likely Cause**: Template condition or data passing issue
-- **Investigation Needed**: Check if `session_breakdown` array is properly passed to template
+#### .cbotset Export Format - COMPLETE REWRITE
+- **Issue**: Export was generating XML format, but cTrader requires JSON format with specific structure
+- **Fix**: Completely rewrote `export_service.py` to generate proper JSON format
+- **Changes**:
+  - Structure: `{"Chart": {...}, "Parameters": {...}}`
+  - Proper parameter name mapping (e.g., `MTF_SMA_Period` → `MTFSMAPeriod`, `MinimumRR` → `MinimumRRRatio`)
+  - ADXMode conversion: string → integer (FlipDirection = 1, Trend = 0)
+  - Timeframe conversion: uppercase → lowercase (M4 → m4)
+  - UTF-8 BOM for cTrader compatibility
+  - All 70+ cBot parameters included with proper defaults
+- **Files Modified**: `wfo_ui/services/export_service.py` (complete rewrite)
 
-#### Current Settings Display Issue
-- **Status**: Current parameter values not showing in Recommended Parameters table
-- **Expected**: Show current bot settings vs recommended settings for comparison
-- **Current Behavior**: "Current Value" column shows hardcoded fallback values or dashes
-- **Investigation Needed**: Verify `current_settings` is loaded from config and passed to template
+#### Current Bot Settings Dropdown - ADDED
+- **Feature**: Added collapsible "Current Bot Settings (Full Details)" section below Recommended Parameters
+- **Structure**:
+  - Three columns: Parameter | Current Value | Recommended Value
+  - Category headers (Session Settings, ADX Filter, MTF SMA, Risk Management)
+  - Color coding: green/red for enabled/disabled, blue for recommended values
+  - Clickable header with expand/collapse arrow
+- **Files Modified**: `wfo_ui/templates/analysis.html`
+
+#### Configuration Updates - BACKTEST VALUES
+- **Update**: Changed default settings from v4.1.3 values to actual backtest values
+- **Changes**:
+  - MTF_SMA_Period: 275 → 250
+  - ADXPeriod: 18 → 16
+  - ADXMinThreshold: 15 → 35
+  - MinimumRR: 5.0 → 4.0
+  - EnableAsianSession: false → true
+- **Files Modified**: `wfo_ui/config.json`, `wfo_ui/services/export_service.py`
+
+#### WFO Browser Launcher - ADDED
+- **Feature**: Added Windows batch file for easy launching
+- **Usage**: Double-click `WFO_Browser.bat` to start server and open browser
+- **Features**:
+  - Auto-opens browser after 2-second delay (server startup time)
+  - Shows server logs in terminal window
+  - Clean shutdown with Ctrl+C
+- **Files Added**: `WFO_Browser.bat`
+
+### Fixed Issues (2026-04-02)
+
+#### Session Breakdown & Overall Metrics Display Issue - FIXED
+- **Root Cause**: `archive_service.py` used `list()` to get JSON files, which returns files in arbitrary order. The oldest JSON file (created before the analyzer was enhanced) lacked `overall_performance` and `session_breakdown` fields.
+- **Fix**: Changed to `sorted(..., reverse=True)` to use the LATEST timestamped JSON file which contains all required fields.
+- **Files Modified**: `wfo_ui/services/archive_service.py` (lines 43, 97, 114)
+
+#### Current Settings Display Issue - FIXED
+- **Root Cause**: Template used lowercase snake_case keys (`adx_period`) but JSON uses PascalCase (`ADXPeriod`), so conditions never matched.
+- **Fix**: Template now dynamically looks up values from `current_settings` dictionary using the actual key from recommendations. Added color highlighting (orange when different, blue when same).
+- **Files Modified**: `wfo_ui/templates/analysis.html` (lines 260-275)
+
+#### Export Form URL Issue - FIXED
+- **Root Cause**: Form action was `/export` but route expects `/export/<period>/<session>`
+- **Fix**: Updated form action to include period and session in URL path
+- **Files Modified**: `wfo_ui/templates/analysis.html` (line 288)
 
 ### Configuration
 
@@ -191,8 +221,9 @@ Opens browser automatically at `http://127.0.0.1:5000`
 - ✅ Browser-based CSV import and analysis
 - ✅ Dashboard chart display
 - ✅ CSV download
-- ⚠️ Session breakdown table (data exists, display issue)
-- ⚠️ Current settings display in recommendations
+- ✅ Session breakdown table (FIXED - now uses latest JSON)
+- ✅ Current settings display in recommendations (FIXED - dynamic lookup)
+- ✅ Export form URL (FIXED - correct route path)
 - ❌ .cbotset export (untested)
 - ❌ Compare page (untested)
 - ❌ Settings page save functionality (untested)
@@ -207,8 +238,6 @@ Opens browser automatically at `http://127.0.0.1:5000`
 
 ### Future Enhancements
 
-- Fix session breakdown display issue
-- Fix current settings comparison display
 - Add real-time analysis progress indicator
 - Add chart customization options
 - Implement dark mode fully

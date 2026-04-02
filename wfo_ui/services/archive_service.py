@@ -35,14 +35,14 @@ def get_archive_tree(page: int = 1, per_page: int = 20) -> Dict[str, Any]:
             if not session_dir.is_dir():
                 continue
 
-            # Read summary metrics from JSON (support timestamped files)
+            # Read summary metrics from JSON (use latest timestamped file)
             results_dir = session_dir / "analysis_results"
             if not results_dir.exists():
                 continue
 
-            json_files = list(results_dir.glob("recommended_settings*.json"))
+            json_files = sorted(results_dir.glob("recommended_settings*.json"), reverse=True)
             if json_files:
-                json_path = json_files[0]  # Use first match
+                json_path = json_files[0]  # Use latest due to reverse sort
                 with open(json_path) as f:
                     data = json.load(f)
                     perf = data.get("performance", {})
@@ -93,8 +93,8 @@ def get_analysis_detail(period: str, session: str) -> Dict[str, Any]:
             "csv_path": None
         }
 
-    # Find JSON file
-    json_files = list(results_dir.glob("recommended_settings*.json"))
+    # Find JSON file (use latest by timestamp in filename)
+    json_files = sorted(results_dir.glob("recommended_settings*.json"), reverse=True)
     if not json_files:
         json_file = results_dir / "recommended_settings.json"
         if not json_file.exists():
@@ -105,13 +105,13 @@ def get_analysis_detail(period: str, session: str) -> Dict[str, Any]:
                 "csv_path": None
             }
     else:
-        json_file = json_files[0]
+        json_file = json_files[0]  # Now gets latest due to reverse sort
 
     with open(json_file) as f:
         data = json.load(f)
 
-    # Find chart
-    chart_files = list(results_dir.glob("*dashboard*.png"))
+    # Find chart (use latest by timestamp in filename)
+    chart_files = sorted(results_dir.glob("*dashboard*.png"), reverse=True)
     chart_path = str(chart_files[0]) if chart_files else None
 
     # Find CSV

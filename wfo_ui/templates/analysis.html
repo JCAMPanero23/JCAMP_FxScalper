@@ -260,29 +260,131 @@
                 <tbody>
                     {% for key, value in recommendations.items() %}
                     <tr>
-                        <td><strong>{{ key.replace('_', ' ').title() }}</strong></td>
+                        <td><strong>{{ key.replace('_', ' ') }}</strong></td>
                         <td>
-                            {% if key == 'adx_period' %}
-                                18
-                            {% elif key == 'adx_min_threshold' %}
-                                15
-                            {% elif key == 'mtf_sma_period' %}
-                                275
-                            {% elif key == 'timeframe_2' %}
-                                M4
-                            {% elif key == 'timeframe_3' %}
-                                M15
-                            {% elif key == 'minimum_rr' %}
-                                5.0
+                            {% if current_settings and key in current_settings %}
+                                {{ current_settings[key] }}
                             {% else %}
                                 -
                             {% endif %}
                         </td>
-                        <td style="color: #3498db; font-weight: bold;">
+                        <td style="color: {% if current_settings and key in current_settings and current_settings[key] != value %}#e67e22{% else %}#3498db{% endif %}; font-weight: bold;">
                             {{ value }}
                         </td>
                     </tr>
                     {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Full Current Settings Dropdown -->
+    {% if current_settings %}
+    <div class="card">
+        <div class="card-header" style="background-color: #7f8c8d; color: white; cursor: pointer;" onclick="toggleSettings()">
+            <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Current Bot Settings (Full Details)</span>
+                <span id="settings-arrow" style="font-size: 0.8em;">▼</span>
+            </h3>
+        </div>
+        <div id="settings-details" class="card-body" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Current Value</th>
+                        <th>Recommended Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Session Settings -->
+                    <tr class="category-header">
+                        <td colspan="3"><strong>Session Settings</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Enable London Session</td>
+                        <td style="color: {% if current_settings.get('EnableLondonSession') %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ current_settings.get('EnableLondonSession', '-') }}
+                        </td>
+                        <td style="color: #3498db;">{{ recommendations.get('EnableLondonSession', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Enable NY Session</td>
+                        <td style="color: {% if current_settings.get('EnableNYSession') %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ current_settings.get('EnableNYSession', '-') }}
+                        </td>
+                        <td style="color: #3498db;">{{ recommendations.get('EnableNYSession', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Enable Asian Session</td>
+                        <td style="color: {% if current_settings.get('EnableAsianSession') %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ current_settings.get('EnableAsianSession', '-') }}
+                        </td>
+                        <td style="color: #3498db;">{{ recommendations.get('EnableAsianSession', '-') }}</td>
+                    </tr>
+                    <!-- ADX Settings -->
+                    <tr class="category-header">
+                        <td colspan="3"><strong>ADX Filter Settings</strong></td>
+                    </tr>
+                    <tr>
+                        <td>ADX Mode</td>
+                        <td>{{ current_settings.get('ADXMode', '-') }}</td>
+                        <td style="color: #3498db; font-weight: bold;">{{ recommendations.get('ADXMode', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>ADX Period</td>
+                        <td>{{ current_settings.get('ADXPeriod', '-') }}</td>
+                        <td style="color: #3498db;">{{ recommendations.get('ADXPeriod', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>ADX Min Threshold</td>
+                        <td>{{ current_settings.get('ADXMinThreshold', '-') }}</td>
+                        <td style="color: #3498db;">{{ recommendations.get('ADXMinThreshold', '-') }}</td>
+                    </tr>
+                    <!-- MTF Settings -->
+                    <tr class="category-header">
+                        <td colspan="3"><strong>MTF SMA Settings</strong></td>
+                    </tr>
+                    <tr>
+                        <td>MTF SMA Period</td>
+                        <td>{{ current_settings.get('MTF_SMA_Period', '-') }}</td>
+                        <td style="color: #3498db;">{{ recommendations.get('MTF_SMA_Period', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Timeframe 2</td>
+                        <td>{{ current_settings.get('Timeframe2', '-') }}</td>
+                        <td style="color: #3498db;">{{ recommendations.get('Timeframe2', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Timeframe 3</td>
+                        <td>{{ current_settings.get('Timeframe3', '-') }}</td>
+                        <td style="color: #3498db;">{{ recommendations.get('Timeframe3', '-') }}</td>
+                    </tr>
+                    <!-- Risk Management -->
+                    <tr class="category-header">
+                        <td colspan="3"><strong>Risk Management</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Minimum R:R Ratio</td>
+                        <td>{{ current_settings.get('MinimumRR', '-') }}</td>
+                        <td style="color: #3498db;">{{ recommendations.get('MinimumRR', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Daily Loss Limit</td>
+                        <td style="color: #e74c3c;">{{ current_settings.get('DailyLossLimit', '-') }}R</td>
+                        <td style="color: #3498db;">{{ recommendations.get('DailyLossLimit', '-') if recommendations.get('DailyLossLimit') else '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Consecutive Loss Limit</td>
+                        <td style="color: #e74c3c;">{{ current_settings.get('ConsecutiveLossLimit', '-') }} losses</td>
+                        <td style="color: #3498db;">{{ recommendations.get('ConsecutiveLossLimit', '-') if recommendations.get('ConsecutiveLossLimit') else '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Monthly Drawdown Limit</td>
+                        <td style="color: #e74c3c;">{{ current_settings.get('MonthlyDDLimit', '-') }}%</td>
+                        <td style="color: #3498db;">{{ recommendations.get('MonthlyDDLimit', '-') if recommendations.get('MonthlyDDLimit') else '-' }}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -295,9 +397,7 @@
             <h3>Export & Actions</h3>
         </div>
         <div class="card-body">
-            <form method="POST" action="/export" style="display: inline;">
-                <input type="hidden" name="period" value="{{ period }}">
-                <input type="hidden" name="session" value="{{ session }}">
+            <form method="POST" action="/export/{{ period }}/{{ session }}" style="display: inline;">
                 <button type="submit" class="btn btn-success">Export as cBotSet</button>
             </form>
             <a href="/" class="btn btn-secondary">Back to Archive</a>
@@ -315,5 +415,30 @@
         background-color: #2c3e50;
         color: white;
     }
+    #settings-details table td:first-child {
+        font-weight: bold;
+        background-color: #f8f9fa;
+        width: 200px;
+    }
+    .category-header td {
+        background-color: #2c3e50 !important;
+        color: white !important;
+        font-weight: bold;
+        padding: 10px !important;
+    }
 </style>
+
+<script>
+function toggleSettings() {
+    var details = document.getElementById('settings-details');
+    var arrow = document.getElementById('settings-arrow');
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        arrow.textContent = '▲';
+    } else {
+        details.style.display = 'none';
+        arrow.textContent = '▼';
+    }
+}
+</script>
 {% endblock %}

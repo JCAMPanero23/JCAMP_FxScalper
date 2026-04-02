@@ -1,163 +1,157 @@
-"""Export service for generating .cbotset XML files for cTrader"""
-import xml.etree.ElementTree as ET
+"""Export service for generating .cbotset JSON files for cTrader"""
+import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
-# Parameter type definitions with validation rules
-PARAM_TYPES = {
-    "MTF_SMA_Period": {"type": "int", "min": 200, "max": 350, "default": 275},
-    "ADXPeriod": {"type": "int", "min": 10, "max": 30, "default": 18},
-    "ADXMinThreshold": {"type": "int", "min": 10, "max": 30, "default": 15},
-    "MinimumRR": {"type": "float", "min": 1.0, "max": 10.0, "default": 5.0},
-    "DailyLossLimit": {"type": "float", "min": -10.0, "max": 0.0, "default": -3.0},
-    "ConsecutiveLossLimit": {"type": "int", "min": 5, "max": 50, "default": 9},
-    "MonthlyDDLimit": {"type": "float", "min": 5.0, "max": 30.0, "default": 10.0},
-    "EnableLondonSession": {"type": "bool", "default": True},
-    "EnableNYSession": {"type": "bool", "default": True},
-    "EnableAsianSession": {"type": "bool", "default": False},
-    "ADXMode": {"type": "string", "allowed": ["FlipDirection", "Trend"], "default": "FlipDirection"},
-    "Timeframe2": {"type": "string", "allowed": ["M2", "M3", "M4", "M5"], "default": "M4"},
-    "Timeframe3": {"type": "string", "allowed": ["M10", "M15", "M20", "M30"], "default": "M15"},
+# Default cBot parameters (full structure matching cTrader format)
+DEFAULT_CBOT_PARAMS = {
+    "MTFHeader": "",
+    "EnableMTFSMAEntry": True,
+    "MTFSMAPeriod": 250,
+    "Timeframe2": "m4",
+    "Timeframe3": "m15",
+    "RequireAllTFsAligned": True,
+    "ATRPeriod": 16,
+    "SLATRMultiplier": 2.0,
+    "MinimumSLPips": 5.0,
+    "ADXHeader": "",
+    "EnableADXFilter": True,
+    "ADXMode": 1,  # 0=Trend, 1=FlipDirection
+    "ADXPeriod": 16,
+    "ADXMinThreshold": 35.0,
+    "ADXMaxThreshold": 40.0,
+    "TradeHeader": "",
+    "EnableTrading": True,
+    "RiskPercent": 1.0,
+    "SLBufferPips": 2.0,
+    "MinimumRRRatio": 4.0,
+    "MaxPositions": 1,
+    "MagicNumber": 100001,
+    "SessionHeader": "",
+    "EnableSessionFilter": True,
+    "EnableLondonSession": True,
+    "EnableNYSession": True,
+    "EnableAsianSession": True,
+    "ShowSessionBoxes": True,
+    "HourFilterHeader": "",
+    "EnableHourFilter": False,
+    "StartHour": 8,
+    "EndHour": 12,
+    "DayFilterHeader": "",
+    "EnableDayFilter": False,
+    "TradeMonday": True,
+    "TradeTuesday": True,
+    "TradeWednesday": True,
+    "TradeThursday": True,
+    "TradeFriday": True,
+    "DirectionFilterHeader": "",
+    "DirectionFilter": 0,
+    "ChandelierHeader": "",
+    "EnableChandelierSL": True,
+    "ChandelierActivationRR": 0.75,
+    "TrailIncrementPips": 5.0,
+    "TPModeSelection": 1,
+    "MinChandelierDistance": 5.0,
+    "ExhaustionHeader": "",
+    "EnableExhaustionExit": False,
+    "MinChandelierMovesBeforeExit": 2,
+    "ExhaustionSwingBars": 8,
+    "ExhaustionRSIPeriod": 14,
+    "RiskHeader": "",
+    "EnableDailyLossLimit": True,
+    "MaxDailyRLoss": -3.0,
+    "MaxDailyLosingTrades": 5,
+    "EnableConsecutiveLossLimit": True,
+    "MaxConsecutiveLosses": 9,
+    "EnableMonthlyDrawdownLimit": True,
+    "MaxMonthlyDrawdownPercent": 10.0,
+    "DiagnosticsHeader": "",
+    "EnableDiagnostics": False,
+    "DiagnosticIntervalBars": 60
 }
 
-# Full CBOT settings structure with categories
-FULL_CBOT_SETTINGS = {
-    "Session Config": [
-        "EnableLondonSession",
-        "EnableNYSession",
-        "EnableAsianSession",
-    ],
-    "ADX Settings": [
-        "ADXMode",
-        "ADXPeriod",
-        "ADXMinThreshold",
-    ],
-    "MTF Settings": [
-        "MTF_SMA_Period",
-        "Timeframe2",
-        "Timeframe3",
-    ],
-    "Risk Management": [
-        "MinimumRR",
-        "DailyLossLimit",
-        "ConsecutiveLossLimit",
-        "MonthlyDDLimit",
-    ],
+# Mapping from WFO analyzer output names to cBot parameter names
+PARAM_NAME_MAPPING = {
+    "MTF_SMA_Period": "MTFSMAPeriod",
+    "ADXPeriod": "ADXPeriod",
+    "ADXMinThreshold": "ADXMinThreshold",
+    "ADXMode": "ADXMode",
+    "MinimumRR": "MinimumRRRatio",
+    "DailyLossLimit": "MaxDailyRLoss",
+    "ConsecutiveLossLimit": "MaxConsecutiveLosses",
+    "MonthlyDDLimit": "MaxMonthlyDrawdownPercent",
+    "EnableLondonSession": "EnableLondonSession",
+    "EnableNYSession": "EnableNYSession",
+    "EnableAsianSession": "EnableAsianSession",
+    "Timeframe2": "Timeframe2",
+    "Timeframe3": "Timeframe3",
+}
+
+# ADX Mode string to int mapping
+ADX_MODE_MAP = {
+    "Trend": 0,
+    "FlipDirection": 1,
 }
 
 
-def validate_params(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate parameters against type definitions and ranges
+def _convert_value(param_name: str, value: Any) -> Any:
+    """Convert parameter value to cBot format"""
+    # ADXMode: string to int
+    if param_name == "ADXMode" and isinstance(value, str):
+        return ADX_MODE_MAP.get(value, 1)
 
-    Args:
-        params: Dictionary of parameters to validate
+    # Timeframes: uppercase to lowercase
+    if param_name in ["Timeframe2", "Timeframe3"] and isinstance(value, str):
+        return value.lower()
 
-    Returns:
-        {"valid": bool, "errors": [str, ...]}
-    """
-    errors = []
+    # Ensure floats for threshold values
+    if param_name in ["ADXMinThreshold", "MinimumRRRatio", "MaxDailyRLoss", "MaxMonthlyDrawdownPercent"]:
+        return float(value)
 
-    for param_name, param_value in params.items():
-        if param_name not in PARAM_TYPES:
-            errors.append(f"Unknown parameter: {param_name}")
-            continue
+    # Ensure ints for integer params
+    if param_name in ["MTFSMAPeriod", "ADXPeriod", "MaxConsecutiveLosses"]:
+        return int(value)
 
-        param_def = PARAM_TYPES[param_name]
-        param_type = param_def["type"]
-
-        # Type checking
-        if param_type == "int":
-            if not isinstance(param_value, int) or isinstance(param_value, bool):
-                errors.append(f"{param_name} must be an integer")
-                continue
-
-            # Range checking
-            if "min" in param_def and param_value < param_def["min"]:
-                errors.append(f"{param_name} must be >= {param_def['min']}")
-            if "max" in param_def and param_value > param_def["max"]:
-                errors.append(f"{param_name} must be <= {param_def['max']}")
-
-        elif param_type == "float":
-            if not isinstance(param_value, (int, float)) or isinstance(param_value, bool):
-                errors.append(f"{param_name} must be a number")
-                continue
-
-            # Range checking
-            if "min" in param_def and param_value < param_def["min"]:
-                errors.append(f"{param_name} must be >= {param_def['min']}")
-            if "max" in param_def and param_value > param_def["max"]:
-                errors.append(f"{param_name} must be <= {param_def['max']}")
-
-        elif param_type == "bool":
-            if not isinstance(param_value, bool):
-                errors.append(f"{param_name} must be a boolean")
-
-        elif param_type == "string":
-            if not isinstance(param_value, str):
-                errors.append(f"{param_name} must be a string")
-            elif "allowed" in param_def and param_value not in param_def["allowed"]:
-                errors.append(f"{param_name} must be one of: {', '.join(param_def['allowed'])}")
-
-    return {
-        "valid": len(errors) == 0,
-        "errors": errors
-    }
-
-
-def _format_value(value: Any) -> str:
-    """Format a value for XML output
-
-    Booleans are formatted as lowercase 'true'/'false'
-    """
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    return str(value)
+    return value
 
 
 def export_to_cbotset(params: Dict[str, Any], output_path: str) -> Dict[str, Any]:
-    """Generate .cbotset XML file with validation
+    """Generate .cbotset JSON file for cTrader
 
     Args:
-        params: Dictionary of parameters to export
+        params: Dictionary of parameters from WFO analysis
         output_path: Path where .cbotset file should be written
 
     Returns:
         {"success": bool, "message": str, "file_path": str} or
         {"success": bool, "error": str}
     """
-    # Validate parameters first
-    validation_result = validate_params(params)
-    if not validation_result["valid"]:
-        return {
-            "success": False,
-            "error": "Parameter validation failed",
-            "details": validation_result["errors"]
+    try:
+        # Start with default parameters
+        cbot_params = DEFAULT_CBOT_PARAMS.copy()
+
+        # Map and apply recommended parameters
+        for wfo_name, value in params.items():
+            cbot_name = PARAM_NAME_MAPPING.get(wfo_name, wfo_name)
+            if cbot_name in cbot_params:
+                cbot_params[cbot_name] = _convert_value(cbot_name, value)
+
+        # Build the cbotset structure
+        cbotset = {
+            "Chart": {
+                "Symbol": "EURUSD",
+                "Period": "m1"
+            },
+            "Parameters": cbot_params
         }
 
-    # Create root XML element
-    root = ET.Element("cBotSettings")
-    root.set("version", "1.0")
-
-    # Add parameters grouped by category
-    for category, param_names in FULL_CBOT_SETTINGS.items():
-        category_elem = ET.SubElement(root, "Category")
-        category_elem.set("name", category)
-
-        for param_name in param_names:
-            if param_name in params:
-                param_elem = ET.SubElement(category_elem, "Parameter")
-                param_elem.set("name", param_name)
-                param_elem.set("value", _format_value(params[param_name]))
-
-    # Write to file
-    try:
+        # Write to file with BOM for cTrader compatibility
         output_path_obj = Path(output_path)
         output_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
-        # Create tree and write with proper formatting
-        tree = ET.ElementTree(root)
-        tree.write(str(output_path_obj), encoding="utf-8", xml_declaration=True)
+        with open(output_path_obj, 'w', encoding='utf-8-sig') as f:
+            json.dump(cbotset, f, indent=2)
 
         return {
             "success": True,
@@ -171,47 +165,44 @@ def export_to_cbotset(params: Dict[str, Any], output_path: str) -> Dict[str, Any
         }
 
 
-def params_from_recommendations(recommendations: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract parameters from recommendation JSON
+def validate_params(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate parameters (simplified validation)
 
     Args:
-        recommendations: JSON object with 'parameters' and other analysis data
+        params: Dictionary of parameters to validate
 
     Returns:
-        Dictionary of extracted parameters
+        {"valid": bool, "errors": [str, ...]}
     """
-    if "parameters" not in recommendations:
-        return {}
+    errors = []
 
-    return recommendations["parameters"]
+    # Basic validation - just check types
+    for param_name, value in params.items():
+        if param_name == "ADXMode" and isinstance(value, str):
+            if value not in ADX_MODE_MAP:
+                errors.append(f"Invalid ADXMode: {value}")
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors
+    }
 
 
 def compare_with_current_settings(
     current: Dict[str, Any],
     recommended: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Compare current settings with recommended settings and detect changes
+    """Compare current settings with recommended settings
 
     Args:
         current: Dictionary of current settings
         recommended: Dictionary of recommended settings
 
     Returns:
-        {
-            "has_changes": bool,
-            "changes": [
-                {
-                    "parameter": str,
-                    "current_value": Any,
-                    "recommended_value": Any
-                },
-                ...
-            ]
-        }
+        {"has_changes": bool, "changes": [...]}
     """
     changes = []
 
-    # Check all parameters in recommended settings
     for param_name, recommended_value in recommended.items():
         current_value = current.get(param_name)
 
