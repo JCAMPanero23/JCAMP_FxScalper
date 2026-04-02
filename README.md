@@ -213,6 +213,67 @@ All sessions defined in GMT. Ensure your broker server time is documented:
 
 ---
 
+## WFO Browser UI
+
+A Flask-based web interface for analyzing Walk-Forward Optimization results.
+
+### Features
+
+- **Archive Browser:** Browse historical backtest results organized by period and session
+- **Analysis Dashboard:** View detailed metrics, recommendations, and performance charts
+- **Side-by-Side Comparison:** Compare two backtest periods to identify improvements
+- **Settings Manager:** Configure paths, behavior, and bot parameters
+- **.cbotset Export:** Generate cTrader parameter files from recommendations
+
+### Quick Start
+
+1. Launch the UI:
+   ```bash
+   python launch_wfo_ui.py
+   ```
+
+2. The browser will automatically open to http://127.0.0.1:5000
+
+3. Use the UI to:
+   - View archived backtest results
+   - Analyze WFO recommendations
+   - Compare different time periods
+   - Export optimized settings to cTrader
+
+### Architecture
+
+The UI follows a clean service-layer architecture:
+
+- **Service Layer** (`wfo_ui/services/`):
+  - `config_service.py` - Configuration management
+  - `file_service.py` - Safe file operations
+  - `analysis_service.py` - WFO analyzer integration
+  - `archive_service.py` - Result archiving and browsing
+  - `export_service.py` - .cbotset XML generation
+
+- **Web Layer** (`wfo_ui/`):
+  - `app.py` - Flask routes and request handling
+  - `templates/` - Jinja2 HTML templates
+  - `static/` - CSS and JavaScript assets
+
+### Testing
+
+Run the test suite:
+
+```bash
+pytest tests/
+```
+
+All services have comprehensive unit tests (25+ tests total).
+
+### Configuration
+
+Settings are managed via `wfo_ui/config.json` (auto-created on first run).
+
+Edit configuration through the Settings page or modify the JSON file directly.
+
+---
+
 ## Troubleshooting
 
 ### EA Not Taking Trades
