@@ -309,6 +309,80 @@ class WFOAnalyzer:
 
         return self
 
+    def detect_equity_degradation(self):
+        """Detect if strategy performance is degrading over time"""
+        print(f"\n{'='*70}")
+        print("EQUITY CURVE TREND ANALYSIS")
+        print(f"{'='*70}\n")
+
+        equity = self.df['RMultiple'].cumsum()
+
+        # Split into thirds for trend analysis
+        third = len(self.df) // 3
+        if third < 5:  # Need minimum data
+            print("⚠️  Insufficient trades for trend analysis (need 15+ trades)")
+            return False
+
+        first_third = self.df[:third]
+        second_third = self.df[third:2*third]
+        final_third = self.df[2*third:]
+
+        first_third_r = first_third['RMultiple'].sum()
+        second_third_r = second_third['RMultiple'].sum()
+        final_third_r = final_third['RMultiple'].sum()
+
+        # Calculate trends
+        print(f"First Third  ({len(first_third):2d} trades): {first_third_r:+7.2f}R")
+        print(f"Second Third ({len(second_third):2d} trades): {second_third_r:+7.2f}R")
+        print(f"Final Third  ({len(final_third):2d} trades): {final_third_r:+7.2f}R")
+        print()
+
+        # Degradation detection
+        degradation_detected = False
+
+        # Severe degradation: Final third < 30% of first third performance
+        if first_third_r > 0 and final_third_r < first_third_r * 0.3:
+            print("🔴 SEVERE DEGRADATION DETECTED!")
+            print(f"   Final third performance is {(final_third_r/first_third_r)*100:.1f}% of initial")
+            print("   → Recommendation: RE-OPTIMIZE with recent data only (last 3-6 months)")
+            degradation_detected = True
+
+        # Performance reversal: First positive, final negative
+        elif first_third_r > 0 and final_third_r < 0:
+            print("🔴 PERFORMANCE REVERSAL DETECTED!")
+            print("   Strategy was profitable, now losing money")
+            print("   → Recommendation: STOP using these parameters immediately")
+            degradation_detected = True
+
+        # Declining trend: Each third worse than previous
+        elif second_third_r < first_third_r and final_third_r < second_third_r:
+            decline_pct = ((first_third_r - final_third_r) / abs(first_third_r) * 100) if first_third_r != 0 else 0
+            print(f"🟡 DECLINING TREND DETECTED!")
+            print(f"   Performance decreased {decline_pct:.1f}% from start to finish")
+            print("   → Recommendation: Consider re-optimization soon")
+            degradation_detected = True
+
+        # Stable or improving
+        else:
+            if final_third_r >= first_third_r:
+                print("✅ PERFORMANCE STABLE OR IMPROVING")
+                print("   Strategy maintaining or increasing profitability")
+            else:
+                print("✅ PERFORMANCE ACCEPTABLE")
+                print("   Minor variation within normal range")
+
+        print()
+
+        # Store result
+        self.results['equity_degradation'] = degradation_detected
+        self.results['equity_trend'] = {
+            'first_third_r': round(first_third_r, 2),
+            'second_third_r': round(second_third_r, 2),
+            'final_third_r': round(final_third_r, 2)
+        }
+
+        return degradation_detected
+
     def generate_recommendations(self):
         """Generate optimized parameter recommendations"""
         print(f"\n{'='*70}")
@@ -349,6 +423,11 @@ class WFOAnalyzer:
         # Add session breakdown
         if 'session_breakdown' in self.results:
             recommendations['session_breakdown'] = self.results['session_breakdown']
+
+        # Add equity trend analysis
+        if 'equity_trend' in self.results:
+            recommendations['equity_trend'] = self.results['equity_trend']
+            recommendations['equity_degradation_detected'] = self.results.get('equity_degradation', False)
 
         # Session recommendation
         if 'best_session' in self.results:
@@ -697,6 +776,7 @@ class WFOAnalyzer:
         self.analyze_direction()
         self.analyze_adx()
         self.analyze_day_of_week()
+        self.detect_equity_degradation()  # NEW: Trend analysis
         self.generate_recommendations()
         self.export_settings()
         self.create_visualizations()

@@ -254,6 +254,9 @@ namespace cAlgo.Robots
         [Parameter("Diagnostic Interval (bars)", DefaultValue = 60, MinValue = 5, MaxValue = 240, Step = 5, Group = "Diagnostics")]
         public int DiagnosticIntervalBars { get; set; }
 
+        [Parameter("Enable CSV Export", DefaultValue = true, Group = "Diagnostics")]
+        public bool EnableCSVExport { get; set; }
+
         #endregion
 
         #region Enums
@@ -1735,20 +1738,174 @@ namespace cAlgo.Robots
                 isWin ? "WIN" : "LOSS", Math.Round(rMultiple, 2), isWin
             });
 
-            // Append to CSV file
-            try
+            // Append to CSV file (only if CSV export enabled)
+            if (EnableCSVExport)
             {
-                System.IO.File.AppendAllText(_tradeLogPath, row + Environment.NewLine);
-                Print("[WFO-LOG] Trade #{0} exit logged | Profit: {1:F2} ({2:F2}R) | Duration: {3:F0}m",
-                    position.Id, position.NetProfit, rMultiple, durationMinutes);
-            }
-            catch (Exception ex)
-            {
-                Print("[WFO-LOG] Error writing to log: {0}", ex.Message);
+                try
+                {
+                    System.IO.File.AppendAllText(_tradeLogPath, row + Environment.NewLine);
+                    Print("[WFO-LOG] Trade #{0} exit logged | Profit: {1:F2} ({2:F2}R) | Duration: {3:F0}m",
+                        position.Id, position.NetProfit, rMultiple, durationMinutes);
+                }
+                catch (Exception ex)
+                {
+                    Print("[WFO-LOG] Error writing to log: {0}", ex.Message);
+                }
             }
 
             // Clean up context
             _tradeContexts.Remove(position.Id);
+        }
+
+        #endregion
+
+        #region Custom Fitness Function
+
+        /// <summary>
+        /// Custom fitness function for cTrader optimization
+        /// Combines multiple metrics with equity curve analysis
+        /// Higher value = better performance
+        /// </summary>
+        protected override double GetFitness(GetFitnessArgs args)
+        {
+            // Minimum trade threshold - reject if too few trades
+            if (History.Count < 30)
+            {
+                Print("[FITNESS] Insufficient trades: {0} (need 30+) - Fitness: 0", History.Count);
+                return 0;
+            }
+
+            // Calculate key metrics
+            double totalProfit = 0;
+            double totalLoss = 0;
+            int winCount = 0;
+            int lossCount = 0;
+            double maxDrawdown = 0;
+            double peak = 0;
+            double equity = args.StartingBalance;
+            List<double> equityCurve = new List<double>();
+
+            foreach (var trade in History)
+            {
+                double netProfit = trade.NetProfit;
+                equity += netProfit;
+                equityCurve.Add(equity);
+
+                // Track wins/losses
+                if (netProfit > 0)
+                {
+                    totalProfit += netProfit;
+                    winCount++;
+                }
+                else
+                {
+                    totalLoss += Math.Abs(netProfit);
+                    lossCount++;
+                }
+
+                // Track drawdown
+                if (equity > peak)
+                    peak = equity;
+
+                double currentDD = (peak - equity) / peak * 100;
+                if (currentDD > maxDrawdown)
+                    maxDrawdown = currentDD;
+            }
+
+            // Calculate Profit Factor
+            double profitFactor = totalLoss > 0 ? totalProfit / totalLoss : 0;
+
+            // Calculate Win Rate
+            double winRate = History.Count > 0 ? (double)winCount / History.Count : 0;
+
+            // Calculate Net Profit Percent
+            double netProfitPercent = ((equity - args.StartingBalance) / args.StartingBalance) * 100;
+
+            // === EQUITY CURVE SLOPE ANALYSIS ===
+            // Linear regression to detect trend (upward = good, downward = bad)
+            double equitySlope = 0;
+            if (equityCurve.Count > 10)
+            {
+                int n = equityCurve.Count;
+                double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+                for (int i = 0; i < n; i++)
+                {
+                    double x = i;
+                    double y = equityCurve[i];
+                    sumX += x;
+                    sumY += y;
+                    sumXY += x * y;
+                    sumX2 += x * x;
+                }
+
+                // Slope of best-fit line: (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX)
+                double numerator = (n * sumXY) - (sumX * sumY);
+                double denominator = (n * sumX2) - (sumX * sumX);
+                equitySlope = denominator != 0 ? numerator / denominator : 0;
+
+                // Normalize slope to percentage per trade
+                equitySlope = (equitySlope / args.StartingBalance) * 100;
+            }
+
+            // === FITNESS CALCULATION ===
+            // Weighted combination of metrics
+            double fitness = 0;
+
+            // 1. Profit Factor (weight: 30%) - Target: 1.3-2.0
+            if (profitFactor >= 1.3 && profitFactor <= 3.0)
+                fitness += 30 * (profitFactor - 1.0);  // Bonus for PF 1.3-3.0
+            else if (profitFactor > 3.0)
+                fitness += 20;  // Penalty for overfitting (PF > 3)
+            else
+                fitness += 0;   // No bonus if PF < 1.3
+
+            // 2. Drawdown Penalty (weight: 25%) - Target: < 20%
+            double ddPenalty = 0;
+            if (maxDrawdown < 10)
+                ddPenalty = 25;  // Excellent DD control
+            else if (maxDrawdown < 20)
+                ddPenalty = 25 - ((maxDrawdown - 10) * 1.5);  // Gradual penalty
+            else
+                ddPenalty = 0;  // Excessive DD
+
+            fitness += ddPenalty;
+
+            // 3. Net Profit (weight: 20%) - Normalized
+            double profitScore = netProfitPercent > 0 ? Math.Min(netProfitPercent / 5, 20) : 0;
+            fitness += profitScore;
+
+            // 4. Win Rate (weight: 10%) - Target: 25-45%
+            double wrScore = 0;
+            if (winRate >= 0.25 && winRate <= 0.45)
+                wrScore = 10;  // Healthy win rate
+            else if (winRate > 0.60)
+                wrScore = 5;   // Overfitting warning
+            else
+                wrScore = winRate * 10;  // Proportional
+
+            fitness += wrScore;
+
+            // 5. === EQUITY CURVE SLOPE (weight: 15%) ===
+            // Positive slope = upward trend = GOOD
+            // Negative slope = downward trend = BAD
+            double slopeScore = 0;
+            if (equitySlope > 0.1)  // Positive trend (>0.1% per trade)
+                slopeScore = 15;
+            else if (equitySlope > 0)
+                slopeScore = 10;  // Slightly positive
+            else if (equitySlope > -0.1)
+                slopeScore = 5;   // Flat/slightly negative
+            else
+                slopeScore = 0;   // Declining trend - bad!
+
+            fitness += slopeScore;
+
+            // Print fitness breakdown
+            Print("[FITNESS] Trades: {0} | PF: {1:F2} | DD: {2:F1}% | Net: {3:F1}% | WR: {4:F1}% | Slope: {5:F3}%/trade → FITNESS: {6:F2}",
+                History.Count, profitFactor, maxDrawdown, netProfitPercent, winRate * 100, equitySlope, fitness);
+
+            return fitness;
         }
 
         #endregion

@@ -217,3 +217,112 @@ def compare_with_current_settings(
         "has_changes": len(changes) > 0,
         "changes": changes
     }
+
+
+def export_optimization_set(output_path: str, focus_params: list = None) -> Dict[str, Any]:
+    """Generate .optset file for cTrader re-optimization
+
+    Args:
+        output_path: Path where .optset file should be written
+        focus_params: Optional list of parameter names to focus optimization on
+                     If None, uses default optimization parameters
+
+    Returns:
+        {"success": bool, "message": str} or {"success": bool, "error": str}
+    """
+    # Default parameters to optimize with their ranges
+    OPTIMIZATION_PARAMS = {
+        # ADX Settings - Primary optimization targets
+        "ADXPeriod": {
+            "min": 14,
+            "max": 21,
+            "step": 1,
+            "default": 16
+        },
+        "ADXMinThreshold": {
+            "min": 15,
+            "max": 40,
+            "step": 5,
+            "default": 35
+        },
+        # MTF Settings - Secondary optimization
+        "MTFSMAPeriod": {
+            "min": 200,
+            "max": 300,
+            "step": 25,
+            "default": 250
+        },
+        # Session toggles - Discrete optimization
+        "EnableLondonSession": {
+            "values": [True, False],
+            "default": True
+        },
+        "EnableNYSession": {
+            "values": [True, False],
+            "default": True
+        },
+        "EnableAsianSession": {
+            "values": [True, False],
+            "default": True
+        }
+    }
+
+    # Filter to focus params if specified
+    if focus_params:
+        params_to_optimize = {k: v for k, v in OPTIMIZATION_PARAMS.items() if k in focus_params}
+    else:
+        params_to_optimize = OPTIMIZATION_PARAMS
+
+    try:
+        # Build .optset structure (XML format for cTrader)
+        optset_content = '<?xml version="1.0" encoding="utf-8"?>\n'
+        optset_content += '<OptimizationSet>\n'
+        optset_content += '  <BotName>Jcamp_1M_scalping</BotName>\n'
+        optset_content += '  <Parameters>\n'
+
+        for param_name, param_config in params_to_optimize.items():
+            optset_content += f'    <Parameter Name="{param_name}">\n'
+
+            if "values" in param_config:
+                # Discrete values (boolean toggles)
+                optset_content += f'      <Type>Discrete</Type>\n'
+                optset_content += f'      <Values>\n'
+                for value in param_config["values"]:
+                    value_str = "true" if value else "false"
+                    optset_content += f'        <Value>{value_str}</Value>\n'
+                optset_content += f'      </Values>\n'
+                default_str = "true" if param_config["default"] else "false"
+                optset_content += f'      <Default>{default_str}</Default>\n'
+            else:
+                # Numeric range
+                optset_content += f'      <Type>Range</Type>\n'
+                optset_content += f'      <Min>{param_config["min"]}</Min>\n'
+                optset_content += f'      <Max>{param_config["max"]}</Max>\n'
+                optset_content += f'      <Step>{param_config["step"]}</Step>\n'
+                optset_content += f'      <Default>{param_config["default"]}</Default>\n'
+
+            optset_content += f'    </Parameter>\n'
+
+        optset_content += '  </Parameters>\n'
+        optset_content += '  <OptimizationCriteria>CustomFitness</OptimizationCriteria>\n'
+        optset_content += '  <MaximizeObjective>true</MaximizeObjective>\n'
+        optset_content += '</OptimizationSet>\n'
+
+        # Write to file
+        output_path_obj = Path(output_path)
+        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path_obj, 'w', encoding='utf-8') as f:
+            f.write(optset_content)
+
+        return {
+            "success": True,
+            "message": f"Successfully exported optimization set to {output_path}",
+            "file_path": str(output_path_obj),
+            "parameters_count": len(params_to_optimize)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to write .optset file: {str(e)}"
+        }
