@@ -1,5 +1,6 @@
 """Analysis service for running WFO analyzer"""
 import subprocess
+import sys
 import json
 from pathlib import Path
 from typing import Dict, Any
@@ -23,7 +24,7 @@ def run_analysis(csv_path: str, period: str, session: str) -> Dict[str, Any]:
         analyzer_script = Path(__file__).parent.parent.parent / "wfo_analyzer.py"
 
         result = subprocess.run(
-            ["python", str(analyzer_script), csv_path],
+            [sys.executable, str(analyzer_script), csv_path],
             capture_output=True,
             text=True,
             timeout=300  # 5 minute timeout
@@ -82,8 +83,16 @@ def parse_results(results_dir: str) -> Dict[str, Any]:
 
     json_file = json_files[0]
 
-    with open(json_file) as f:
-        data = json.load(f)
+    try:
+        with open(json_file) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        return {
+            "metrics": {},
+            "recommendations": {},
+            "chart_path": None,
+            "error": str(e)
+        }
 
     # Find the dashboard PNG
     chart_files = list(results_path.glob("analysis_dashboard_*.png"))
