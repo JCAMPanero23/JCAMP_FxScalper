@@ -215,62 +215,106 @@ All sessions defined in GMT. Ensure your broker server time is documented:
 
 ## WFO Browser UI
 
-A Flask-based web interface for analyzing Walk-Forward Optimization results.
+A Flask-based web interface for analyzing Walk-Forward Optimization results from cTrader backtests.
 
 ### Features
 
 - **Archive Browser:** Browse historical backtest results organized by period and session
-- **Analysis Dashboard:** View detailed metrics, recommendations, and performance charts
+- **Analysis Dashboard:**
+  - Overall backtest performance (all trades)
+  - Session breakdown analysis (London, NY, Asian)
+  - Recommended configuration results (filtered trades)
+  - Interactive performance charts
+  - Current settings vs recommended comparison
+- **Full Settings Dropdown:** Collapsible view showing all current bot parameters with recommended values
 - **Side-by-Side Comparison:** Compare two backtest periods to identify improvements
 - **Settings Manager:** Configure paths, behavior, and bot parameters
-- **.cbotset Export:** Generate cTrader parameter files from recommendations
+- **.cbotset Export:** Generate properly formatted JSON files for cTrader (not XML)
 
 ### Quick Start
 
-1. Launch the UI:
-   ```bash
-   python launch_wfo_ui.py
-   ```
+**Option 1: Windows Batch File (Recommended)**
+```bash
+# Double-click WFO_Browser.bat in project root
+# Browser opens automatically after 2 seconds
+```
 
-2. The browser will automatically open to http://127.0.0.1:5000
+**Option 2: Python Script**
+```bash
+python launch_wfo_ui.py
+```
 
-3. Use the UI to:
-   - View archived backtest results
-   - Analyze WFO recommendations
-   - Compare different time periods
-   - Export optimized settings to cTrader
+The browser will open to http://127.0.0.1:5000
+
+### Using the UI
+
+1. **Import New Analysis:**
+   - Click "New Analysis" → Select CSV from cTrader logs
+   - Enter period (e.g., "Apr_Jun_2025") and session (e.g., "all_sessions")
+   - Analysis runs automatically and archives results
+
+2. **Browse Archive:**
+   - View all archived results on home page
+   - Click "View Details" to see comprehensive analysis
+
+3. **Export Settings:**
+   - On analysis page, click "Export as cBotSet"
+   - Downloads .cbotset JSON file ready for cTrader import
+
+4. **Compare Periods:**
+   - Click "Compare" → Select two periods/sessions
+   - Side-by-side metric comparison
 
 ### Architecture
 
 The UI follows a clean service-layer architecture:
 
 - **Service Layer** (`wfo_ui/services/`):
-  - `config_service.py` - Configuration management
-  - `file_service.py` - Safe file operations
-  - `analysis_service.py` - WFO analyzer integration
-  - `archive_service.py` - Result archiving and browsing
-  - `export_service.py` - .cbotset XML generation
+  - `config_service.py` - Configuration management with validation
+  - `file_service.py` - Safe file operations and cleanup
+  - `analysis_service.py` - WFO analyzer subprocess integration
+  - `archive_service.py` - Result archiving, browsing, and latest-file selection
+  - `export_service.py` - .cbotset JSON generation (cTrader format)
 
 - **Web Layer** (`wfo_ui/`):
   - `app.py` - Flask routes and request handling
-  - `templates/` - Jinja2 HTML templates
+  - `templates/` - Jinja2 HTML templates with collapsible sections
   - `static/` - CSS and JavaScript assets
 
-### Testing
+- **Launcher:**
+  - `WFO_Browser.bat` - Windows batch file for easy startup
+  - `launch_wfo_ui.py` - Python launcher script
 
-Run the test suite:
+### Key Improvements (v4.4.1-WFO)
 
-```bash
-pytest tests/
-```
+- **Export Format Fix:** Generates proper JSON `.cbotset` files (was XML)
+  - Structure: `{"Chart": {...}, "Parameters": {...}}`
+  - All 70+ cBot parameters with proper defaults
+  - Parameter name mapping (MTF_SMA_Period → MTFSMAPeriod)
+  - UTF-8 BOM for cTrader compatibility
 
-All services have comprehensive unit tests (25+ tests total).
+- **Latest File Selection:** Archive service now uses `sorted(..., reverse=True)` to load the latest timestamped JSON/chart files
+
+- **Full Settings Dropdown:** Shows all current bot settings vs recommended values in collapsible section
+
+- **Backtest Defaults Updated:** Configuration matches actual backtest values (MTF=250, ADXPeriod=16, ADXThreshold=35, MinRR=4.0)
 
 ### Configuration
 
 Settings are managed via `wfo_ui/config.json` (auto-created on first run).
 
+**Current Backtest Settings:**
+- MTF_SMA_Period: 250
+- ADXPeriod: 16
+- ADXMinThreshold: 35
+- MinimumRR: 4.0
+- EnableAsianSession: true
+
 Edit configuration through the Settings page or modify the JSON file directly.
+
+### Documentation
+
+See `CHANGELOG_WFO_UI.md` for detailed version history and fixes.
 
 ---
 
