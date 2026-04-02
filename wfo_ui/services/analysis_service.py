@@ -22,6 +22,7 @@ def run_analysis(csv_path: str, period: str, session: str) -> Dict[str, Any]:
     """
     try:
         analyzer_script = Path(__file__).parent.parent.parent / "wfo_analyzer.py"
+        csv_file = Path(csv_path)
 
         result = subprocess.run(
             [sys.executable, str(analyzer_script), csv_path],
@@ -37,8 +38,16 @@ def run_analysis(csv_path: str, period: str, session: str) -> Dict[str, Any]:
                 "details": result.stderr
             }
 
-        # Results are in wfo_results/ (created by analyzer)
-        results_path = RESULTS_DIR.resolve()
+        # Results are created next to the CSV file in wfo_results/
+        # (analyzer creates: csv_file.parent / 'wfo_results')
+        results_path = csv_file.parent / 'wfo_results'
+
+        if not results_path.exists():
+            return {
+                "success": False,
+                "error": "Results directory not created",
+                "details": f"Expected results at: {results_path}"
+            }
 
         return {
             "success": True,
