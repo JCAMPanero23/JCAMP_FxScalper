@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - JCAMP WFO Analysis{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h1>500</h1>
+    <h2>Server Error</h2>
+    <p>Something went wrong on our end. Please try again.</p>
+    <a href="/" class="btn btn-primary">Go to Home</a>
+</div>
+
+<style>
+.error-page {
+    text-align: center;
+    padding: 4rem 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.error-page h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.error-page p {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}

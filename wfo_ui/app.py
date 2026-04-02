@@ -81,19 +81,61 @@ def analysis(period, session):
             analysis_detail.get('recommendations', {})
         )
 
+        # Convert file paths to URLs
+        chart_url = None
+        csv_url = None
+
+        if analysis_detail.get('chart_path'):
+            chart_filename = Path(analysis_detail['chart_path']).name
+            chart_url = f"/archive/{period}/{session}/{chart_filename}"
+
+        if analysis_detail.get('csv_path'):
+            csv_filename = Path(analysis_detail['csv_path']).name
+            csv_url = f"/archive/{period}/{session}/{csv_filename}"
+
         return render_template(
             'analysis.html',
             period=period,
             session=session,
+            overall_metrics=analysis_detail.get('overall_metrics', {}),
+            session_breakdown=analysis_detail.get('session_breakdown', []),
             metrics=analysis_detail.get('metrics', {}),
             recommendations=analysis_detail.get('recommendations', {}),
-            chart_path=analysis_detail.get('chart_path'),
-            csv_path=analysis_detail.get('csv_path'),
+            chart_path=chart_url,
+            csv_path=csv_url,
             current_settings=current_settings,
             comparison=comparison
         )
     except Exception as e:
         flash(f'Error loading analysis: {str(e)}', 'error')
+        return redirect(url_for('index')), 500
+
+
+@app.route('/archive/<period>/<session>/<filename>')
+def serve_archive_file(period, session, filename):
+    """Serve files from archive directory"""
+    try:
+        # Get config to find archive directory
+        config = config_service.load_config()
+        archive_dir = Path(config.get('paths', {}).get('archive', 'data/backtest_archive'))
+
+        # Construct file path
+        file_path = archive_dir / period / session / 'analysis_results' / filename
+
+        # Security check - ensure path is within archive directory
+        if not file_path.resolve().is_relative_to(archive_dir.resolve()):
+            flash('Invalid file path', 'error')
+            return redirect(url_for('index')), 403
+
+        # Check if file exists
+        if not file_path.exists():
+            flash(f'File not found: {filename}', 'error')
+            return redirect(url_for('index')), 404
+
+        # Serve the file
+        return send_file(file_path)
+    except Exception as e:
+        flash(f'Error serving file: {str(e)}', 'error')
         return redirect(url_for('index')), 500
 
 
@@ -392,6 +434,39 @@ def import_analyze():
     except Exception as e:
         flash(f'Error during import: {str(e)}', 'error')
         return redirect(url_for('import_page'))
+
+
+@app.route('/delete/<period>/<session>', methods=['POST'])
+def delete_archive(period, session):
+    """Delete an archive entry"""
+    try:
+        # Get config to find archive directory
+        config = config_service.load_config()
+        archive_dir = Path(config.get('paths', {}).get('archive', 'data/backtest_archive'))
+
+        # Construct the directory path
+        entry_path = archive_dir / period / session
+
+        # Security check - ensure path is within archive directory
+        if not entry_path.resolve().is_relative_to(archive_dir.resolve()):
+            flash('Invalid archive path', 'error')
+            return redirect(url_for('index')), 403
+
+        # Check if directory exists
+        if not entry_path.exists():
+            flash(f'Archive entry not found: {period}/{session}', 'error')
+            return redirect(url_for('index')), 404
+
+        # Delete the directory and its contents
+        import shutil
+        shutil.rmtree(entry_path)
+
+        flash(f'Successfully deleted: {period} / {session}', 'success')
+        return redirect(url_for('index'))
+
+    except Exception as e:
+        flash(f'Error deleting archive: {str(e)}', 'error')
+        return redirect(url_for('index')), 500
 
 
 @app.errorhandler(404)

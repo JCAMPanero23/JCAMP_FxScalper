@@ -220,6 +220,21 @@ input[type="reset"] {
     background-color: #7f8c8d;
 }
 
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+}
+
 .btn-success {
     background-color: #27ae60;
     color: white;

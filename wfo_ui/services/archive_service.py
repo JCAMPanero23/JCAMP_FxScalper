@@ -119,6 +119,8 @@ def get_analysis_detail(period: str, session: str) -> Dict[str, Any]:
     csv_path = str(csv_files[0]) if csv_files else None
 
     return {
+        "overall_metrics": data.get("overall_performance", {}),
+        "session_breakdown": data.get("session_breakdown", []),
         "metrics": data.get("performance", {}),
         "recommendations": data.get("parameters", {}),
         "chart_path": chart_path,

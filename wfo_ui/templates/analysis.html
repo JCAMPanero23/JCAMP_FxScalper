@@ -44,10 +44,133 @@
     </div>
     {% endif %}
 
-    <!-- Metrics Table -->
+    <!-- Overall Backtest Metrics -->
+    {% if overall_metrics %}
     <div class="card">
-        <div class="card-header">
-            <h3>Performance Metrics</h3>
+        <div class="card-header" style="background-color: #34495e; color: white;">
+            <h3>Overall Backtest Results (All Trades)</h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Complete backtest performance across all sessions and parameters</p>
+        </div>
+        <div class="card-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Trades</strong></td>
+                        <td>{{ overall_metrics.get('total_trades', 'N/A') }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Win Rate</strong></td>
+                        <td style="color: {% if overall_metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%.1f"|format(overall_metrics.get('win_rate', 0)) }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Profit Factor</strong></td>
+                        <td style="color: {% if overall_metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif overall_metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(overall_metrics.get('profit_factor', 0)) }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total R</strong></td>
+                        <td style="color: {% if overall_metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(overall_metrics.get('total_r', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Average R</strong></td>
+                        <td style="color: {% if overall_metrics.get('average_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(overall_metrics.get('average_r', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Maximum Drawdown</strong></td>
+                        <td style="color: {% if overall_metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif overall_metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(overall_metrics.get('max_drawdown', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Avg Win</strong></td>
+                        <td>{{ "%.2f"|format(overall_metrics.get('avg_win', 0)) }}R</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Avg Loss</strong></td>
+                        <td>{{ "%.2f"|format(overall_metrics.get('avg_loss', 0)) }}R</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Win/Loss Ratio</strong></td>
+                        <td>{{ "%.2f"|format(overall_metrics.get('win_loss_ratio', 0)) }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consecutive Wins</strong></td>
+                        <td>{{ overall_metrics.get('consecutive_wins', 'N/A') }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consecutive Losses</strong></td>
+                        <td style="color: {% if overall_metrics.get('consecutive_losses', 0) > 5 %}#e74c3c{% else %}#27ae60{% endif %};">
+                            {{ overall_metrics.get('consecutive_losses', 'N/A') }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Session Breakdown -->
+    {% if session_breakdown %}
+    <div class="card">
+        <div class="card-header" style="background-color: #16a085; color: white;">
+            <h3>Session Performance Breakdown</h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Performance comparison across different trading sessions</p>
+        </div>
+        <div class="card-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Trades</th>
+                        <th>Win Rate</th>
+                        <th>Avg R</th>
+                        <th>Total R</th>
+                        <th>Profit Factor</th>
+                        <th>Avg Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in session_breakdown %}
+                    <tr>
+                        <td><strong>{{ session.Session }}</strong></td>
+                        <td>{{ session.Trades }}</td>
+                        <td style="color: {% if session['Win Rate']|replace('%', '')|float >= 40 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ session['Win Rate'] }}
+                        </td>
+                        <td>{{ session['Avg R'] }}</td>
+                        <td style="color: {% if session['Total R']|replace('R', '')|float > 0 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ session['Total R'] }}
+                        </td>
+                        <td style="color: {% if session['Profit Factor'] > 1.5 %}#27ae60{% elif session['Profit Factor'] > 1 %}#f39c12{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(session['Profit Factor']) }}
+                        </td>
+                        <td>{{ session['Avg Duration'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommended Configuration Metrics -->
+    <div class="card">
+        <div class="card-header" style="background-color: #2980b9; color: white;">
+            <h3>Recommended Configuration Results (Filtered Trades)</h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Performance after applying optimized session and parameter filters</p>
         </div>
         <div class="card-body">
             <table>
@@ -65,7 +188,7 @@
                     <tr>
                         <td><strong>Win Rate</strong></td>
                         <td style="color: {% if metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %};">
-                            {{ "%.2f"|format(metrics.get('win_rate', 0)) }}%
+                            {{ "%.1f"|format(metrics.get('win_rate', 0)) }}%
                         </td>
                     </tr>
                     <tr>
@@ -81,9 +204,15 @@
                         </td>
                     </tr>
                     <tr>
+                        <td><strong>Average R</strong></td>
+                        <td style="color: {% if metrics.get('average_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(metrics.get('average_r', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
                         <td><strong>Maximum Drawdown</strong></td>
                         <td style="color: {% if metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">
-                            {{ "%.2f"|format(metrics.get('max_drawdown', 0)) }}%
+                            {{ "%.2f"|format(metrics.get('max_drawdown', 0)) }}R
                         </td>
                     </tr>
                     <tr>

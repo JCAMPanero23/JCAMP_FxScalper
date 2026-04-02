@@ -101,6 +101,9 @@ class WFOAnalyzer:
         print(session_df.to_string(index=False))
         print()
 
+        # Save all session stats
+        self.results['session_breakdown'] = session_stats
+
         # Determine best session
         if len(session_stats) > 0:
             best_session = max(session_stats, key=lambda x: float(x['Total R'].replace('R', '')))
@@ -320,8 +323,32 @@ class WFOAnalyzer:
                 'total_trades': int(len(self.df))
             },
             'parameters': {},
+            'overall_performance': {},
             'performance': {}
         }
+
+        # Calculate OVERALL performance (all trades)
+        print("\n" + "="*70)
+        print("OVERALL BACKTEST PERFORMANCE (All Trades)")
+        print("="*70)
+        overall_metrics = self._calc_comprehensive_metrics(self.df)
+        recommendations['overall_performance'] = overall_metrics
+
+        print(f"  Total Trades: {overall_metrics['total_trades']}")
+        print(f"  Win Rate: {overall_metrics['win_rate']:.1f}%")
+        print(f"  Profit Factor: {overall_metrics['profit_factor']:.2f}")
+        print(f"  Total R: {overall_metrics['total_r']:+.2f}R")
+        print(f"  Average R: {overall_metrics['average_r']:+.2f}R")
+        print(f"  Max Drawdown: {overall_metrics['max_drawdown']:.2f}R")
+        print(f"  Avg Win: {overall_metrics['avg_win']:+.2f}R")
+        print(f"  Avg Loss: {overall_metrics['avg_loss']:+.2f}R")
+        print(f"  Consecutive Wins: {overall_metrics['consecutive_wins']}")
+        print(f"  Consecutive Losses: {overall_metrics['consecutive_losses']}")
+        print()
+
+        # Add session breakdown
+        if 'session_breakdown' in self.results:
+            recommendations['session_breakdown'] = self.results['session_breakdown']
 
         # Session recommendation
         if 'best_session' in self.results:
@@ -411,26 +438,25 @@ class WFOAnalyzer:
         # Apply ADX mode filter
         filtered = filtered[filtered['ADXMode'] == recommendations['parameters']['ADXMode']]
 
+        # Calculate FILTERED performance (recommended configuration)
+        print("\n" + "="*70)
+        print("RECOMMENDED CONFIGURATION PERFORMANCE (Filtered Trades)")
+        print("="*70)
+
         if len(filtered) > 0:
-            win_rate = filtered['WinningTrade'].mean() * 100
-            avg_r = filtered['RMultiple'].mean()
-            total_r = filtered['RMultiple'].sum()
-            pf = self._calc_profit_factor(filtered)
-            trades = len(filtered)
+            filtered_metrics = self._calc_comprehensive_metrics(filtered)
+            recommendations['performance'] = filtered_metrics
 
-            print(f"  Total Trades: {trades}")
-            print(f"  Win Rate: {win_rate:.1f}%")
-            print(f"  Average R: {avg_r:.2f}R")
-            print(f"  Total R: {total_r:+.2f}R")
-            print(f"  Profit Factor: {pf:.2f}")
-
-            recommendations['performance'] = {
-                'total_trades': trades,
-                'win_rate': round(win_rate, 1),
-                'average_r': round(avg_r, 2),
-                'total_r': round(total_r, 2),
-                'profit_factor': round(pf, 2)
-            }
+            print(f"  Total Trades: {filtered_metrics['total_trades']}")
+            print(f"  Win Rate: {filtered_metrics['win_rate']:.1f}%")
+            print(f"  Profit Factor: {filtered_metrics['profit_factor']:.2f}")
+            print(f"  Total R: {filtered_metrics['total_r']:+.2f}R")
+            print(f"  Average R: {filtered_metrics['average_r']:+.2f}R")
+            print(f"  Max Drawdown: {filtered_metrics['max_drawdown']:.2f}R")
+            print(f"  Avg Win: {filtered_metrics['avg_win']:+.2f}R")
+            print(f"  Avg Loss: {filtered_metrics['avg_loss']:+.2f}R")
+            print(f"  Consecutive Wins: {filtered_metrics['consecutive_wins']}")
+            print(f"  Consecutive Losses: {filtered_metrics['consecutive_losses']}")
 
         print()
 
@@ -621,6 +647,41 @@ class WFOAnalyzer:
             return float('inf') if wins > 0 else 0
 
         return round(wins / losses, 2)
+
+    def _calc_comprehensive_metrics(self, df):
+        """Calculate comprehensive performance metrics for a dataframe"""
+        if len(df) == 0:
+            return {}
+
+        wins = df[df['WinningTrade'] == True]
+        losses = df[df['WinningTrade'] == False]
+
+        # Calculate cumulative R for drawdown
+        cumulative_r = df['RMultiple'].cumsum()
+        running_max = cumulative_r.expanding().max()
+        drawdown = cumulative_r - running_max
+        max_dd = drawdown.min()
+
+        # Calculate consecutive streaks
+        streaks = (df['WinningTrade'] != df['WinningTrade'].shift()).cumsum()
+        win_streaks = df[df['WinningTrade'] == True].groupby(streaks).size()
+        loss_streaks = df[df['WinningTrade'] == False].groupby(streaks).size()
+
+        metrics = {
+            'total_trades': int(len(df)),
+            'win_rate': round(df['WinningTrade'].mean() * 100, 1),
+            'profit_factor': self._calc_profit_factor(df),
+            'total_r': round(df['RMultiple'].sum(), 2),
+            'average_r': round(df['RMultiple'].mean(), 2),
+            'max_drawdown': round(max_dd, 2),
+            'avg_win': round(wins['RMultiple'].mean(), 2) if len(wins) > 0 else 0.0,
+            'avg_loss': round(losses['RMultiple'].mean(), 2) if len(losses) > 0 else 0.0,
+            'win_loss_ratio': round(abs(wins['RMultiple'].mean() / losses['RMultiple'].mean()), 2) if len(losses) > 0 and losses['RMultiple'].mean() != 0 else 0.0,
+            'consecutive_wins': int(win_streaks.max()) if len(win_streaks) > 0 else 0,
+            'consecutive_losses': int(loss_streaks.max()) if len(loss_streaks) > 0 else 0
+        }
+
+        return metrics
 
     def run_full_analysis(self):
         """Run complete analysis pipeline"""

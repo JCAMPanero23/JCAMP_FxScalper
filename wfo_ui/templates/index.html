@@ -47,9 +47,16 @@
                                                 </span>
                                             </div>
                                         </div>
-                                        <a href="/analysis?period={{ period.name }}&session={{ session.name }}" class="btn btn-primary btn-small" style="display: block; text-align: center;">
-                                            View Details
-                                        </a>
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                            <a href="/analysis/{{ period.name }}/{{ session.name }}" class="btn btn-primary btn-small" style="flex: 1; text-align: center;">
+                                                View Details
+                                            </a>
+                                            <form method="POST" action="/delete/{{ period.name }}/{{ session.name }}" style="flex: 0;" onsubmit="return confirm('Are you sure you want to delete {{ period.name }}/{{ session.name }}?');">
+                                                <button type="submit" class="btn btn-danger btn-small" style="padding: 0.5rem 0.75rem;">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
