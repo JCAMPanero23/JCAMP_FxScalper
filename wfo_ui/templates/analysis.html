@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Detail - JCAMP WFO Analysis{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if not metrics %}
+    <div class="card">
+        <div class="card-body text-center">
+            <p class="text-muted" style="font-size: 1.1rem;">No analysis data available for this period/session</p>
+            <a href="/" class="btn btn-primary">Back to Archive</a>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- Header Card -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Analysis Details</h2>
+            <p class="text-muted">
+                <strong>Period:</strong> {{ period }} | <strong>Session:</strong> {{ session }}
+            </p>
+        </div>
+        <div class="card-footer">
+            <a href="/" class="btn btn-secondary">Back to Archive</a>
+            {% if chart_path %}
+            <a href="{{ chart_path }}" download class="btn btn-primary">Download Chart</a>
+            {% endif %}
+            {% if csv_path %}
+            <a href="{{ csv_path }}" download class="btn btn-primary">Download CSV</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Dashboard Chart -->
+    {% if chart_path %}
+    <div class="card">
+        <div class="card-header">
+            <h3>Analysis Dashboard</h3>
+        </div>
+        <div class="card-body" style="text-align: center;">
+            <img src="{{ chart_path }}" alt="Analysis Dashboard" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Metrics Table -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Performance Metrics</h3>
+        </div>
+        <div class="card-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Trades</strong></td>
+                        <td>{{ metrics.get('total_trades', 'N/A') }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Win Rate</strong></td>
+                        <td style="color: {% if metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(metrics.get('win_rate', 0)) }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Profit Factor</strong></td>
+                        <td style="color: {% if metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(metrics.get('profit_factor', 0)) }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total R</strong></td>
+                        <td style="color: {% if metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(metrics.get('total_r', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Maximum Drawdown</strong></td>
+                        <td style="color: {% if metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(metrics.get('max_drawdown', 0)) }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Avg Win</strong></td>
+                        <td>{{ "%.2f"|format(metrics.get('avg_win', 0)) }}R</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Avg Loss</strong></td>
+                        <td>{{ "%.2f"|format(metrics.get('avg_loss', 0)) }}R</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Win/Loss Ratio</strong></td>
+                        <td>{{ "%.2f"|format(metrics.get('win_loss_ratio', 0)) }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consecutive Wins</strong></td>
+                        <td>{{ metrics.get('consecutive_wins', 'N/A') }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consecutive Losses</strong></td>
+                        <td style="color: {% if metrics.get('consecutive_losses', 0) > 5 %}#e74c3c{% else %}#27ae60{% endif %};">
+                            {{ metrics.get('consecutive_losses', 'N/A') }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recommendations Table -->
+    {% if recommendations %}
+    <div class="card">
+        <div class="card-header">
+            <h3>Recommended Parameters</h3>
+        </div>
+        <div class="card-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Current Value</th>
+                        <th>Recommended Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, value in recommendations.items() %}
+                    <tr>
+                        <td><strong>{{ key.replace('_', ' ').title() }}</strong></td>
+                        <td>
+                            {% if key == 'adx_period' %}
+                                18
+                            {% elif key == 'adx_min_threshold' %}
+                                15
+                            {% elif key == 'mtf_sma_period' %}
+                                275
+                            {% elif key == 'timeframe_2' %}
+                                M4
+                            {% elif key == 'timeframe_3' %}
+                                M15
+                            {% elif key == 'minimum_rr' %}
+                                5.0
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td style="color: #3498db; font-weight: bold;">
+                            {{ value }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Export Section -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Export & Actions</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/export" style="display: inline;">
+                <input type="hidden" name="period" value="{{ period }}">
+                <input type="hidden" name="session" value="{{ session }}">
+                <button type="submit" class="btn btn-success">Export as cBotSet</button>
+            </form>
+            <a href="/" class="btn btn-secondary">Back to Archive</a>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<style>
+    .card h3 {
+        margin: 0 !important;
+    }
+    table th {
+        background-color: #2c3e50;
+        color: white;
+    }
+</style>
+{% endblock %}

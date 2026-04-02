@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Analysis - JCAMP WFO Analysis{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Compare Analysis Results</h2>
+            <p class="text-muted">Side-by-side comparison of two periods or sessions</p>
+        </div>
+        <div class="card-body">
+            <!-- Period/Session Selection Form -->
+            <form method="GET" action="/compare" style="margin-bottom: 2rem;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="period1">Period (Left)</label>
+                        <select name="period1" id="period1" required>
+                            <option value="">Select a period...</option>
+                            {% for period in available_periods %}
+                            <option value="{{ period }}" {% if period1 == period %}selected{% endif %}>
+                                {{ period }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="session1">Session (Left)</label>
+                        <select name="session1" id="session1">
+                            <option value="">Select a session...</option>
+                            {% for session in sessions1 %}
+                            <option value="{{ session }}" {% if session1 == session %}selected{% endif %}>
+                                {{ session }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="period2">Period (Right)</label>
+                        <select name="period2" id="period2" required>
+                            <option value="">Select a period...</option>
+                            {% for period in available_periods %}
+                            <option value="{{ period }}" {% if period2 == period %}selected{% endif %}>
+                                {{ period }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="session2">Session (Right)</label>
+                        <select name="session2" id="session2">
+                            <option value="">Select a session...</option>
+                            {% for session in sessions2 %}
+                            <option value="{{ session }}" {% if session2 == session %}selected{% endif %}>
+                                {{ session }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Compare</button>
+            </form>
+        </div>
+    </div>
+
+    {% if metrics1 and metrics2 %}
+    <!-- Comparison Results -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+        <!-- Left Column -->
+        <div>
+            <div class="card">
+                <div class="card-header" style="background-color: #ecf0f1;">
+                    <h3>{{ period1 }} - {{ session1 }}</h3>
+                </div>
+                <div class="card-body">
+                    <table style="margin-bottom: 0;">
+                        <tbody>
+                            <tr>
+                                <td><strong>Total Trades</strong></td>
+                                <td style="text-align: right;">{{ metrics1.get('total_trades', 'N/A') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Win Rate</strong></td>
+                                <td style="text-align: right; color: {% if metrics1.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics1.get('win_rate', 0)) }}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Profit Factor</strong></td>
+                                <td style="text-align: right; color: {% if metrics1.get('profit_factor', 0) > 1.5 %}#27ae60{% elif metrics1.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics1.get('profit_factor', 0)) }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total R</strong></td>
+                                <td style="text-align: right; color: {% if metrics1.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics1.get('total_r', 0)) }}R
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Max Drawdown</strong></td>
+                                <td style="text-align: right; color: {% if metrics1.get('max_drawdown', 0) > -10 %}#27ae60{% elif metrics1.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics1.get('max_drawdown', 0)) }}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Avg Win</strong></td>
+                                <td style="text-align: right;">{{ "%.2f"|format(metrics1.get('avg_win', 0)) }}R</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Avg Loss</strong></td>
+                                <td style="text-align: right;">{{ "%.2f"|format(metrics1.get('avg_loss', 0)) }}R</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Consecutive Losses</strong></td>
+                                <td style="text-align: right; color: {% if metrics1.get('consecutive_losses', 0) > 5 %}#e74c3c{% else %}#27ae60{% endif %}; font-weight: bold;">
+                                    {{ metrics1.get('consecutive_losses', 'N/A') }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div>
+            <div class="card">
+                <div class="card-header" style="background-color: #ecf0f1;">
+                    <h3>{{ period2 }} - {{ session2 }}</h3>
+                </div>
+                <div class="card-body">
+                    <table style="margin-bottom: 0;">
+                        <tbody>
+                            <tr>
+                                <td><strong>Total Trades</strong></td>
+                                <td style="text-align: right;">{{ metrics2.get('total_trades', 'N/A') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Win Rate</strong></td>
+                                <td style="text-align: right; color: {% if metrics2.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics2.get('win_rate', 0)) }}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Profit Factor</strong></td>
+                                <td style="text-align: right; color: {% if metrics2.get('profit_factor', 0) > 1.5 %}#27ae60{% elif metrics2.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics2.get('profit_factor', 0)) }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total R</strong></td>
+                                <td style="text-align: right; color: {% if metrics2.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics2.get('total_r', 0)) }}R
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Max Drawdown</strong></td>
+                                <td style="text-align: right; color: {% if metrics2.get('max_drawdown', 0) > -10 %}#27ae60{% elif metrics2.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                    {{ "%.2f"|format(metrics2.get('max_drawdown', 0)) }}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Avg Win</strong></td>
+                                <td style="text-align: right;">{{ "%.2f"|format(metrics2.get('avg_win', 0)) }}R</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Avg Loss</strong></td>
+                                <td style="text-align: right;">{{ "%.2f"|format(metrics2.get('avg_loss', 0)) }}R</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Consecutive Losses</strong></td>
+                                <td style="text-align: right; color: {% if metrics2.get('consecutive_losses', 0) > 5 %}#e74c3c{% else %}#27ae60{% endif %}; font-weight: bold;">
+                                    {{ metrics2.get('consecutive_losses', 'N/A') }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Difference Summary -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Difference Summary</h3>
+        </div>
+        <div class="card-body">
+            {% set wr_diff = metrics2.get('win_rate', 0) - metrics1.get('win_rate', 0) %}
+            {% set pf_diff = metrics2.get('profit_factor', 0) - metrics1.get('profit_factor', 0) %}
+            {% set tr_diff = metrics2.get('total_r', 0) - metrics1.get('total_r', 0) %}
+            {% set md_diff = metrics2.get('max_drawdown', 0) - metrics1.get('max_drawdown', 0) %}
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Difference</th>
+                        <th>Winner</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Win Rate</strong></td>
+                        <td>{{ "%.2f"|format(wr_diff) }}%</td>
+                        <td style="color: {% if wr_diff > 0 %}#27ae60{% elif wr_diff < 0 %}#e74c3c{% else %}#7f8c8d{% endif %}; font-weight: bold;">
+                            {% if wr_diff > 0 %}Right{% elif wr_diff < 0 %}Left{% else %}Tie{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Profit Factor</strong></td>
+                        <td>{{ "%.2f"|format(pf_diff) }}</td>
+                        <td style="color: {% if pf_diff > 0 %}#27ae60{% elif pf_diff < 0 %}#e74c3c{% else %}#7f8c8d{% endif %}; font-weight: bold;">
+                            {% if pf_diff > 0 %}Right{% elif pf_diff < 0 %}Left{% else %}Tie{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total R</strong></td>
+                        <td style="color: {% if tr_diff > 0 %}#27ae60{% elif tr_diff < 0 %}#e74c3c{% else %}#7f8c8d{% endif %};">{{ "%.2f"|format(tr_diff) }}R</td>
+                        <td style="color: {% if tr_diff > 0 %}#27ae60{% elif tr_diff < 0 %}#e74c3c{% else %}#7f8c8d{% endif %}; font-weight: bold;">
+                            {% if tr_diff > 0 %}Right{% elif tr_diff < 0 %}Left{% else %}Tie{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Max Drawdown</strong></td>
+                        <td style="color: {% if md_diff < 0 %}#27ae60{% elif md_diff > 0 %}#e74c3c{% else %}#7f8c8d{% endif %};">{{ "%.2f"|format(md_diff) }}%</td>
+                        <td style="color: {% if md_diff < 0 %}#27ae60{% elif md_diff > 0 %}#e74c3c{% else %}#7f8c8d{% endif %}; font-weight: bold;">
+                            {% if md_diff < 0 %}Right{% elif md_diff > 0 %}Left{% else %}Tie{% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back Button -->
+    <div class="card mt-4">
+        <div class="card-footer">
+            <a href="/" class="btn btn-secondary">Back to Archive</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card h3 {
+        margin: 0 !important;
+    }
+    @media (max-width: 768px) {
+        [style*="display: grid; grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
+{% endblock %}

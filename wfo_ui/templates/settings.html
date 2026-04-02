@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - JCAMP WFO Analysis{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Settings</h2>
+            <p class="text-muted">Configure application paths and behavior</p>
+        </div>
+    </div>
+
+    <!-- Path Settings -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h3>Path Settings</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/settings/save-paths">
+                <div class="form-group">
+                    <label for="ctrader_logs">cTrader Logs Path</label>
+                    <input type="text" id="ctrader_logs" name="ctrader_logs" value="{{ config.paths.ctrader_logs }}" required>
+                    <small style="color: #7f8c8d; display: block; margin-top: 0.5rem;">
+                        Location of cTrader trade log files
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="archive">Archive Path</label>
+                    <input type="text" id="archive" name="archive" value="{{ config.paths.archive }}" required>
+                    <small style="color: #7f8c8d; display: block; margin-top: 0.5rem;">
+                        Location where backtest results are stored
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="temp">Temp Path</label>
+                    <input type="text" id="temp" name="temp" value="{{ config.paths.temp }}" required>
+                    <small style="color: #7f8c8d; display: block; margin-top: 0.5rem;">
+                        Temporary directory for processing files
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="analyzer_script">Analyzer Script Path</label>
+                    <input type="text" id="analyzer_script" name="analyzer_script" value="{{ config.paths.analyzer_script }}" required>
+                    <small style="color: #7f8c8d; display: block; margin-top: 0.5rem;">
+                        Path to wfo_analyzer.py script
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Paths</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Behavior Settings -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h3>Behavior Settings</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/settings/save-behavior">
+                <div class="form-group">
+                    <label for="results_per_page">Results Per Page</label>
+                    <input type="number" id="results_per_page" name="results_per_page"
+                           value="{{ config.behavior.results_per_page }}" min="10" max="100" required>
+                    <small style="color: #7f8c8d; display: block; margin-top: 0.5rem;">
+                        Number of archive results to show per page (10-100)
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="checkbox" id="auto_cleanup" name="auto_cleanup" value="true"
+                               {% if config.behavior.auto_cleanup %}checked{% endif %}>
+                        <label for="auto_cleanup" style="margin: 0; cursor: pointer;">
+                            <strong>Auto Cleanup</strong> - Automatically delete CSV files after archiving
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="checkbox" id="auto_open_browser" name="auto_open_browser" value="true"
+                               {% if config.behavior.auto_open_browser %}checked{% endif %}>
+                        <label for="auto_open_browser" style="margin: 0; cursor: pointer;">
+                            <strong>Auto Open Browser</strong> - Automatically open the UI in your browser on startup
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="checkbox" id="dark_mode" name="dark_mode" value="true"
+                               {% if config.behavior.dark_mode %}checked{% endif %}>
+                        <label for="dark_mode" style="margin: 0; cursor: pointer;">
+                            <strong>Dark Mode</strong> - Use dark theme (coming soon)
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Behavior Settings</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Export Settings -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h3>Export Settings</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/settings/save-export">
+                <div class="form-group">
+                    <label for="default_filename_pattern">Default Filename Pattern</label>
+                    <input type="text" id="default_filename_pattern" name="default_filename_pattern"
+                           value="{{ config.export.default_filename_pattern }}" required>
+                    <small style="color: #7f8c8d; display: block; margin-top: 0.5rem;">
+                        Template for exported files. Use {period} and {session} as placeholders.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="checkbox" id="include_timestamp" name="include_timestamp" value="true"
+                               {% if config.export.include_timestamp %}checked{% endif %}>
+                        <label for="include_timestamp" style="margin: 0; cursor: pointer;">
+                            <strong>Include Timestamp</strong> - Add timestamp to exported filenames
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Export Settings</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Current Bot Settings -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h3>Current cBot Settings</h3>
+            <p class="text-muted">These are the current trading bot parameter values</p>
+        </div>
+        <div class="card-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Current Value</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>MTF SMA Period</strong></td>
+                        <td>{{ config.cbot_current_settings.MTF_SMA_Period }}</td>
+                        <td class="text-muted">Core trend detection period</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Timeframe 2</strong></td>
+                        <td>{{ config.cbot_current_settings.Timeframe2 }}</td>
+                        <td class="text-muted">Medium-term alignment timeframe</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Timeframe 3</strong></td>
+                        <td>{{ config.cbot_current_settings.Timeframe3 }}</td>
+                        <td class="text-muted">Higher timeframe confirmation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADX Mode</strong></td>
+                        <td>{{ config.cbot_current_settings.ADXMode }}</td>
+                        <td class="text-muted">ADX behavior mode</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADX Period</strong></td>
+                        <td>{{ config.cbot_current_settings.ADXPeriod }}</td>
+                        <td class="text-muted">ADX indicator period</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADX Min Threshold</strong></td>
+                        <td>{{ config.cbot_current_settings.ADXMinThreshold }}</td>
+                        <td class="text-muted">ADX trigger threshold</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Minimum RR</strong></td>
+                        <td>{{ config.cbot_current_settings.MinimumRR }}</td>
+                        <td class="text-muted">Minimum risk/reward ratio</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Daily Loss Limit</strong></td>
+                        <td>{{ config.cbot_current_settings.DailyLossLimit }}R</td>
+                        <td class="text-muted">Daily loss stop threshold</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consecutive Loss Limit</strong></td>
+                        <td>{{ config.cbot_current_settings.ConsecutiveLossLimit }}</td>
+                        <td class="text-muted">Consecutive loss warning threshold</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Monthly DD Limit</strong></td>
+                        <td>{{ config.cbot_current_settings.MonthlyDDLimit }}%</td>
+                        <td class="text-muted">Monthly drawdown stop threshold</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Enable London Session</strong></td>
+                        <td style="color: {% if config.cbot_current_settings.EnableLondonSession %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {% if config.cbot_current_settings.EnableLondonSession %}Enabled{% else %}Disabled{% endif %}
+                        </td>
+                        <td class="text-muted">London session trading</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Enable NY Session</strong></td>
+                        <td style="color: {% if config.cbot_current_settings.EnableNYSession %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {% if config.cbot_current_settings.EnableNYSession %}Enabled{% else %}Disabled{% endif %}
+                        </td>
+                        <td class="text-muted">New York session trading</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Enable Asian Session</strong></td>
+                        <td style="color: {% if config.cbot_current_settings.EnableAsianSession %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {% if config.cbot_current_settings.EnableAsianSession %}Enabled{% else %}Disabled{% endif %}
+                        </td>
+                        <td class="text-muted">Asian session trading</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #ecf0f1;">
+                <p class="text-muted" style="font-size: 0.9rem;">
+                    To update bot parameters, edit the cBot settings directly in cTrader and these values will reflect the current configuration.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="card mt-3" style="border-left: 4px solid #e74c3c;">
+        <div class="card-header">
+            <h3 style="color: #e74c3c;">Danger Zone</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/settings/reset-config" style="margin-bottom: 1rem;">
+                <p class="text-muted" style="margin-bottom: 1rem;">
+                    Reset all settings to default values. This cannot be undone.
+                </p>
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure? This will reset all settings to defaults.');">
+                    Reset to Defaults
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="card mt-3">
+        <div class="card-footer">
+            <a href="/" class="btn btn-secondary">Back to Archive</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card h3 {
+        margin: 0 !important;
+    }
+    table td {
+        vertical-align: middle;
+    }
+    table td small {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}

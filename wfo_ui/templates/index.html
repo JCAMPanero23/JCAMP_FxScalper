@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Archive Browser - JCAMP WFO Analysis{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Archive Browser</h2>
+            <p class="text-muted">Browse backtest results organized by period and session</p>
+        </div>
+        <div class="card-body">
+            {% if periods %}
+                {% for period in periods %}
+                <div class="card mt-3 mb-3" style="background-color: #f9f9f9; border-left: 4px solid #3498db;">
+                    <div class="card-header" style="border-bottom: 1px solid #ddd; margin-bottom: 1rem; padding-bottom: 0.75rem;">
+                        <h3 style="margin: 0; color: #2c3e50; font-size: 1.25rem;">
+                            {{ period.name }}
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        {% if period.sessions %}
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                                {% for session in period.sessions %}
+                                <div class="card" style="background-color: white; border: 1px solid #ecf0f1;">
+                                    <div style="padding: 1rem;">
+                                        <h4 style="margin: 0 0 1rem 0; color: #2c3e50;">
+                                            {{ session.name }}
+                                        </h4>
+                                        <div style="margin-bottom: 1rem;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 500; color: #555;">Win Rate</span>
+                                                <span style="color: {% if session.win_rate >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                                    {{ "%.1f"|format(session.win_rate) }}%
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 500; color: #555;">Total R</span>
+                                                <span style="color: {% if session.total_r > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                                    {{ "%.2f"|format(session.total_r) }}R
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="font-weight: 500; color: #555;">Trades</span>
+                                                <span style="color: #2c3e50; font-weight: bold;">
+                                                    {{ session.trades }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <a href="/analysis?period={{ period.name }}&session={{ session.name }}" class="btn btn-primary btn-small" style="display: block; text-align: center;">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No sessions for this period</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Pagination -->
+                {% if total_pages > 1 %}
+                <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
+                    {% if current_page > 1 %}
+                        <a href="/?page=1" class="btn btn-secondary btn-small">First</a>
+                        <a href="/?page={{ current_page - 1 }}" class="btn btn-secondary btn-small">Previous</a>
+                    {% endif %}
+
+                    <span style="padding: 0.5rem 1rem; background-color: #3498db; color: white; border-radius: 4px;">
+                        Page {{ current_page }} of {{ total_pages }}
+                    </span>
+
+                    {% if current_page < total_pages %}
+                        <a href="/?page={{ current_page + 1 }}" class="btn btn-secondary btn-small">Next</a>
+                        <a href="/?page={{ total_pages }}" class="btn btn-secondary btn-small">Last</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% else %}
+                <div style="text-align: center; padding: 2rem;">
+                    <p class="text-muted" style="font-size: 1.1rem;">No archive data available yet</p>
+                    <p class="text-muted">Run backtest analysis to populate the archive</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .card h3 {
+        margin: 0 !important;
+    }
+    .card h4 {
+        margin: 0 !important;
+    }
+</style>
+{% endblock %}
