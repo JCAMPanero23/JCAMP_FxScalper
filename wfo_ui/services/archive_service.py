@@ -35,9 +35,14 @@ def get_archive_tree(page: int = 1, per_page: int = 20) -> Dict[str, Any]:
             if not session_dir.is_dir():
                 continue
 
-            # Read summary metrics from JSON
-            json_path = session_dir / "analysis_results" / "recommended_settings.json"
-            if json_path.exists():
+            # Read summary metrics from JSON (support timestamped files)
+            results_dir = session_dir / "analysis_results"
+            if not results_dir.exists():
+                continue
+
+            json_files = list(results_dir.glob("recommended_settings*.json"))
+            if json_files:
+                json_path = json_files[0]  # Use first match
                 with open(json_path) as f:
                     data = json.load(f)
                     perf = data.get("performance", {})
