@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.3.0-WFO";
+        private const string BOT_VERSION = "4.4.0-WFO";
         private const string VERSION_DATE = "2026-03-31";
-        private const string VERSION_NOTES = "WFO + Advanced Filters (Hour/Day/Direction) + Session + ADX Range + Logging";
+        private const string VERSION_NOTES = "WFO + Chandelier SL Safety + Close on Monthly DD + Advanced Filters";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -240,6 +240,9 @@ namespace cAlgo.Robots
 
         [Parameter("Max Monthly DD %", DefaultValue = 10.0, MinValue = 5.0, MaxValue = 20.0, Step = 1.0, Group = "Risk Management")]
         public double MaxMonthlyDrawdownPercent { get; set; }
+
+        [Parameter("Close Positions on DD Limit", DefaultValue = true, Group = "Risk Management")]
+        public bool ClosePositionsOnMonthlyDD { get; set; }
 
         #endregion
 
@@ -495,7 +498,7 @@ namespace cAlgo.Robots
 
             Print("Trading Enabled: {0} | Session Filter: {1}", EnableTrading, EnableSessionFilter);
             Print("ADX Filter: {0} | Exhaustion Exit: {1}", EnableADXFilter, EnableExhaustionExit);
-            Print("Daily Limit: {0} | Consecutive Loss Limit: {1} | Monthly DD Limit: {2}", EnableDailyLossLimit, EnableConsecutiveLossLimit, EnableMonthlyDrawdownLimit);
+            Print("Daily Limit: {0} | Consecutive Loss Limit: {1} | Monthly DD Limit: {2} | Close on DD: {3}", EnableDailyLossLimit, EnableConsecutiveLossLimit, EnableMonthlyDrawdownLimit, ClosePositionsOnMonthlyDD);
             Print("Risk: {0:F1}% | Min RR: {1:F1} | Max Positions: {2}", RiskPercent, MinimumRRRatio, MaxPositions);
             Print("Diagnostics: {0} | Interval: {1} bars ({2} min on M1)", EnableDiagnostics, DiagnosticIntervalBars, DiagnosticIntervalBars);
             Print("========================================");
@@ -1053,6 +1056,14 @@ namespace cAlgo.Robots
 
                 double currentPrice = state.TradeDirection == TradeType.Buy ? Symbol.Bid : Symbol.Ask;
 
+                // SAFETY CHECK: Verify position still has valid SL - restore if missing
+                if (!position.StopLoss.HasValue && state.CurrentTrailingSL > 0)
+                {
+                    Print("[CHANDELIER] WARNING: Position {0} lost SL! Restoring from state: {1:F5}",
+                        position.Id, state.CurrentTrailingSL);
+                    ModifyPosition(position, state.CurrentTrailingSL, position.TakeProfit);
+                }
+
                 // Check activation
                 if (!state.IsActivated)
                 {
@@ -1066,10 +1077,10 @@ namespace cAlgo.Robots
                         state.PriceWatermark = currentPrice;
                         Print("[CHANDELIER] ACTIVATED | Position {0} | Price: {1:F5}", position.Id, currentPrice);
 
-                        // Remove TP if configured
+                        // Remove TP if configured - use saved SL from state, not position.StopLoss (may be null!)
                         if (TPModeSelection == ChandelierTPMode.RemoveTP)
                         {
-                            ModifyPosition(position, position.StopLoss, null);
+                            ModifyPosition(position, state.CurrentTrailingSL, null);
                         }
                     }
                 }
@@ -1553,6 +1564,38 @@ namespace cAlgo.Robots
                     Print("[MONTHLY-DD] LIMIT REACHED | DD: {0:F1}% | Start: {1:F2} | Current: {2:F2}",
                         currentDrawdown, _monthStartEquity, Account.Equity);
                     Print("[MONTHLY-DD] Trading paused until next month. Re-optimize parameters.");
+
+                    // Close all positions to prevent further losses
+                    if (ClosePositionsOnMonthlyDD)
+                    {
+                        CloseAllPositionsOnLimit("[MONTHLY-DD]");
+                    }
+                }
+            }
+        }
+
+        private void CloseAllPositionsOnLimit(string reason)
+        {
+            var positionsToClose = Positions.Where(p => p.Label == MagicNumber.ToString()).ToList();
+
+            if (positionsToClose.Count == 0)
+            {
+                Print("{0} No open positions to close.", reason);
+                return;
+            }
+
+            Print("{0} Closing {1} open position(s) to prevent further losses...", reason, positionsToClose.Count);
+
+            foreach (var position in positionsToClose)
+            {
+                var closeResult = ClosePosition(position);
+                if (closeResult.IsSuccessful)
+                {
+                    Print("{0} Closed position {1} | P/L: {2:F2}", reason, position.Id, position.NetProfit);
+                }
+                else
+                {
+                    Print("{0} FAILED to close position {1}: {2}", reason, position.Id, closeResult.Error);
                 }
             }
         }

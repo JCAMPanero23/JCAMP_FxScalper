@@ -1,6 +1,6 @@
-# JCAMP FxScalper v4.1.3
+# JCAMP FxScalper v4.4.0-WFO
 
-MTF SMA Alignment Strategy with ADX FlipDirection mode and Consecutive Loss Protection.
+MTF SMA Alignment Strategy with ADX FlipDirection mode, Chandelier Trailing SL, and Advanced Risk Protection.
 
 ## Quick Start
 
@@ -12,20 +12,21 @@ D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs
 cp "D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs" "C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs"
 ```
 
-## Current Parameters (v4.1.3)
+## Current Parameters (v4.4.0-WFO)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| MTF SMA Period | 275 | Core trend detection |
+| MTF SMA Period | 250 | Core trend detection |
 | Timeframe 2 | M4 | Medium-term alignment |
 | Timeframe 3 | M15 | Higher TF confirmation |
 | ADX Mode | FlipDirection | Contrarian in ranging |
-| ADX Period | 18 | |
-| ADX Threshold | 15 | Below = flip direction |
-| Minimum RR | 5.0 | High-quality setups only |
+| ADX Period | 16 | |
+| ADX Threshold | 35 | Below = flip direction |
+| Minimum RR | 4.0 | High-quality setups only |
 | Daily Loss Limit | -3R | Stops trading for the day |
 | Consecutive Loss Limit | 9 losses | Strategy degradation warning |
 | Monthly DD Limit | 10% | Stop and re-optimize |
+| **Close on DD Limit** | **true** | **Closes all positions when DD hit** |
 
 **Optimization File:** `Jcamp_1M_scalping, EURUSD m1_v4.1.2.optset`
 
@@ -49,10 +50,11 @@ cp "D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs" "C:\Users\Jcamp_Laptop\Documents\cA
 
 ### Layer 3: Monthly Drawdown Limit
 - **Trigger**: `10%` drawdown from month start equity
-- **Action**: Stop trading until next month
+- **Action**: Stop trading until next month + **Close all positions** (v4.4.0+)
 - **Purpose**: Prevent catastrophic monthly losses
 - **Reset**: First day of new month
 - **For Optimization**: Keep enabled
+- **Close on DD**: When enabled (default), closes all open positions immediately to prevent further losses
 
 ## Backtest Results (Nov 2025 - Feb 2026)
 
@@ -105,7 +107,21 @@ If monthly DD limit (10%) hit → re-optimize immediately.
 
 ## Version History
 
-### v4.1.3 (Current)
+### v4.4.0-WFO (Current)
+- **CRITICAL BUG FIX**: Chandelier SL safety check - restores SL if position loses it
+- **NEW**: Close all positions when Monthly DD limit hit (prevents unprotected trades)
+- **FIX**: Use saved SL from state instead of position.StopLoss (may be null)
+- WFO analysis integration with equity curve degradation detection
+- Custom GetFitness with equity slope analysis
+- CSV export toggle for optimization runs
+
+### v4.3.0-WFO
+- WFO (Walk-Forward Optimization) logging system
+- Advanced filters: Hour/Day/Direction
+- Session filtering with Asian/London/NY support
+- ADX Range mode
+
+### v4.1.3
 - Consecutive loss limit (default: 9 losses)
 - Warns when strategy degradation detected
 - Designed for Chandelier-based strategies
