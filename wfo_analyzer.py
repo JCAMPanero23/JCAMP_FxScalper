@@ -320,7 +320,7 @@ class WFOAnalyzer:
         # Split into thirds for trend analysis
         third = len(self.df) // 3
         if third < 5:  # Need minimum data
-            print("⚠️  Insufficient trades for trend analysis (need 15+ trades)")
+            print("[WARNING] Insufficient trades for trend analysis (need 15+ trades)")
             return False
 
         first_third = self.df[:third]
@@ -342,33 +342,33 @@ class WFOAnalyzer:
 
         # Severe degradation: Final third < 30% of first third performance
         if first_third_r > 0 and final_third_r < first_third_r * 0.3:
-            print("🔴 SEVERE DEGRADATION DETECTED!")
+            print("[!] SEVERE DEGRADATION DETECTED!")
             print(f"   Final third performance is {(final_third_r/first_third_r)*100:.1f}% of initial")
-            print("   → Recommendation: RE-OPTIMIZE with recent data only (last 3-6 months)")
+            print("   --> Recommendation: RE-OPTIMIZE with recent data only (last 3-6 months)")
             degradation_detected = True
 
         # Performance reversal: First positive, final negative
         elif first_third_r > 0 and final_third_r < 0:
-            print("🔴 PERFORMANCE REVERSAL DETECTED!")
+            print("[!] PERFORMANCE REVERSAL DETECTED!")
             print("   Strategy was profitable, now losing money")
-            print("   → Recommendation: STOP using these parameters immediately")
+            print("   --> Recommendation: STOP using these parameters immediately")
             degradation_detected = True
 
         # Declining trend: Each third worse than previous
         elif second_third_r < first_third_r and final_third_r < second_third_r:
             decline_pct = ((first_third_r - final_third_r) / abs(first_third_r) * 100) if first_third_r != 0 else 0
-            print(f"🟡 DECLINING TREND DETECTED!")
+            print(f"[WARNING] DECLINING TREND DETECTED!")
             print(f"   Performance decreased {decline_pct:.1f}% from start to finish")
-            print("   → Recommendation: Consider re-optimization soon")
+            print("   --> Recommendation: Consider re-optimization soon")
             degradation_detected = True
 
         # Stable or improving
         else:
             if final_third_r >= first_third_r:
-                print("✅ PERFORMANCE STABLE OR IMPROVING")
+                print("[OK] PERFORMANCE STABLE OR IMPROVING")
                 print("   Strategy maintaining or increasing profitability")
             else:
-                print("✅ PERFORMANCE ACCEPTABLE")
+                print("[OK] PERFORMANCE ACCEPTABLE")
                 print("   Minor variation within normal range")
 
         print()
