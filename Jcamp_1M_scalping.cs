@@ -19,7 +19,7 @@ namespace cAlgo.Robots
     {
         #region Version Info
         private const string BOT_VERSION = "4.4.0-WFO";
-        private const string VERSION_DATE = "2026-03-31";
+        private const string VERSION_DATE = "2026-04-03";
         private const string VERSION_NOTES = "WFO + Chandelier SL Safety + Close on Monthly DD + Advanced Filters";
         #endregion
 
@@ -896,6 +896,28 @@ namespace cAlgo.Robots
             if (result.IsSuccessful)
             {
                 Print("[BUY] SUCCESS | Position ID: {0}", result.Position.Id);
+
+                // CRITICAL: Verify SL was actually set by cTrader
+                if (!result.Position.StopLoss.HasValue)
+                {
+                    Print("[BUY] WARNING: SL not set by ExecuteMarketOrder! Setting explicitly...");
+                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit);
+                    if (!modifyResult.IsSuccessful)
+                    {
+                        Print("[BUY] CRITICAL: Failed to set SL! Error: {0}", modifyResult.Error);
+                    }
+                    else
+                    {
+                        Print("[BUY] SL explicitly set to {0:F5}", stopLoss);
+                    }
+                }
+                else
+                {
+                    Print("[BUY] SL verified: {0:F5} | TP: {1}",
+                        result.Position.StopLoss.Value,
+                        result.Position.TakeProfit.HasValue ? result.Position.TakeProfit.Value.ToString("F5") : "none");
+                }
+
                 InitializeChandelierState(result.Position, entryPrice, stopLoss, takeProfit);
 
                 // Log trade entry context for WFO analysis
@@ -960,6 +982,28 @@ namespace cAlgo.Robots
             if (result.IsSuccessful)
             {
                 Print("[SELL] SUCCESS | Position ID: {0}", result.Position.Id);
+
+                // CRITICAL: Verify SL was actually set by cTrader
+                if (!result.Position.StopLoss.HasValue)
+                {
+                    Print("[SELL] WARNING: SL not set by ExecuteMarketOrder! Setting explicitly...");
+                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit);
+                    if (!modifyResult.IsSuccessful)
+                    {
+                        Print("[SELL] CRITICAL: Failed to set SL! Error: {0}", modifyResult.Error);
+                    }
+                    else
+                    {
+                        Print("[SELL] SL explicitly set to {0:F5}", stopLoss);
+                    }
+                }
+                else
+                {
+                    Print("[SELL] SL verified: {0:F5} | TP: {1}",
+                        result.Position.StopLoss.Value,
+                        result.Position.TakeProfit.HasValue ? result.Position.TakeProfit.Value.ToString("F5") : "none");
+                }
+
                 InitializeChandelierState(result.Position, entryPrice, stopLoss, takeProfit);
 
                 // Log trade entry context for WFO analysis
