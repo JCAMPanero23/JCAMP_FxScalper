@@ -1052,7 +1052,7 @@ namespace cAlgo.Robots
         /// <summary>
         /// Attempts to set SL with retries and progressively wider distance if rejected
         /// </summary>
-        private bool TrySetStopLossWithRetry(Position position, double originalSL, double originalTP, TradeType direction)
+        private bool TrySetStopLossWithRetry(Position position, double originalSL, double? originalTP, TradeType direction)
         {
             const int MAX_RETRIES = 3;
             const double EXTRA_PIPS_PER_RETRY = 2.0; // Add 2 pips per retry
