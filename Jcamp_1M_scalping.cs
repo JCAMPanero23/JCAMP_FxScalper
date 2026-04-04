@@ -901,14 +901,16 @@ namespace cAlgo.Robots
                 if (!result.Position.StopLoss.HasValue)
                 {
                     Print("[BUY] WARNING: SL not set by ExecuteMarketOrder! Setting explicitly...");
-                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit, false);
-                    if (!modifyResult.IsSuccessful)
+
+                    // Try to set SL with retries and wider distance if needed
+                    bool slSet = TrySetStopLossWithRetry(result.Position, stopLoss, takeProfit, TradeType.Buy);
+
+                    if (!slSet)
                     {
-                        Print("[BUY] CRITICAL: Failed to set SL! Error: {0}", modifyResult.Error);
-                    }
-                    else
-                    {
-                        Print("[BUY] SL explicitly set to {0:F5}", stopLoss);
+                        // CRITICAL: Cannot set SL - close position immediately to prevent unprotected trade
+                        Print("[BUY] CRITICAL: Cannot set SL after retries! Closing position to prevent unprotected trade.");
+                        ClosePosition(result.Position);
+                        return;
                     }
                 }
                 else
@@ -987,14 +989,16 @@ namespace cAlgo.Robots
                 if (!result.Position.StopLoss.HasValue)
                 {
                     Print("[SELL] WARNING: SL not set by ExecuteMarketOrder! Setting explicitly...");
-                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit, false);
-                    if (!modifyResult.IsSuccessful)
+
+                    // Try to set SL with retries and wider distance if needed
+                    bool slSet = TrySetStopLossWithRetry(result.Position, stopLoss, takeProfit, TradeType.Sell);
+
+                    if (!slSet)
                     {
-                        Print("[SELL] CRITICAL: Failed to set SL! Error: {0}", modifyResult.Error);
-                    }
-                    else
-                    {
-                        Print("[SELL] SL explicitly set to {0:F5}", stopLoss);
+                        // CRITICAL: Cannot set SL - close position immediately to prevent unprotected trade
+                        Print("[SELL] CRITICAL: Cannot set SL after retries! Closing position to prevent unprotected trade.");
+                        ClosePosition(result.Position);
+                        return;
                     }
                 }
                 else
@@ -1043,6 +1047,56 @@ namespace cAlgo.Robots
                 return 0;
 
             return volumeInUnits;
+        }
+
+        /// <summary>
+        /// Attempts to set SL with retries and progressively wider distance if rejected
+        /// </summary>
+        private bool TrySetStopLossWithRetry(Position position, double originalSL, double originalTP, TradeType direction)
+        {
+            const int MAX_RETRIES = 3;
+            const double EXTRA_PIPS_PER_RETRY = 2.0; // Add 2 pips per retry
+
+            double currentSL = originalSL;
+
+            for (int attempt = 1; attempt <= MAX_RETRIES; attempt++)
+            {
+                // Try to set SL/TP
+                var modifyResult = ModifyPosition(position, currentSL, originalTP, false);
+
+                if (modifyResult.IsSuccessful)
+                {
+                    if (attempt > 1)
+                    {
+                        Print("[SL-RETRY] Success on attempt {0} | SL widened to: {1:F5} (added {2:F1} pips)",
+                            attempt, currentSL, (attempt - 1) * EXTRA_PIPS_PER_RETRY);
+                    }
+                    else
+                    {
+                        Print("[SL-RETRY] SL set successfully: {0:F5}", currentSL);
+                    }
+                    return true;
+                }
+
+                Print("[SL-RETRY] Attempt {0} failed: {1} | Widening SL...", attempt, modifyResult.Error);
+
+                // Widen SL for next attempt
+                double extraDistance = EXTRA_PIPS_PER_RETRY * Symbol.PipSize;
+                if (direction == TradeType.Buy)
+                {
+                    currentSL -= extraDistance; // Move SL further below for BUY
+                }
+                else
+                {
+                    currentSL += extraDistance; // Move SL further above for SELL
+                }
+
+                // Small delay between retries (may help with spread/liquidity issues)
+                System.Threading.Thread.Sleep(100);
+            }
+
+            Print("[SL-RETRY] All {0} attempts failed! Position will be closed.", MAX_RETRIES);
+            return false;
         }
 
         #endregion
@@ -1103,9 +1157,19 @@ namespace cAlgo.Robots
                 // SAFETY CHECK: Verify position still has valid SL - restore if missing
                 if (!position.StopLoss.HasValue && state.CurrentTrailingSL > 0)
                 {
-                    Print("[CHANDELIER] WARNING: Position {0} lost SL! Restoring from state: {1:F5}",
+                    Print("[CHANDELIER] WARNING: Position {0} lost SL! Attempting to restore: {1:F5}",
                         position.Id, state.CurrentTrailingSL);
-                    ModifyPosition(position, state.CurrentTrailingSL, position.TakeProfit, false);
+
+                    bool restored = TrySetStopLossWithRetry(position, state.CurrentTrailingSL, position.TakeProfit, state.TradeDirection);
+
+                    if (!restored)
+                    {
+                        // Cannot restore SL - close position to prevent unprotected trade
+                        Print("[CHANDELIER] CRITICAL: Cannot restore SL for position {0}! Closing to prevent losses.", position.Id);
+                        ClosePosition(position);
+                        positionsToRemove.Add(kvp.Key);
+                        continue;
+                    }
                 }
 
                 // Check activation
