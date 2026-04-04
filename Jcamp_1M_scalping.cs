@@ -2042,24 +2042,65 @@ namespace cAlgo.Robots
 
             fitness += wrScore;
 
-            // 5. === EQUITY CURVE SLOPE (weight: 15%) ===
+            // 5. === EQUITY CURVE SLOPE (weight: 10%) ===
             // Positive slope = upward trend = GOOD
             // Negative slope = downward trend = BAD
             double slopeScore = 0;
             if (equitySlope > 0.1)  // Positive trend (>0.1% per trade)
-                slopeScore = 15;
+                slopeScore = 10;
             else if (equitySlope > 0)
-                slopeScore = 10;  // Slightly positive
+                slopeScore = 7;   // Slightly positive
             else if (equitySlope > -0.1)
-                slopeScore = 5;   // Flat/slightly negative
+                slopeScore = 3;   // Flat/slightly negative
             else
                 slopeScore = 0;   // Declining trend - bad!
 
             fitness += slopeScore;
 
+            // 6. === FINAL THIRD PERFORMANCE (weight: 15%) ===
+            // WFO Priority: Recent performance predicts future results
+            // Final third should be profitable - this is what matters most!
+            double finalThirdScore = 0;
+            if (equityCurve.Count >= 9)
+            {
+                int thirdSize = equityCurve.Count / 3;
+                int finalStart = equityCurve.Count - thirdSize;
+
+                // Calculate final third profit
+                double finalStartEquity = equityCurve[finalStart];
+                double finalEndEquity = equityCurve[equityCurve.Count - 1];
+                double finalThirdProfit = finalEndEquity - finalStartEquity;
+                double finalThirdPercent = (finalThirdProfit / finalStartEquity) * 100;
+
+                // Also check first third for comparison (degradation detection)
+                double firstEndEquity = equityCurve[thirdSize - 1];
+                double firstThirdProfit = firstEndEquity - startingBalance;
+
+                // Score final third performance
+                if (finalThirdPercent > 3)      // Strong finish (>3%)
+                    finalThirdScore = 15;
+                else if (finalThirdPercent > 0) // Positive finish
+                    finalThirdScore = 10;
+                else if (finalThirdPercent > -3) // Slight decline
+                    finalThirdScore = 5;
+                else                            // Heavy losses at end - BAD!
+                    finalThirdScore = 0;
+
+                // DEGRADATION PENALTY: If final third is much worse than first third
+                if (finalThirdProfit < firstThirdProfit * -0.5 && firstThirdProfit > 0)
+                {
+                    // Strategy is degrading - significant penalty
+                    fitness -= 10;
+                    Print("[FITNESS] ⚠️ DEGRADATION: First third +{0:F2} → Final third {1:F2}",
+                        firstThirdProfit, finalThirdProfit);
+                }
+            }
+
+            fitness += finalThirdScore;
+
             // Print fitness breakdown
-            Print("[FITNESS] Trades: {0} | PF: {1:F2} | DD: {2:F1}% | Net: {3:F1}% | WR: {4:F1}% | Slope: {5:F3}%/trade → FITNESS: {6:F2}",
-                History.Count, profitFactor, maxDrawdown, netProfitPercent, winRate * 100, equitySlope, fitness);
+            Print("[FITNESS] Trades: {0} | PF: {1:F2} | DD: {2:F1}% | Net: {3:F1}% | WR: {4:F1}% | Slope: {5:F3}%/trade | Final3rd: {6:F0} → FITNESS: {7:F2}",
+                History.Count, profitFactor, maxDrawdown, netProfitPercent, winRate * 100, equitySlope, finalThirdScore, fitness);
 
             return fitness;
         }

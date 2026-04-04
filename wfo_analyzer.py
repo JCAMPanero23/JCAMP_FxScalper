@@ -429,6 +429,37 @@ class WFOAnalyzer:
             recommendations['equity_trend'] = self.results['equity_trend']
             recommendations['equity_degradation_detected'] = self.results.get('equity_degradation', False)
 
+            # === OPTIMIZATION PRIORITY RECOMMENDATION ===
+            if self.results.get('equity_degradation', False):
+                equity_trend = self.results['equity_trend']
+                first_r = equity_trend.get('first_third_r', 0)
+                final_r = equity_trend.get('final_third_r', 0)
+
+                print("\n" + "!"*70)
+                print("!!  CRITICAL: EQUITY DEGRADATION DETECTED - RE-OPTIMIZATION REQUIRED  !!")
+                print("!"*70)
+                print(f"\n  First Third:  {first_r:+.2f}R")
+                print(f"  Final Third:  {final_r:+.2f}R")
+                print(f"  Degradation:  {final_r - first_r:+.2f}R\n")
+                print("  RECOMMENDED ACTIONS:")
+                print("  1. Run new optimization on RECENT data (last 2-3 months)")
+                print("  2. Use GetFitness with Final Third Priority enabled")
+                print("  3. Reduce position size until new parameters are validated")
+                print("  4. Consider market regime change (trending vs ranging)")
+                print("!"*70 + "\n")
+
+                recommendations['optimization_recommendation'] = {
+                    'action': 'RE-OPTIMIZE IMMEDIATELY',
+                    'priority': 'HIGH',
+                    'reason': f'Strategy degraded from {first_r:+.2f}R to {final_r:+.2f}R',
+                    'suggested_steps': [
+                        'Run optimization on recent 2-3 months data',
+                        'Prioritize Final Third performance in fitness function',
+                        'Reduce position size during validation',
+                        'Check for market regime change'
+                    ]
+                }
+
         # Session recommendation
         if 'best_session' in self.results:
             best = self.results['best_session']
@@ -555,7 +586,7 @@ class WFOAnalyzer:
         print("EXPORTING OPTIMIZED SETTINGS")
         print(f"{'='*70}\n")
 
-        output_dir = self.log_file.parent / 'wfo_results'
+        output_dir = self.log_file.parent / 'analysis_results'
         output_dir.mkdir(exist_ok=True)
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -606,7 +637,7 @@ class WFOAnalyzer:
         print("GENERATING VISUALIZATIONS")
         print(f"{'='*70}\n")
 
-        output_dir = self.log_file.parent / 'wfo_results'
+        output_dir = self.log_file.parent / 'analysis_results'
         output_dir.mkdir(exist_ok=True)
 
         fig = plt.figure(figsize=(20, 12))
@@ -785,7 +816,7 @@ class WFOAnalyzer:
         print("ANALYSIS COMPLETE!")
         print(f"{'='*70}\n")
         print("Next steps:")
-        print("1. Review the recommended settings in wfo_results/")
+        print("1. Review the recommended settings in analysis_results/")
         print("2. Apply settings to your cBot in cAlgo")
         print("3. Run out-of-sample backtest to validate")
         print("4. If validated, deploy to demo with monitoring")

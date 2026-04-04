@@ -123,6 +123,9 @@ def get_analysis_detail(period: str, session: str) -> Dict[str, Any]:
         "session_breakdown": data.get("session_breakdown", []),
         "metrics": data.get("performance", {}),
         "recommendations": data.get("parameters", {}),
+        "equity_trend": data.get("equity_trend", {}),
+        "equity_degradation_detected": data.get("equity_degradation_detected", False),
+        "optimization_recommendation": data.get("optimization_recommendation", {}),
         "chart_path": chart_path,
         "csv_path": csv_path
     }
