@@ -901,7 +901,7 @@ namespace cAlgo.Robots
                 if (!result.Position.StopLoss.HasValue)
                 {
                     Print("[BUY] WARNING: SL not set by ExecuteMarketOrder! Setting explicitly...");
-                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit);
+                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit, false);
                     if (!modifyResult.IsSuccessful)
                     {
                         Print("[BUY] CRITICAL: Failed to set SL! Error: {0}", modifyResult.Error);
@@ -987,7 +987,7 @@ namespace cAlgo.Robots
                 if (!result.Position.StopLoss.HasValue)
                 {
                     Print("[SELL] WARNING: SL not set by ExecuteMarketOrder! Setting explicitly...");
-                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit);
+                    var modifyResult = ModifyPosition(result.Position, stopLoss, takeProfit, false);
                     if (!modifyResult.IsSuccessful)
                     {
                         Print("[SELL] CRITICAL: Failed to set SL! Error: {0}", modifyResult.Error);
@@ -1105,7 +1105,7 @@ namespace cAlgo.Robots
                 {
                     Print("[CHANDELIER] WARNING: Position {0} lost SL! Restoring from state: {1:F5}",
                         position.Id, state.CurrentTrailingSL);
-                    ModifyPosition(position, state.CurrentTrailingSL, position.TakeProfit);
+                    ModifyPosition(position, state.CurrentTrailingSL, position.TakeProfit, false);
                 }
 
                 // Check activation
@@ -1124,7 +1124,7 @@ namespace cAlgo.Robots
                         // Remove TP if configured - use saved SL from state, not position.StopLoss (may be null!)
                         if (TPModeSelection == ChandelierTPMode.RemoveTP)
                         {
-                            ModifyPosition(position, state.CurrentTrailingSL, null);
+                            ModifyPosition(position, state.CurrentTrailingSL, null, false);
                         }
                     }
                 }
@@ -1165,7 +1165,7 @@ namespace cAlgo.Robots
                         double distanceFromPrice = Math.Abs(currentPrice - newSL) / Symbol.PipSize;
                         if (distanceFromPrice >= MinChandelierDistance)
                         {
-                            ModifyPosition(position, newSL, position.TakeProfit);
+                            ModifyPosition(position, newSL, position.TakeProfit, false);
                             state.CurrentTrailingSL = newSL;
                             state.LastIncrementCount = currentIncrements;
                             state.ChandelierMoveCount++;
@@ -1862,6 +1862,10 @@ namespace cAlgo.Robots
                 return 0;
             }
 
+            // Calculate starting balance (Balance - NetProfit = what we started with)
+            double startingBalance = args.Balance - args.NetProfit;
+            if (startingBalance <= 0) startingBalance = 10000; // Fallback
+
             // Calculate key metrics
             double totalProfit = 0;
             double totalLoss = 0;
@@ -1869,7 +1873,7 @@ namespace cAlgo.Robots
             int lossCount = 0;
             double maxDrawdown = 0;
             double peak = 0;
-            double equity = args.StartingBalance;
+            double equity = startingBalance;
             List<double> equityCurve = new List<double>();
 
             foreach (var trade in History)
@@ -1906,7 +1910,7 @@ namespace cAlgo.Robots
             double winRate = History.Count > 0 ? (double)winCount / History.Count : 0;
 
             // Calculate Net Profit Percent
-            double netProfitPercent = ((equity - args.StartingBalance) / args.StartingBalance) * 100;
+            double netProfitPercent = ((equity - startingBalance) / startingBalance) * 100;
 
             // === EQUITY CURVE SLOPE ANALYSIS ===
             // Linear regression to detect trend (upward = good, downward = bad)
@@ -1932,7 +1936,7 @@ namespace cAlgo.Robots
                 equitySlope = denominator != 0 ? numerator / denominator : 0;
 
                 // Normalize slope to percentage per trade
-                equitySlope = (equitySlope / args.StartingBalance) * 100;
+                equitySlope = (equitySlope / startingBalance) * 100;
             }
 
             // === FITNESS CALCULATION ===
