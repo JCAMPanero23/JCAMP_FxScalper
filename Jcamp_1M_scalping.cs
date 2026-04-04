@@ -1862,8 +1862,9 @@ namespace cAlgo.Robots
                 return 0;
             }
 
-            // Calculate starting balance (Balance - NetProfit = what we started with)
-            double startingBalance = args.Balance - args.NetProfit;
+            // Calculate starting balance from equity and net profit
+            // args.Equity is current equity, args.NetProfit is total P/L
+            double startingBalance = args.Equity - args.NetProfit;
             if (startingBalance <= 0) startingBalance = 10000; // Fallback
 
             // Calculate key metrics
