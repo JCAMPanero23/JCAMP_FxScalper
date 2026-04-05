@@ -28,26 +28,33 @@ app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
 def index():
     """Home page - Archive browser"""
     try:
-        # Get pagination parameters
+        # Get pagination and filter parameters
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
+        pair_filter = request.args.get('pair', None, type=str)
 
         # Validate per_page range
         if per_page < 10 or per_page > 100:
             per_page = 20
 
-        # Get archive tree with pagination
-        archive_data = archive_service.get_archive_tree(page=page, per_page=per_page)
+        # Get archive tree with pagination and pair filter
+        archive_data = archive_service.get_archive_tree(
+            page=page,
+            per_page=per_page,
+            pair_filter=pair_filter
+        )
 
         return render_template(
             'index.html',
             periods=archive_data.get('periods', []),
             total_pages=archive_data.get('total_pages', 0),
-            current_page=archive_data.get('current_page', 1)
+            current_page=archive_data.get('current_page', 1),
+            pairs=archive_data.get('pairs', []),
+            current_pair=archive_data.get('current_pair')
         )
     except Exception as e:
         flash(f'Error loading archive: {str(e)}', 'error')
-        return render_template('index.html', periods=[], total_pages=0, current_page=1), 500
+        return render_template('index.html', periods=[], total_pages=0, current_page=1, pairs=[], current_pair=None), 500
 
 
 @app.route('/analysis/<period>/<session>')
@@ -93,6 +100,9 @@ def analysis(period, session):
             csv_filename = Path(analysis_detail['csv_path']).name
             csv_url = f"/archive/{period}/{session}/{csv_filename}"
 
+        # Get backtest settings from the analysis (extracted from CSV)
+        backtest_settings = analysis_detail.get('backtest_settings', {})
+
         return render_template(
             'analysis.html',
             period=period,
@@ -101,6 +111,7 @@ def analysis(period, session):
             session_breakdown=analysis_detail.get('session_breakdown', []),
             metrics=analysis_detail.get('metrics', {}),
             recommendations=analysis_detail.get('recommendations', {}),
+            backtest_settings=backtest_settings,
             equity_trend=analysis_detail.get('equity_trend', {}),
             equity_degradation_detected=analysis_detail.get('equity_degradation_detected', False),
             optimization_recommendation=analysis_detail.get('optimization_recommendation', {}),
@@ -320,10 +331,22 @@ def export(period, session):
         # Get analysis data
         analysis_detail = archive_service.get_analysis_detail(period, session)
         recommendations = analysis_detail.get('recommendations', {})
+        backtest_settings = analysis_detail.get('backtest_settings', {})
 
         if not recommendations:
             flash('No recommendations found to export', 'error')
             return redirect(url_for('analysis', period=period, session=session))
+
+        # Use backtest_settings from the CSV as base (settings actually used during backtest)
+        # Fall back to config if backtest_settings not available (old analyses)
+        if backtest_settings:
+            base_settings = backtest_settings
+        else:
+            config = config_service.load_config()
+            base_settings = config.get('cbot_current_settings', {})
+
+        # Merge: backtest settings + analyzer recommendations (recommendations override base)
+        merged_params = {**base_settings, **recommendations}
 
         # Generate temporary file path
         temp_dir = Path(app.config['UPLOAD_FOLDER'])
@@ -333,7 +356,7 @@ def export(period, session):
 
         # Export to .cbotset file
         export_result = export_service.export_to_cbotset(
-            recommendations,
+            merged_params,
             str(temp_file)
         )
 
@@ -363,6 +386,68 @@ def export(period, session):
     except Exception as e:
         flash(f'Export error: {str(e)}', 'error')
         return redirect(url_for('index')), 500
+
+
+@app.route('/download-optset')
+def download_optset():
+    """Download the .optset file for re-optimization"""
+    try:
+        optimization_sets_dir = Path(__file__).parent.parent / "optimization_sets"
+
+        # Find the latest dated .optset file (pattern: Jcamp_1M_scalping_YYYY-MM-DD.optset)
+        optset_files = list(optimization_sets_dir.glob("Jcamp_1M_scalping_*.optset"))
+
+        if not optset_files:
+            # Fallback to old naming convention
+            old_path = optimization_sets_dir / "Jcamp_1M_scalping, EURUSD m1.optset"
+            if old_path.exists():
+                optset_files = [old_path]
+
+        if not optset_files:
+            flash('No .optset file found in optimization_sets folder.', 'error')
+            return redirect(url_for('index'))
+
+        # Sort by name (date) and get the latest
+        optset_files.sort(reverse=True)
+        optset_path = optset_files[0]
+
+        # Generate download filename with current date
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d')
+        download_name = f'Jcamp_1M_scalping_{today}.optset'
+
+        return send_file(
+            str(optset_path),
+            mimetype='application/json',
+            as_attachment=True,
+            download_name=download_name
+        )
+
+    except Exception as e:
+        flash(f'Error downloading .optset file: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+
+@app.route('/download-optimization-guide')
+def download_optimization_guide():
+    """Download the optimization guide markdown file"""
+    try:
+        guide_path = Path(__file__).parent.parent / "optimization_sets" / "OPTIMIZATION_GUIDE.md"
+
+        if not guide_path.exists():
+            flash('Optimization guide not found', 'error')
+            return redirect(url_for('index'))
+
+        return send_file(
+            str(guide_path),
+            mimetype='text/markdown',
+            as_attachment=True,
+            download_name='OPTIMIZATION_GUIDE.md'
+        )
+
+    except Exception as e:
+        flash(f'Error downloading guide: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 
 @app.route('/import')
@@ -397,6 +482,23 @@ def import_page():
         return redirect(url_for('index'))
 
 
+@app.route('/import/check-existing', methods=['POST'])
+def check_existing():
+    """Check if analysis results already exist for a period/session"""
+    try:
+        period = request.form.get('period', '').strip()
+        session = request.form.get('session', '').strip()
+
+        if not period or not session:
+            return json.dumps({"exists": False})
+
+        result = archive_service.check_existing_analysis(period, session)
+        return json.dumps(result)
+
+    except Exception as e:
+        return json.dumps({"exists": False, "error": str(e)})
+
+
 @app.route('/import/analyze', methods=['POST'])
 def import_analyze():
     """Run WFO analysis and archive the results"""
@@ -404,6 +506,7 @@ def import_analyze():
         csv_path = request.form.get('csv_file')
         period = request.form.get('period', '').strip()
         session = request.form.get('session', '').strip()
+        confirm_overwrite = request.form.get('confirm_overwrite', 'false') == 'true'
 
         if not csv_path or not period or not session:
             flash('Please fill in all fields', 'error')
@@ -412,6 +515,21 @@ def import_analyze():
         if not Path(csv_path).exists():
             flash('CSV file not found', 'error')
             return redirect(url_for('import_page'))
+
+        # Check for existing analysis results
+        existing = archive_service.check_existing_analysis(period, session)
+        if existing['exists'] and not confirm_overwrite:
+            # Return to import page with warning - this shouldn't happen
+            # if JS is working, but handle it as fallback
+            flash(f'Analysis already exists for {period}/{session}. Please confirm overwrite.', 'warning')
+            return redirect(url_for('import_page'))
+
+        # If overwriting, delete existing results first
+        if existing['exists'] and confirm_overwrite:
+            delete_result = archive_service.delete_analysis_results(period, session)
+            if not delete_result['success']:
+                flash(f"Failed to delete existing results: {delete_result['error']}", 'error')
+                return redirect(url_for('import_page'))
 
         # Run WFO analysis
         flash('Running WFO analysis... this may take 1-2 minutes', 'info')
@@ -431,12 +549,38 @@ def import_analyze():
             results_path=results_path
         )
 
-        flash(f'Successfully analyzed and archived: {period} / {session}', 'success')
+        action = 'overwritten and re-analyzed' if confirm_overwrite else 'analyzed and archived'
+        flash(f'Successfully {action}: {period} / {session}', 'success')
         return redirect(url_for('analysis', period=period, session=session))
 
     except Exception as e:
         flash(f'Error during import: {str(e)}', 'error')
         return redirect(url_for('import_page'))
+
+
+@app.route('/rename/<period>/<session>', methods=['POST'])
+def rename_session(period, session):
+    """Rename a session"""
+    try:
+        new_session = request.form.get('new_session', '').strip()
+
+        if not new_session:
+            flash('New session name is required', 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
+        # Perform rename
+        result = archive_service.rename_session(period, session, new_session)
+
+        if result['success']:
+            flash(f'Successfully renamed to: {period} / {new_session}', 'success')
+            return redirect(url_for('analysis', period=period, session=new_session))
+        else:
+            flash(f"Rename failed: {result['error']}", 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
+    except Exception as e:
+        flash(f'Error renaming session: {str(e)}', 'error')
+        return redirect(url_for('analysis', period=period, session=session))
 
 
 @app.route('/delete/<period>/<session>', methods=['POST'])

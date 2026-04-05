@@ -18,8 +18,25 @@
         <div class="card-header">
             <h2>Analysis Details</h2>
             <p class="text-muted">
-                <strong>Period:</strong> {{ period }} | <strong>Session:</strong> {{ session }}
+                <strong>Period:</strong> {{ period }} | <strong>Session:</strong> <span id="current-session">{{ session }}</span>
+                <button type="button" class="btn btn-small" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin-left: 0.5rem;" onclick="toggleRenameForm()">
+                    Rename
+                </button>
             </p>
+            <!-- Inline Rename Form (hidden by default) -->
+            <div id="rename-form" style="display: none; margin-top: 1rem; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
+                <form method="POST" action="/rename/{{ period }}/{{ session }}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <label for="new_session" style="font-weight: 500;">New name:</label>
+                    <input type="text" name="new_session" id="new_session" value="{{ session }}"
+                           style="padding: 0.4rem; border: 1px solid #dee2e6; border-radius: 4px; min-width: 200px;"
+                           pattern="[a-zA-Z0-9_-]+" title="Only letters, numbers, underscores, and hyphens allowed">
+                    <button type="submit" class="btn btn-primary btn-small">Save</button>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="toggleRenameForm()">Cancel</button>
+                </form>
+                <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                    Tip: Use format <code>PAIR_session_filter</code> (e.g., EURUSD_all_sessions, USDJPY_london_ny)
+                </small>
+            </div>
         </div>
         <div class="card-footer">
             <a href="/" class="btn btn-secondary">Back to Archive</a>
@@ -252,6 +269,25 @@
                     which better predicts future performance.
                 </p>
             </div>
+
+            <!-- Re-Optimization Quick Actions -->
+            <div style="margin-top: 20px; padding: 15px; background-color: #fdf2f2; border: 2px solid #8e44ad; border-radius: 8px;">
+                <h4 style="margin-top: 0; color: #8e44ad;">Quick Re-Optimization Actions</h4>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                    <a href="/download-optset" class="btn btn-primary" style="background-color: #8e44ad; border-color: #8e44ad;">
+                        Download .optset File
+                    </a>
+                    <a href="/download-optimization-guide" class="btn btn-secondary">
+                        Download Optimization Guide
+                    </a>
+                    <a href="/export/{{ period }}/{{ session }}" class="btn btn-success">
+                        Export Current Settings (.cbotset)
+                    </a>
+                </div>
+                <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.9rem; color: #666;">
+                    <strong>Targets:</strong> PF 1.3-2.0 | DD &lt;20% | Win Rate 25-45% | 30+ trades
+                </p>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -413,49 +449,46 @@
     </div>
     {% endif %}
 
-    <!-- Full Current Settings Dropdown -->
-    {% if current_settings %}
+    <!-- Backtest Settings (From CSV) -->
+    {% if backtest_settings %}
     <div class="card">
-        <div class="card-header" style="background-color: #7f8c8d; color: white; cursor: pointer;" onclick="toggleSettings()">
+        <div class="card-header" style="background-color: #2c3e50; color: white; cursor: pointer;" onclick="toggleSettings()">
             <h3 style="display: flex; justify-content: space-between; align-items: center;">
-                <span>Current Bot Settings (Full Details)</span>
+                <span>Backtest Settings (From CSV)</span>
                 <span id="settings-arrow" style="font-size: 0.8em;">▼</span>
             </h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">
+                Settings extracted from trade log - these were used during the backtest
+            </p>
         </div>
         <div id="settings-details" class="card-body" style="display: none;">
             <table>
                 <thead>
                     <tr>
                         <th>Parameter</th>
-                        <th>Current Value</th>
-                        <th>Recommended Value</th>
+                        <th>Backtest Value</th>
+                        <th>Recommended (Analyzed)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Session Settings -->
+                    <!-- MTF Settings -->
                     <tr class="category-header">
-                        <td colspan="3"><strong>Session Settings</strong></td>
+                        <td colspan="3"><strong>MTF SMA Settings</strong></td>
                     </tr>
                     <tr>
-                        <td>Enable London Session</td>
-                        <td style="color: {% if current_settings.get('EnableLondonSession') %}#27ae60{% else %}#e74c3c{% endif %};">
-                            {{ current_settings.get('EnableLondonSession', '-') }}
-                        </td>
-                        <td style="color: #3498db;">{{ recommendations.get('EnableLondonSession', '-') }}</td>
+                        <td>MTF SMA Period</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('MTFSMAPeriod', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
                     </tr>
                     <tr>
-                        <td>Enable NY Session</td>
-                        <td style="color: {% if current_settings.get('EnableNYSession') %}#27ae60{% else %}#e74c3c{% endif %};">
-                            {{ current_settings.get('EnableNYSession', '-') }}
-                        </td>
-                        <td style="color: #3498db;">{{ recommendations.get('EnableNYSession', '-') }}</td>
+                        <td>Timeframe 2</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('Timeframe2', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
                     </tr>
                     <tr>
-                        <td>Enable Asian Session</td>
-                        <td style="color: {% if current_settings.get('EnableAsianSession') %}#27ae60{% else %}#e74c3c{% endif %};">
-                            {{ current_settings.get('EnableAsianSession', '-') }}
-                        </td>
-                        <td style="color: #3498db;">{{ recommendations.get('EnableAsianSession', '-') }}</td>
+                        <td>Timeframe 3</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('Timeframe3', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
                     </tr>
                     <!-- ADX Settings -->
                     <tr class="category-header">
@@ -463,37 +496,85 @@
                     </tr>
                     <tr>
                         <td>ADX Mode</td>
-                        <td>{{ current_settings.get('ADXMode', '-') }}</td>
+                        <td>{{ backtest_settings.get('ADXMode', '-') }}</td>
                         <td style="color: #3498db; font-weight: bold;">{{ recommendations.get('ADXMode', '-') }}</td>
                     </tr>
                     <tr>
                         <td>ADX Period</td>
-                        <td>{{ current_settings.get('ADXPeriod', '-') }}</td>
-                        <td style="color: #3498db;">{{ recommendations.get('ADXPeriod', '-') }}</td>
+                        <td>{{ backtest_settings.get('ADXPeriod', '-') }}</td>
+                        <td style="color: {% if backtest_settings.get('ADXPeriod') != recommendations.get('ADXPeriod') %}#e67e22{% else %}#3498db{% endif %}; font-weight: bold;">
+                            {{ recommendations.get('ADXPeriod', '-') }}
+                        </td>
                     </tr>
                     <tr>
                         <td>ADX Min Threshold</td>
-                        <td>{{ current_settings.get('ADXMinThreshold', '-') }}</td>
-                        <td style="color: #3498db;">{{ recommendations.get('ADXMinThreshold', '-') }}</td>
+                        <td>{{ backtest_settings.get('ADXMinThreshold', '-') }}</td>
+                        <td style="color: {% if backtest_settings.get('ADXMinThreshold') != recommendations.get('ADXMinThreshold') %}#e67e22{% else %}#3498db{% endif %}; font-weight: bold;">
+                            {{ recommendations.get('ADXMinThreshold', '-') }}
+                        </td>
                     </tr>
-                    <!-- MTF Settings -->
+                    <!-- Session Settings -->
                     <tr class="category-header">
-                        <td colspan="3"><strong>MTF SMA Settings</strong></td>
+                        <td colspan="3"><strong>Session Settings (Analyzed)</strong></td>
                     </tr>
                     <tr>
-                        <td>MTF SMA Period</td>
-                        <td>{{ current_settings.get('MTF_SMA_Period', '-') }}</td>
-                        <td style="color: #3498db;">{{ recommendations.get('MTF_SMA_Period', '-') }}</td>
+                        <td>Enable London Session</td>
+                        <td style="color: #95a5a6;">All sessions used</td>
+                        <td style="color: {% if recommendations.get('EnableLondonSession') %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                            {{ recommendations.get('EnableLondonSession', '-') }}
+                        </td>
                     </tr>
                     <tr>
-                        <td>Timeframe 2</td>
-                        <td>{{ current_settings.get('Timeframe2', '-') }}</td>
-                        <td style="color: #3498db;">{{ recommendations.get('Timeframe2', '-') }}</td>
+                        <td>Enable NY Session</td>
+                        <td style="color: #95a5a6;">All sessions used</td>
+                        <td style="color: {% if recommendations.get('EnableNYSession') %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                            {{ recommendations.get('EnableNYSession', '-') }}
+                        </td>
                     </tr>
                     <tr>
-                        <td>Timeframe 3</td>
-                        <td>{{ current_settings.get('Timeframe3', '-') }}</td>
-                        <td style="color: #3498db;">{{ recommendations.get('Timeframe3', '-') }}</td>
+                        <td>Enable Asian Session</td>
+                        <td style="color: #95a5a6;">All sessions used</td>
+                        <td style="color: {% if recommendations.get('EnableAsianSession') %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                            {{ recommendations.get('EnableAsianSession', '-') }}
+                        </td>
+                    </tr>
+                    <!-- ATR/SL Settings -->
+                    <tr class="category-header">
+                        <td colspan="3"><strong>ATR & Stop Loss Settings</strong></td>
+                    </tr>
+                    <tr>
+                        <td>ATR Period</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('ATRPeriod', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
+                    </tr>
+                    <tr>
+                        <td>SL ATR Multiplier</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('SLATRMultiplier', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
+                    </tr>
+                    <tr>
+                        <td>SL Buffer Pips</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('SLBufferPips', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
+                    </tr>
+                    <!-- Chandelier Settings -->
+                    <tr class="category-header">
+                        <td colspan="3"><strong>Chandelier Trailing SL</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Chandelier Activation RR</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('ChandelierActivationRR', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
+                    </tr>
+                    <tr>
+                        <td>Trail Increment Pips</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('TrailIncrementPips', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
+                    </tr>
+                    <tr>
+                        <td>Min Chandelier Distance</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('MinChandelierDistance', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
                     </tr>
                     <!-- Risk Management -->
                     <tr class="category-header">
@@ -501,26 +582,23 @@
                     </tr>
                     <tr>
                         <td>Minimum R:R Ratio</td>
-                        <td>{{ current_settings.get('MinimumRR', '-') }}</td>
-                        <td style="color: #3498db;">{{ recommendations.get('MinimumRR', '-') }}</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('MinimumRRRatio', '-') }}</td>
+                        <td style="color: #95a5a6;">-</td>
                     </tr>
                     <tr>
-                        <td>Daily Loss Limit</td>
-                        <td style="color: #e74c3c;">{{ current_settings.get('DailyLossLimit', '-') }}R</td>
-                        <td style="color: #3498db;">{{ recommendations.get('DailyLossLimit', '-') if recommendations.get('DailyLossLimit') else '-' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Consecutive Loss Limit</td>
-                        <td style="color: #e74c3c;">{{ current_settings.get('ConsecutiveLossLimit', '-') }} losses</td>
-                        <td style="color: #3498db;">{{ recommendations.get('ConsecutiveLossLimit', '-') if recommendations.get('ConsecutiveLossLimit') else '-' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Monthly Drawdown Limit</td>
-                        <td style="color: #e74c3c;">{{ current_settings.get('MonthlyDDLimit', '-') }}%</td>
-                        <td style="color: #3498db;">{{ recommendations.get('MonthlyDDLimit', '-') if recommendations.get('MonthlyDDLimit') else '-' }}</td>
+                        <td>Risk Percent</td>
+                        <td style="font-weight: bold;">{{ backtest_settings.get('RiskPercent', '-') }}%</td>
+                        <td style="color: #95a5a6;">-</td>
                     </tr>
                 </tbody>
             </table>
+            <div style="margin-top: 15px; padding: 10px; background-color: #e8f6f3; border-radius: 4px;">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <strong>Note:</strong> Backtest values are extracted from the trade log CSV.
+                    Recommended values come from the WFO analyzer based on performance analysis.
+                    The .cbotset export will merge backtest settings with analyzer recommendations.
+                </p>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -563,6 +641,17 @@
 </style>
 
 <script>
+function toggleRenameForm() {
+    var form = document.getElementById('rename-form');
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        document.getElementById('new_session').focus();
+        document.getElementById('new_session').select();
+    } else {
+        form.style.display = 'none';
+    }
+}
+
 function toggleSettings() {
     var details = document.getElementById('settings-details');
     var arrow = document.getElementById('settings-arrow');

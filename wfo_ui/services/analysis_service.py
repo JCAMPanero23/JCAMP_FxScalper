@@ -2,6 +2,7 @@
 import subprocess
 import sys
 import json
+import shutil
 from pathlib import Path
 from typing import Dict, Any
 
@@ -24,6 +25,11 @@ def run_analysis(csv_path: str, period: str, session: str) -> Dict[str, Any]:
         analyzer_script = Path(__file__).parent.parent.parent / "wfo_analyzer.py"
         csv_file = Path(csv_path)
 
+        # Clear old results before running new analysis
+        old_results = csv_file.parent / 'analysis_results'
+        if old_results.exists():
+            shutil.rmtree(old_results)
+
         result = subprocess.run(
             [sys.executable, str(analyzer_script), csv_path],
             capture_output=True,
@@ -38,9 +44,8 @@ def run_analysis(csv_path: str, period: str, session: str) -> Dict[str, Any]:
                 "details": result.stderr
             }
 
-        # Results are created next to the CSV file in wfo_results/
-        # (analyzer creates: csv_file.parent / 'wfo_results')
-        results_path = csv_file.parent / 'wfo_results'
+        # Results are created next to the CSV file in analysis_results/
+        results_path = csv_file.parent / 'analysis_results'
 
         if not results_path.exists():
             return {

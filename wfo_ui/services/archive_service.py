@@ -1,8 +1,9 @@
 """Archive service for managing backtest results"""
 import json
+import re
 import shutil
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from . import config_service
 from . import file_service
@@ -11,18 +12,55 @@ from . import file_service
 ARCHIVE_ROOT = Path(__file__).parent.parent.parent / "data" / "backtest_archive"
 
 
-def get_archive_tree(page: int = 1, per_page: int = 20) -> Dict[str, Any]:
+def extract_pair_from_csv(csv_path: Path) -> str:
+    """Extract trading pair from CSV filename
+
+    Pattern: TradeLog_EURUSD_1092444_20260402_220400.csv
+    Returns: EURUSD (or 'Unknown' if not found)
+    """
+    match = re.search(r'TradeLog_([A-Z]{6})_', csv_path.name)
+    if match:
+        return match.group(1)
+    return "Unknown"
+
+
+def get_all_pairs() -> List[str]:
+    """Get list of all unique pairs in archive"""
+    pairs = set()
+
+    if not ARCHIVE_ROOT.exists():
+        return []
+
+    for period_dir in ARCHIVE_ROOT.iterdir():
+        if not period_dir.is_dir():
+            continue
+        for session_dir in period_dir.iterdir():
+            if not session_dir.is_dir():
+                continue
+            csv_files = list(session_dir.glob("TradeLog*.csv"))
+            if csv_files:
+                pair = extract_pair_from_csv(csv_files[0])
+                pairs.add(pair)
+
+    return sorted(pairs)
+
+
+def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[str] = None) -> Dict[str, Any]:
     """Get archive directory structure
 
     Args:
         page: Page number (1-indexed)
         per_page: Results per page
+        pair_filter: Optional pair to filter by (e.g., 'EURUSD')
 
     Returns:
-        {"periods": [...], "total_pages": int, "current_page": int}
+        {"periods": [...], "total_pages": int, "current_page": int, "pairs": [...], "current_pair": str}
     """
     if not ARCHIVE_ROOT.exists():
-        return {"periods": [], "total_pages": 0, "current_page": 1}
+        return {"periods": [], "total_pages": 0, "current_page": 1, "pairs": [], "current_pair": None}
+
+    # Get all available pairs for tabs
+    all_pairs = get_all_pairs()
 
     periods = []
 
@@ -33,6 +71,14 @@ def get_archive_tree(page: int = 1, per_page: int = 20) -> Dict[str, Any]:
         sessions = []
         for session_dir in sorted(period_dir.iterdir()):
             if not session_dir.is_dir():
+                continue
+
+            # Extract pair from CSV filename
+            csv_files = list(session_dir.glob("TradeLog*.csv"))
+            pair = extract_pair_from_csv(csv_files[0]) if csv_files else "Unknown"
+
+            # Apply pair filter if specified
+            if pair_filter and pair != pair_filter:
                 continue
 
             # Read summary metrics from JSON (use latest timestamped file)
@@ -49,15 +95,18 @@ def get_archive_tree(page: int = 1, per_page: int = 20) -> Dict[str, Any]:
 
                     sessions.append({
                         "name": session_dir.name,
+                        "pair": pair,
                         "total_r": perf.get("total_r", 0),
                         "win_rate": perf.get("win_rate", 0),
                         "trades": perf.get("total_trades", 0)
                     })
 
-        periods.append({
-            "name": period_dir.name,
-            "sessions": sessions
-        })
+        # Only add period if it has sessions (after filtering)
+        if sessions:
+            periods.append({
+                "name": period_dir.name,
+                "sessions": sessions
+            })
 
     # Pagination
     start = (page - 1) * per_page
@@ -68,7 +117,9 @@ def get_archive_tree(page: int = 1, per_page: int = 20) -> Dict[str, Any]:
     return {
         "periods": periods[start:end],
         "total_pages": total_pages,
-        "current_page": page
+        "current_page": page,
+        "pairs": all_pairs,
+        "current_pair": pair_filter
     }
 
 
@@ -123,12 +174,104 @@ def get_analysis_detail(period: str, session: str) -> Dict[str, Any]:
         "session_breakdown": data.get("session_breakdown", []),
         "metrics": data.get("performance", {}),
         "recommendations": data.get("parameters", {}),
+        "backtest_settings": data.get("backtest_settings", {}),
         "equity_trend": data.get("equity_trend", {}),
         "equity_degradation_detected": data.get("equity_degradation_detected", False),
         "optimization_recommendation": data.get("optimization_recommendation", {}),
         "chart_path": chart_path,
         "csv_path": csv_path
     }
+
+
+def check_existing_analysis(period: str, session: str) -> Dict[str, Any]:
+    """Check if analysis results already exist for a period/session
+
+    Args:
+        period: Period name (e.g., Jan_Mar_2026)
+        session: Session name (e.g., EURUSD_all_sessions)
+
+    Returns:
+        {"exists": bool, "path": str or None, "metrics": dict or None}
+    """
+    session_dir = ARCHIVE_ROOT / period / session
+    results_dir = session_dir / "analysis_results"
+
+    if not results_dir.exists():
+        return {"exists": False, "path": None, "metrics": None}
+
+    # Try to get some metrics from existing analysis
+    json_files = sorted(results_dir.glob("recommended_settings*.json"), reverse=True)
+    metrics = None
+    if json_files:
+        try:
+            with open(json_files[0]) as f:
+                data = json.load(f)
+                perf = data.get("performance", {})
+                metrics = {
+                    "total_r": perf.get("total_r", 0),
+                    "win_rate": perf.get("win_rate", 0),
+                    "trades": perf.get("total_trades", 0)
+                }
+        except Exception:
+            pass
+
+    return {"exists": True, "path": str(results_dir), "metrics": metrics}
+
+
+def delete_analysis_results(period: str, session: str) -> Dict[str, Any]:
+    """Delete existing analysis results for a period/session
+
+    Args:
+        period: Period name
+        session: Session name
+
+    Returns:
+        {"success": bool, "error": str or None}
+    """
+    results_dir = ARCHIVE_ROOT / period / session / "analysis_results"
+
+    if not results_dir.exists():
+        return {"success": True, "error": None}
+
+    try:
+        shutil.rmtree(results_dir)
+        return {"success": True, "error": None}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def rename_session(period: str, old_session: str, new_session: str) -> Dict[str, Any]:
+    """Rename a session within a period
+
+    Args:
+        period: Period name (e.g., Jan_Mar_2026)
+        old_session: Current session name
+        new_session: New session name
+
+    Returns:
+        {"success": bool, "error": str or None}
+    """
+    old_path = ARCHIVE_ROOT / period / old_session
+    new_path = ARCHIVE_ROOT / period / new_session
+
+    # Validate old path exists
+    if not old_path.exists():
+        return {"success": False, "error": f"Session not found: {period}/{old_session}"}
+
+    # Check new path doesn't already exist
+    if new_path.exists():
+        return {"success": False, "error": f"Session already exists: {period}/{new_session}"}
+
+    # Validate new session name (alphanumeric, underscore, hyphen only)
+    import re
+    if not re.match(r'^[a-zA-Z0-9_-]+$', new_session):
+        return {"success": False, "error": "Session name can only contain letters, numbers, underscores, and hyphens"}
+
+    try:
+        old_path.rename(new_path)
+        return {"success": True, "error": None}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 def create_archive_entry(period: str, session: str, csv_path: str, results_path: str) -> Dict[str, str]:

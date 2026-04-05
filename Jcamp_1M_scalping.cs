@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.4.0-WFO";
-        private const string VERSION_DATE = "2026-04-03";
-        private const string VERSION_NOTES = "WFO + Chandelier SL Safety + Close on Monthly DD + Advanced Filters";
+        private const string BOT_VERSION = "4.4.2-WFO";
+        private const string VERSION_DATE = "2026-04-05";
+        private const string VERSION_NOTES = "Fix: CSV only created when EnableCSVExport=true + Re-optimization instructions";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -483,18 +483,25 @@ namespace cAlgo.Robots
             // Subscribe to position events
             Positions.Closed += OnPositionClosedHandler;
 
-            // Initialize trade log file for WFO analysis
-            _tradeLogPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "cAlgo", "Trade_Logs", string.Format("TradeLog_{0}_{1}_{2}.csv",
-                SymbolName, Account.Number, DateTime.Now.ToString("yyyyMMdd_HHmmss")));
+            // Initialize trade log file for WFO analysis (only if CSV export enabled)
+            if (EnableCSVExport)
+            {
+                _tradeLogPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    "cAlgo", "Trade_Logs", string.Format("TradeLog_{0}_{1}_{2}.csv",
+                    SymbolName, Account.Number, DateTime.Now.ToString("yyyyMMdd_HHmmss")));
 
-            // Create directory if it doesn't exist
-            string logDir = System.IO.Path.GetDirectoryName(_tradeLogPath);
-            if (!System.IO.Directory.Exists(logDir))
-                System.IO.Directory.CreateDirectory(logDir);
+                // Create directory if it doesn't exist
+                string logDir = System.IO.Path.GetDirectoryName(_tradeLogPath);
+                if (!System.IO.Directory.Exists(logDir))
+                    System.IO.Directory.CreateDirectory(logDir);
 
-            Print("[WFO-LOG] Trade log initialized: {0}", _tradeLogPath);
-            WriteLogHeader();
+                Print("[WFO-LOG] Trade log initialized: {0}", _tradeLogPath);
+                WriteLogHeader();
+            }
+            else
+            {
+                Print("[WFO-LOG] CSV export disabled - no trade log will be created");
+            }
 
             Print("Trading Enabled: {0} | Session Filter: {1}", EnableTrading, EnableSessionFilter);
             Print("ADX Filter: {0} | Exhaustion Exit: {1}", EnableADXFilter, EnableExhaustionExit);
@@ -1671,7 +1678,9 @@ namespace cAlgo.Robots
                     _monthlyLimitReached = true;
                     Print("[MONTHLY-DD] LIMIT REACHED | DD: {0:F1}% | Start: {1:F2} | Current: {2:F2}",
                         currentDrawdown, _monthStartEquity, Account.Equity);
-                    Print("[MONTHLY-DD] Trading paused until next month. Re-optimize parameters.");
+
+                    // Print re-optimization instructions
+                    PrintReoptimizationInstructions();
 
                     // Close all positions to prevent further losses
                     if (ClosePositionsOnMonthlyDD)
@@ -1706,6 +1715,32 @@ namespace cAlgo.Robots
                     Print("{0} FAILED to close position {1}: {2}", reason, position.Id, closeResult.Error);
                 }
             }
+        }
+
+        private void PrintReoptimizationInstructions()
+        {
+            Print("========================================");
+            Print("[RE-OPTIMIZE] IMMEDIATE ACTION REQUIRED");
+            Print("========================================");
+            Print("[RE-OPTIMIZE] Current Settings:");
+            Print("[RE-OPTIMIZE]   MTF SMA Period: {0}", MTFSMAPeriod);
+            Print("[RE-OPTIMIZE]   Timeframe 2: {0}", Timeframe2);
+            Print("[RE-OPTIMIZE]   Timeframe 3: {0}", Timeframe3);
+            Print("[RE-OPTIMIZE]   ADX Period: {0} | Threshold: {1}", ADXPeriod, ADXMinThreshold);
+            Print("[RE-OPTIMIZE]   ATR Period: {0} | SL Multiplier: {1}", ATRPeriod, SLATRMultiplier);
+            Print("[RE-OPTIMIZE]   Min RR: {0} | Risk: {1}%", MinimumRRRatio, RiskPercent);
+            Print("----------------------------------------");
+            Print("[RE-OPTIMIZE] Sessions: London={0} NY={1} Asian={2}",
+                EnableLondonSession, EnableNYSession, EnableAsianSession);
+            Print("----------------------------------------");
+            Print("[RE-OPTIMIZE] Optimization File:");
+            Print("[RE-OPTIMIZE]   Jcamp_1M_scalping, EURUSD m1.optset");
+            Print("[RE-OPTIMIZE] Guide:");
+            Print("[RE-OPTIMIZE]   optimization_sets/OPTIMIZATION_GUIDE.md");
+            Print("----------------------------------------");
+            Print("[RE-OPTIMIZE] Priority: ADX Threshold > SMA Period > Timeframes");
+            Print("[RE-OPTIMIZE] Target: PF 1.3-2.0 | DD <20% | WinRate 25-45%");
+            Print("========================================");
         }
 
         private bool IsMonthlyLimitReached()
@@ -1795,6 +1830,9 @@ namespace cAlgo.Robots
 
                 // Parameters Snapshot
                 "SMAPeriod", "Timeframe2", "Timeframe3", "MinRR", "RiskPercent",
+                "ATRPeriod", "SLATRMultiplier", "SLBufferPips", "MinimumSLPips",
+                "ChandelierActivationRR", "TrailIncrementPips", "MinChandelierDistance", "TPModeSelection",
+                "EnableLondonSession", "EnableNYSession", "EnableAsianSession", "MaxPositions",
 
                 // Risk Context
                 "DailyRLoss", "ConsecutiveLosses", "AccountBalance", "AccountEquity",
@@ -1880,6 +1918,9 @@ namespace cAlgo.Robots
 
                 // Parameters Snapshot
                 MTFSMAPeriod, Timeframe2, Timeframe3, MinimumRRRatio, RiskPercent,
+                ATRPeriod, SLATRMultiplier, SLBufferPips, MinimumSLPips,
+                ChandelierActivationRR, TrailIncrementPips, MinChandelierDistance, (int)TPModeSelection,
+                EnableLondonSession, EnableNYSession, EnableAsianSession, MaxPositions,
 
                 // Risk Context
                 Math.Round(_dailyRLoss, 2), _consecutiveLosses,

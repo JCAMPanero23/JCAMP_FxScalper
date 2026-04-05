@@ -71,21 +71,52 @@ DEFAULT_CBOT_PARAMS = {
     "DiagnosticIntervalBars": 60
 }
 
-# Mapping from WFO analyzer output names to cBot parameter names
+# Mapping from WFO analyzer/config output names to cBot parameter names
+# Most params use the same name, but some have legacy/different names
 PARAM_NAME_MAPPING = {
+    # Legacy analyzer output names -> cBot names
     "MTF_SMA_Period": "MTFSMAPeriod",
-    "ADXPeriod": "ADXPeriod",
-    "ADXMinThreshold": "ADXMinThreshold",
-    "ADXMode": "ADXMode",
     "MinimumRR": "MinimumRRRatio",
     "DailyLossLimit": "MaxDailyRLoss",
     "ConsecutiveLossLimit": "MaxConsecutiveLosses",
     "MonthlyDDLimit": "MaxMonthlyDrawdownPercent",
+    # Direct mappings (same name, included for completeness)
+    "MTFSMAPeriod": "MTFSMAPeriod",
+    "Timeframe2": "Timeframe2",
+    "Timeframe3": "Timeframe3",
+    "RequireAllTFsAligned": "RequireAllTFsAligned",
+    "ATRPeriod": "ATRPeriod",
+    "SLATRMultiplier": "SLATRMultiplier",
+    "MinimumSLPips": "MinimumSLPips",
+    "ADXMode": "ADXMode",
+    "ADXPeriod": "ADXPeriod",
+    "ADXMinThreshold": "ADXMinThreshold",
+    "ADXMaxThreshold": "ADXMaxThreshold",
+    "RiskPercent": "RiskPercent",
+    "SLBufferPips": "SLBufferPips",
+    "MinimumRRRatio": "MinimumRRRatio",
+    "MaxPositions": "MaxPositions",
     "EnableLondonSession": "EnableLondonSession",
     "EnableNYSession": "EnableNYSession",
     "EnableAsianSession": "EnableAsianSession",
-    "Timeframe2": "Timeframe2",
-    "Timeframe3": "Timeframe3",
+    "EnableHourFilter": "EnableHourFilter",
+    "StartHour": "StartHour",
+    "EndHour": "EndHour",
+    "EnableDayFilter": "EnableDayFilter",
+    "TradeMonday": "TradeMonday",
+    "TradeTuesday": "TradeTuesday",
+    "TradeWednesday": "TradeWednesday",
+    "TradeThursday": "TradeThursday",
+    "TradeFriday": "TradeFriday",
+    "DirectionFilter": "DirectionFilter",
+    "ChandelierActivationRR": "ChandelierActivationRR",
+    "TrailIncrementPips": "TrailIncrementPips",
+    "MinChandelierDistance": "MinChandelierDistance",
+    "TPModeSelection": "TPModeSelection",
+    "MaxDailyRLoss": "MaxDailyRLoss",
+    "MaxDailyLosingTrades": "MaxDailyLosingTrades",
+    "MaxConsecutiveLosses": "MaxConsecutiveLosses",
+    "MaxMonthlyDrawdownPercent": "MaxMonthlyDrawdownPercent",
 }
 
 # ADX Mode string to int mapping
@@ -116,12 +147,13 @@ def _convert_value(param_name: str, value: Any) -> Any:
     return value
 
 
-def export_to_cbotset(params: Dict[str, Any], output_path: str) -> Dict[str, Any]:
+def export_to_cbotset(params: Dict[str, Any], output_path: str, symbol: str = None) -> Dict[str, Any]:
     """Generate .cbotset JSON file for cTrader
 
     Args:
         params: Dictionary of parameters from WFO analysis
         output_path: Path where .cbotset file should be written
+        symbol: Trading symbol (e.g., EURUSD, USDJPY). If None, extracted from output_path
 
     Returns:
         {"success": bool, "message": str, "file_path": str} or
@@ -137,10 +169,16 @@ def export_to_cbotset(params: Dict[str, Any], output_path: str) -> Dict[str, Any
             if cbot_name in cbot_params:
                 cbot_params[cbot_name] = _convert_value(cbot_name, value)
 
+        # Extract symbol from output path if not provided (e.g., "USDJPY_all_sessions" -> "USDJPY")
+        if symbol is None:
+            import re
+            match = re.search(r'([A-Z]{6})_', output_path)
+            symbol = match.group(1) if match else "EURUSD"
+
         # Build the cbotset structure
         cbotset = {
             "Chart": {
-                "Symbol": "EURUSD",
+                "Symbol": symbol,
                 "Period": "m1"
             },
             "Parameters": cbot_params

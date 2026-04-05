@@ -37,6 +37,21 @@ class WFOAnalyzer:
 
         self.df = pd.read_csv(self.log_file)
 
+        # Check for required columns
+        required_columns = ['EntryDate', 'ExitDate', 'WinningTrade', 'RMultiple', 'ProfitCurrency']
+        missing_columns = [col for col in required_columns if col not in self.df.columns]
+
+        if missing_columns:
+            print(f"[ERROR] Missing required columns: {missing_columns}")
+            print(f"  Available columns: {list(self.df.columns)}")
+            print(f"  Rows in file: {len(self.df)}")
+            self.df = pd.DataFrame()  # Empty dataframe
+            return self
+
+        if len(self.df) == 0:
+            print("[ERROR] CSV file is empty (no trade data)")
+            return self
+
         # Convert data types
         self.df['EntryDate'] = pd.to_datetime(self.df['EntryDate'])
         self.df['ExitDate'] = pd.to_datetime(self.df['ExitDate'])
@@ -56,11 +71,31 @@ class WFOAnalyzer:
         print("SESSION ANALYSIS")
         print(f"{'='*70}\n")
 
+        if len(self.df) == 0:
+            print("[SKIP] No data to analyze")
+            self.results['session_breakdown'] = []
+            return self
+
         session_stats = []
 
+        # Check if session columns exist
+        has_london = 'IsLondonSession' in self.df.columns
+        has_ny = 'IsNYSession' in self.df.columns
+        has_asian = 'IsAsianSession' in self.df.columns
+        has_duration = 'DurationMinutes' in self.df.columns
+
+        if not (has_london or has_ny or has_asian):
+            print("[SKIP] No session columns found (IsLondonSession, IsNYSession, IsAsianSession)")
+            self.results['session_breakdown'] = []
+            return self
+
         # London Session
-        london = self.df[self.df['IsLondonSession'] == True]
+        if has_london:
+            london = self.df[self.df['IsLondonSession'] == True]
+        else:
+            london = pd.DataFrame()
         if len(london) > 0:
+            avg_duration = f"{london['DurationMinutes'].mean():.0f}m" if has_duration else "N/A"
             session_stats.append({
                 'Session': 'London (08:00-12:00 UTC)',
                 'Trades': len(london),
@@ -68,12 +103,16 @@ class WFOAnalyzer:
                 'Avg R': f"{london['RMultiple'].mean():.2f}R",
                 'Total R': f"{london['RMultiple'].sum():.2f}R",
                 'Profit Factor': self._calc_profit_factor(london),
-                'Avg Duration': f"{london['DurationMinutes'].mean():.0f}m"
+                'Avg Duration': avg_duration
             })
 
         # NY Overlap Session
-        ny = self.df[self.df['IsNYSession'] == True]
+        if has_ny:
+            ny = self.df[self.df['IsNYSession'] == True]
+        else:
+            ny = pd.DataFrame()
         if len(ny) > 0:
+            avg_duration = f"{ny['DurationMinutes'].mean():.0f}m" if has_duration else "N/A"
             session_stats.append({
                 'Session': 'NY Overlap (13:00-17:00 UTC)',
                 'Trades': len(ny),
@@ -81,12 +120,16 @@ class WFOAnalyzer:
                 'Avg R': f"{ny['RMultiple'].mean():.2f}R",
                 'Total R': f"{ny['RMultiple'].sum():.2f}R",
                 'Profit Factor': self._calc_profit_factor(ny),
-                'Avg Duration': f"{ny['DurationMinutes'].mean():.0f}m"
+                'Avg Duration': avg_duration
             })
 
         # Asian Session
-        asian = self.df[self.df['IsAsianSession'] == True]
+        if has_asian:
+            asian = self.df[self.df['IsAsianSession'] == True]
+        else:
+            asian = pd.DataFrame()
         if len(asian) > 0:
+            avg_duration = f"{asian['DurationMinutes'].mean():.0f}m" if has_duration else "N/A"
             session_stats.append({
                 'Session': 'Asian (04:00-08:00, 20:00-04:00 UTC)',
                 'Trades': len(asian),
@@ -94,7 +137,7 @@ class WFOAnalyzer:
                 'Avg R': f"{asian['RMultiple'].mean():.2f}R",
                 'Total R': f"{asian['RMultiple'].sum():.2f}R",
                 'Profit Factor': self._calc_profit_factor(asian),
-                'Avg Duration': f"{asian['DurationMinutes'].mean():.0f}m"
+                'Avg Duration': avg_duration
             })
 
         session_df = pd.DataFrame(session_stats)
@@ -120,6 +163,17 @@ class WFOAnalyzer:
         print("HOURLY ANALYSIS")
         print(f"{'='*70}\n")
 
+        # Check if required columns exist
+        if 'EntryHour' not in self.df.columns:
+            print("[SKIP] EntryHour column not found in data")
+            self.results['hourly_analysis'] = []
+            return self
+
+        if len(self.df) == 0:
+            print("[SKIP] No data to analyze")
+            self.results['hourly_analysis'] = []
+            return self
+
         hourly = self.df.groupby('EntryHour').agg({
             'PositionID': 'count',
             'WinningTrade': 'mean',
@@ -128,7 +182,14 @@ class WFOAnalyzer:
         }).round(2)
 
         hourly.columns = ['Trades', 'Win Rate', 'Avg R', 'Total R', 'Profit $']
-        hourly['Win Rate'] = (hourly['Win Rate'] * 100).round(1).astype(str) + '%'
+
+        # Safely convert to percentage string - handle edge cases
+        try:
+            hourly['Win Rate'] = pd.to_numeric(hourly['Win Rate'], errors='coerce')
+            hourly['Win Rate'] = (hourly['Win Rate'] * 100).round(1).astype(str) + '%'
+        except Exception:
+            hourly['Win Rate'] = hourly['Win Rate'].astype(str) + '%'
+
         hourly['Avg R'] = hourly['Avg R'].astype(str) + 'R'
         hourly['Total R'] = hourly['Total R'].astype(str) + 'R'
 
@@ -165,11 +226,23 @@ class WFOAnalyzer:
         print("DIRECTION ANALYSIS (BUY vs SELL)")
         print(f"{'='*70}\n")
 
+        if len(self.df) == 0:
+            print("[SKIP] No data to analyze")
+            self.results['direction_stats'] = []
+            return self
+
+        if 'Direction' not in self.df.columns:
+            print("[SKIP] Direction column not found")
+            self.results['direction_stats'] = []
+            return self
+
+        has_duration = 'DurationMinutes' in self.df.columns
         direction_stats = []
 
         for direction in ['Buy', 'Sell']:
             trades = self.df[self.df['Direction'] == direction]
             if len(trades) > 0:
+                avg_duration = f"{trades['DurationMinutes'].mean():.0f}m" if has_duration else "N/A"
                 direction_stats.append({
                     'Direction': direction.upper(),
                     'Trades': len(trades),
@@ -177,7 +250,7 @@ class WFOAnalyzer:
                     'Avg R': f"{trades['RMultiple'].mean():.2f}R",
                     'Total R': f"{trades['RMultiple'].sum():.2f}R",
                     'Profit Factor': self._calc_profit_factor(trades),
-                    'Avg Duration': f"{trades['DurationMinutes'].mean():.0f}m"
+                    'Avg Duration': avg_duration
                 })
 
         direction_df = pd.DataFrame(direction_stats)
@@ -192,6 +265,8 @@ class WFOAnalyzer:
             ('IsLondonSession', 'London'),
             ('IsNYSession', 'NY Overlap')
         ]:
+            if session_col not in self.df.columns:
+                continue
             session_trades = self.df[self.df[session_col] == True]
             if len(session_trades) > 0:
                 print(f"  {session_name}:")
@@ -210,6 +285,16 @@ class WFOAnalyzer:
         print(f"\n{'='*70}")
         print("ADX FILTER ANALYSIS")
         print(f"{'='*70}\n")
+
+        if len(self.df) == 0:
+            print("[SKIP] No data to analyze")
+            self.results['adx_analysis'] = {}
+            return self
+
+        if 'ADXMode' not in self.df.columns:
+            print("[SKIP] ADXMode column not found")
+            self.results['adx_analysis'] = {}
+            return self
 
         # ADX Mode comparison
         print("ADX MODE PERFORMANCE:")
@@ -230,8 +315,13 @@ class WFOAnalyzer:
         print("FLIP DIRECTION ANALYSIS:")
         print()
 
-        flip_trades = self.df[self.df['FlipDirectionUsed'] == True]
-        normal_trades = self.df[self.df['FlipDirectionUsed'] == False]
+        if 'FlipDirectionUsed' not in self.df.columns:
+            print("[SKIP] FlipDirectionUsed column not found")
+            flip_trades = pd.DataFrame()
+            normal_trades = pd.DataFrame()
+        else:
+            flip_trades = self.df[self.df['FlipDirectionUsed'] == True]
+            normal_trades = self.df[self.df['FlipDirectionUsed'] == False]
 
         if len(flip_trades) > 0:
             print(f"  Flip Direction Trades: {len(flip_trades)}")
@@ -255,6 +345,10 @@ class WFOAnalyzer:
         print("ADX THRESHOLD RANGES:")
         print()
 
+        if 'ADXValue' not in self.df.columns:
+            print("[SKIP] ADXValue column not found")
+            return self
+
         self.df['ADX_Bucket'] = pd.cut(
             self.df['ADXValue'],
             bins=[0, 15, 18, 20, 22, 25, 100],
@@ -267,7 +361,13 @@ class WFOAnalyzer:
             'RMultiple': 'sum'
         })
         adx_threshold.columns = ['Trades', 'Win Rate', 'Total R']
-        adx_threshold['Win Rate'] = (adx_threshold['Win Rate'] * 100).round(1)
+
+        # Safely convert Win Rate
+        try:
+            adx_threshold['Win Rate'] = pd.to_numeric(adx_threshold['Win Rate'], errors='coerce')
+            adx_threshold['Win Rate'] = (adx_threshold['Win Rate'] * 100).round(1)
+        except Exception:
+            pass
 
         print(adx_threshold.to_string())
         print()
@@ -290,6 +390,16 @@ class WFOAnalyzer:
         print("DAY OF WEEK ANALYSIS")
         print(f"{'='*70}\n")
 
+        if len(self.df) == 0:
+            print("[SKIP] No data to analyze")
+            self.results['day_stats'] = {}
+            return self
+
+        if 'EntryDayOfWeek' not in self.df.columns:
+            print("[SKIP] EntryDayOfWeek column not found")
+            self.results['day_stats'] = {}
+            return self
+
         day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
         day_stats = self.df.groupby('EntryDayOfWeek').agg({
@@ -299,7 +409,13 @@ class WFOAnalyzer:
         }).round(2)
 
         day_stats.columns = ['Trades', 'Win Rate', 'Avg R', 'Total R']
-        day_stats['Win Rate'] = (day_stats['Win Rate'] * 100).round(1).astype(str) + '%'
+
+        # Safely convert Win Rate
+        try:
+            day_stats['Win Rate'] = pd.to_numeric(day_stats['Win Rate'], errors='coerce')
+            day_stats['Win Rate'] = (day_stats['Win Rate'] * 100).round(1).astype(str) + '%'
+        except Exception:
+            day_stats['Win Rate'] = day_stats['Win Rate'].astype(str) + '%'
 
         # Reorder by weekday
         day_stats = day_stats.reindex([day for day in day_order if day in day_stats.index])
@@ -315,12 +431,20 @@ class WFOAnalyzer:
         print("EQUITY CURVE TREND ANALYSIS")
         print(f"{'='*70}\n")
 
+        if len(self.df) == 0:
+            print("[SKIP] No data to analyze")
+            self.results['equity_trend'] = {}
+            self.results['equity_degradation'] = False
+            return False
+
         equity = self.df['RMultiple'].cumsum()
 
         # Split into thirds for trend analysis
         third = len(self.df) // 3
         if third < 5:  # Need minimum data
             print("[WARNING] Insufficient trades for trend analysis (need 15+ trades)")
+            self.results['equity_trend'] = {}
+            self.results['equity_degradation'] = False
             return False
 
         first_third = self.df[:third]
@@ -383,22 +507,122 @@ class WFOAnalyzer:
 
         return degradation_detected
 
+    def _extract_backtest_settings(self):
+        """Extract bot settings from the first row of CSV data
+
+        These are the settings that were used when running the backtest,
+        stored in each trade row by the bot.
+        """
+        if len(self.df) == 0:
+            return {}
+
+        # Get first row to extract settings (all rows should have same settings)
+        first_row = self.df.iloc[0]
+
+        # Map CSV column names to cBot parameter names
+        settings = {}
+
+        # MTF Settings
+        if 'SMAPeriod' in first_row:
+            settings['MTFSMAPeriod'] = int(first_row['SMAPeriod'])
+        if 'Timeframe2' in first_row:
+            # Convert Minute2 -> m2 format
+            tf2 = str(first_row['Timeframe2'])
+            if tf2.startswith('Minute'):
+                tf2 = 'm' + tf2.replace('Minute', '')
+            settings['Timeframe2'] = tf2.lower()
+        if 'Timeframe3' in first_row:
+            tf3 = str(first_row['Timeframe3'])
+            if tf3.startswith('Minute'):
+                tf3 = 'm' + tf3.replace('Minute', '')
+            settings['Timeframe3'] = tf3.lower()
+
+        # ADX Settings (stored but will be overridden by recommendations)
+        if 'ADXPeriod' in first_row:
+            settings['ADXPeriod'] = int(first_row['ADXPeriod'])
+        if 'ADXThreshold' in first_row:
+            settings['ADXMinThreshold'] = float(first_row['ADXThreshold'])
+        if 'ADXMode' in first_row:
+            settings['ADXMode'] = str(first_row['ADXMode'])
+
+        # Risk Settings
+        if 'MinRR' in first_row:
+            settings['MinimumRRRatio'] = float(first_row['MinRR'])
+        if 'RiskPercent' in first_row:
+            settings['RiskPercent'] = float(first_row['RiskPercent'])
+
+        # ATR/SL Settings
+        if 'ATRPeriod' in first_row:
+            settings['ATRPeriod'] = int(first_row['ATRPeriod'])
+        if 'SLATRMultiplier' in first_row:
+            settings['SLATRMultiplier'] = float(first_row['SLATRMultiplier'])
+        if 'SLBufferPips' in first_row:
+            settings['SLBufferPips'] = float(first_row['SLBufferPips'])
+        if 'MinimumSLPips' in first_row:
+            settings['MinimumSLPips'] = float(first_row['MinimumSLPips'])
+
+        # Chandelier Settings
+        if 'ChandelierActivationRR' in first_row:
+            settings['ChandelierActivationRR'] = float(first_row['ChandelierActivationRR'])
+        if 'TrailIncrementPips' in first_row:
+            settings['TrailIncrementPips'] = float(first_row['TrailIncrementPips'])
+        if 'MinChandelierDistance' in first_row:
+            settings['MinChandelierDistance'] = float(first_row['MinChandelierDistance'])
+        if 'TPModeSelection' in first_row:
+            settings['TPModeSelection'] = int(first_row['TPModeSelection'])
+
+        # Session Filter Settings
+        if 'EnableLondonSession' in first_row:
+            settings['EnableLondonSession'] = str(first_row['EnableLondonSession']).lower() == 'true'
+        if 'EnableNYSession' in first_row:
+            settings['EnableNYSession'] = str(first_row['EnableNYSession']).lower() == 'true'
+        if 'EnableAsianSession' in first_row:
+            settings['EnableAsianSession'] = str(first_row['EnableAsianSession']).lower() == 'true'
+
+        # Trade Management
+        if 'MaxPositions' in first_row:
+            settings['MaxPositions'] = int(first_row['MaxPositions'])
+
+        return settings
+
     def generate_recommendations(self):
         """Generate optimized parameter recommendations"""
         print(f"\n{'='*70}")
         print("RECOMMENDED PARAMETER SETTINGS")
         print(f"{'='*70}\n")
 
+        # Handle empty dataframe or missing dates
+        if len(self.df) == 0:
+            print("[ERROR] No data to generate recommendations")
+            return {
+                'timestamp': datetime.now().isoformat(),
+                'data_range': {'start': None, 'end': None, 'total_trades': 0},
+                'parameters': {},
+                'overall_performance': {},
+                'performance': {}
+            }
+
+        # Safely get date range
+        try:
+            start_date = self.df['EntryDate'].min()
+            end_date = self.df['EntryDate'].max()
+            start_str = start_date.isoformat() if pd.notna(start_date) else None
+            end_str = end_date.isoformat() if pd.notna(end_date) else None
+        except Exception:
+            start_str = None
+            end_str = None
+
         recommendations = {
             'timestamp': datetime.now().isoformat(),
             'data_range': {
-                'start': self.df['EntryDate'].min().isoformat(),
-                'end': self.df['EntryDate'].max().isoformat(),
+                'start': start_str,
+                'end': end_str,
                 'total_trades': int(len(self.df))
             },
             'parameters': {},
             'overall_performance': {},
-            'performance': {}
+            'performance': {},
+            'backtest_settings': self._extract_backtest_settings()
         }
 
         # Calculate OVERALL performance (all trades)
@@ -407,6 +631,14 @@ class WFOAnalyzer:
         print("="*70)
         overall_metrics = self._calc_comprehensive_metrics(self.df)
         recommendations['overall_performance'] = overall_metrics
+
+        if not overall_metrics or 'total_trades' not in overall_metrics:
+            print("  ERROR: No trades found in data!")
+            print(f"  DataFrame rows: {len(self.df) if self.df is not None else 0}")
+            print("  Check that your CSV contains valid trade data with required columns:")
+            print("    - RMultiple, WinningTrade, etc.")
+            print()
+            return recommendations
 
         print(f"  Total Trades: {overall_metrics['total_trades']}")
         print(f"  Win Rate: {overall_metrics['win_rate']:.1f}%")
