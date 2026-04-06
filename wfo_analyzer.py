@@ -147,13 +147,32 @@ class WFOAnalyzer:
         # Save all session stats
         self.results['session_breakdown'] = session_stats
 
-        # Determine best session
+        # Determine viable sessions (filter out poor performers)
         if len(session_stats) > 0:
-            best_session = max(session_stats, key=lambda x: float(x['Total R'].replace('R', '')))
-            print(f">>> BEST SESSION: {best_session['Session']}")
-            print(f"   Total R: {best_session['Total R']} | Win Rate: {best_session['Win Rate']}")
+            # Filter viable sessions: positive Total R AND win rate >= 20%
+            viable_sessions = [
+                s for s in session_stats
+                if float(s['Total R'].replace('R', '')) > 0
+                and float(s['Win Rate'].replace('%', '')) >= 20.0
+            ]
 
-            self.results['best_session'] = best_session
+            if viable_sessions:
+                # Sort by Total R (best first)
+                viable_sessions.sort(key=lambda x: float(x['Total R'].replace('R', '')), reverse=True)
+
+                print(f">>> VIABLE SESSIONS ({len(viable_sessions)}):")
+                for session in viable_sessions:
+                    print(f"   - {session['Session']}: {session['Total R']} | {session['Win Rate']}")
+
+                if len(session_stats) > len(viable_sessions):
+                    print(f"   (Filtered out {len(session_stats) - len(viable_sessions)} poor-performing sessions)")
+
+                # Store all viable sessions for recommendations
+                self.results['viable_sessions'] = viable_sessions
+            else:
+                print(f">>> NO VIABLE SESSION FOUND")
+                print(f"   All sessions have either negative R or win rate < 20%")
+                # Don't set viable_sessions, which will prevent session recommendations later
 
         return self
 
@@ -692,29 +711,50 @@ class WFOAnalyzer:
                     ]
                 }
 
-        # Session recommendation
-        if 'best_session' in self.results:
-            best = self.results['best_session']
-            session_name = best['Session']
+        # Session recommendation - Enable ALL viable sessions
+        if 'viable_sessions' in self.results:
+            viable = self.results['viable_sessions']
 
-            if 'London' in session_name:
-                recommendations['parameters']['EnableLondonSession'] = True
-                recommendations['parameters']['EnableNYSession'] = False
-                recommendations['parameters']['EnableAsianSession'] = False
-                print(f"[OK] SESSION: London Only (08:00-12:00 UTC)")
-                print(f"  Reason: {best['Total R']} total return, {best['Win Rate']} win rate")
-            elif 'NY' in session_name:
-                recommendations['parameters']['EnableLondonSession'] = False
-                recommendations['parameters']['EnableNYSession'] = True
-                recommendations['parameters']['EnableAsianSession'] = False
-                print(f"[OK] SESSION: NY Overlap Only (13:00-17:00 UTC)")
-                print(f"  Reason: {best['Total R']} total return, {best['Win Rate']} win rate")
-            elif 'Asian' in session_name:
-                recommendations['parameters']['EnableLondonSession'] = False
-                recommendations['parameters']['EnableNYSession'] = False
-                recommendations['parameters']['EnableAsianSession'] = True
-                print(f"[OK] SESSION: Asian Only (04:00-08:00, 20:00-04:00 UTC)")
-                print(f"  Reason: {best['Total R']} total return, {best['Win Rate']} win rate")
+            # Initialize all to False
+            enable_london = False
+            enable_ny = False
+            enable_asian = False
+
+            # Enable all viable sessions
+            enabled_sessions = []
+            for session in viable:
+                session_name = session['Session']
+
+                if 'London' in session_name:
+                    enable_london = True
+                    enabled_sessions.append(f"London ({session['Total R']}, {session['Win Rate']})")
+                elif 'NY' in session_name:
+                    enable_ny = True
+                    enabled_sessions.append(f"NY ({session['Total R']}, {session['Win Rate']})")
+                elif 'Asian' in session_name:
+                    enable_asian = True
+                    enabled_sessions.append(f"Asian ({session['Total R']}, {session['Win Rate']})")
+
+            # Set parameters
+            recommendations['parameters']['EnableLondonSession'] = enable_london
+            recommendations['parameters']['EnableNYSession'] = enable_ny
+            recommendations['parameters']['EnableAsianSession'] = enable_asian
+
+            # Print summary
+            print(f"\n[OK] SESSIONS ENABLED: {', '.join(enabled_sessions)}")
+            print(f"  All sessions with +R and ≥20% win rate are enabled")
+
+            if not enable_london:
+                print(f"  London: DISABLED (negative R or <20% win rate)")
+            if not enable_ny:
+                print(f"  NY: DISABLED (negative R or <20% win rate)")
+            if not enable_asian:
+                print(f"  Asian: DISABLED (negative R or <20% win rate)")
+        else:
+            # No viable session found - keep current settings
+            print(f"\n[WARN] SESSION: No viable session meets criteria (+R and ≥20% win rate)")
+            print(f"  Keeping current session settings unchanged")
+            # Keep session enables as-is (don't change them) since none are viable
 
         # ADX Mode recommendation
         adx_modes = {}

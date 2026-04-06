@@ -28,20 +28,36 @@ app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
 def index():
     """Home page - Archive browser"""
     try:
-        # Get pagination and filter parameters
+        # Get pagination, filter, sort, and search parameters
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         pair_filter = request.args.get('pair', None, type=str)
+        sort_by = request.args.get('sort', 'date_newest', type=str)
+        search_query = request.args.get('search', None, type=str)
 
         # Validate per_page range
         if per_page < 10 or per_page > 100:
             per_page = 20
 
-        # Get archive tree with pagination and pair filter
+        # Validate sort_by
+        valid_sorts = ['date_newest', 'date_oldest', 'name_asc', 'name_desc',
+                       'total_r_desc', 'total_r_asc', 'win_rate_desc', 'win_rate_asc']
+        if sort_by not in valid_sorts:
+            sort_by = 'date_newest'
+
+        # Clean search query
+        if search_query:
+            search_query = search_query.strip()
+            if not search_query:
+                search_query = None
+
+        # Get archive tree with pagination, pair filter, sorting, and search
         archive_data = archive_service.get_archive_tree(
             page=page,
             per_page=per_page,
-            pair_filter=pair_filter
+            pair_filter=pair_filter,
+            sort_by=sort_by,
+            search_query=search_query
         )
 
         return render_template(
@@ -50,11 +66,13 @@ def index():
             total_pages=archive_data.get('total_pages', 0),
             current_page=archive_data.get('current_page', 1),
             pairs=archive_data.get('pairs', []),
-            current_pair=archive_data.get('current_pair')
+            current_pair=archive_data.get('current_pair'),
+            sort_by=archive_data.get('sort_by', 'date_newest'),
+            search_query=archive_data.get('search_query')
         )
     except Exception as e:
         flash(f'Error loading archive: {str(e)}', 'error')
-        return render_template('index.html', periods=[], total_pages=0, current_page=1, pairs=[], current_pair=None), 500
+        return render_template('index.html', periods=[], total_pages=0, current_page=1, pairs=[], current_pair=None, sort_by='date_newest', search_query=None), 500
 
 
 @app.route('/analysis/<period>/<session>')

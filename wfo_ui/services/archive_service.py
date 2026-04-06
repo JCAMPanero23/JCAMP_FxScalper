@@ -45,26 +45,28 @@ def get_all_pairs() -> List[str]:
     return sorted(pairs)
 
 
-def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[str] = None) -> Dict[str, Any]:
+def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[str] = None, sort_by: str = 'date_newest', search_query: Optional[str] = None) -> Dict[str, Any]:
     """Get archive directory structure
 
     Args:
         page: Page number (1-indexed)
         per_page: Results per page
         pair_filter: Optional pair to filter by (e.g., 'EURUSD')
+        sort_by: Sort order - 'date_newest', 'date_oldest', 'name_asc', 'name_desc', 'total_r_desc', 'total_r_asc', 'win_rate_desc', 'win_rate_asc'
+        search_query: Optional search string to filter by period or session name
 
     Returns:
-        {"periods": [...], "total_pages": int, "current_page": int, "pairs": [...], "current_pair": str}
+        {"periods": [...], "total_pages": int, "current_page": int, "pairs": [...], "current_pair": str, "sort_by": str, "search_query": str}
     """
     if not ARCHIVE_ROOT.exists():
-        return {"periods": [], "total_pages": 0, "current_page": 1, "pairs": [], "current_pair": None}
+        return {"periods": [], "total_pages": 0, "current_page": 1, "pairs": [], "current_pair": None, "sort_by": sort_by, "search_query": search_query}
 
     # Get all available pairs for tabs
     all_pairs = get_all_pairs()
 
     periods = []
 
-    for period_dir in sorted(ARCHIVE_ROOT.iterdir(), reverse=True):
+    for period_dir in ARCHIVE_ROOT.iterdir():
         if not period_dir.is_dir():
             continue
 
@@ -103,10 +105,65 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
 
         # Only add period if it has sessions (after filtering)
         if sessions:
+            # Calculate aggregate metrics for sorting
+            total_r_sum = sum(s['total_r'] for s in sessions)
+            avg_win_rate = sum(s['win_rate'] for s in sessions) / len(sessions) if sessions else 0
+
             periods.append({
                 "name": period_dir.name,
-                "sessions": sessions
+                "sessions": sessions,
+                "modified_time": period_dir.stat().st_mtime,  # For date sorting
+                "total_r_aggregate": total_r_sum,
+                "win_rate_aggregate": avg_win_rate
             })
+
+    # Apply sorting
+    if sort_by == 'date_newest':
+        periods.sort(key=lambda x: x['modified_time'], reverse=True)
+    elif sort_by == 'date_oldest':
+        periods.sort(key=lambda x: x['modified_time'])
+    elif sort_by == 'name_asc':
+        periods.sort(key=lambda x: x['name'])
+    elif sort_by == 'name_desc':
+        periods.sort(key=lambda x: x['name'], reverse=True)
+    elif sort_by == 'total_r_desc':
+        periods.sort(key=lambda x: x['total_r_aggregate'], reverse=True)
+    elif sort_by == 'total_r_asc':
+        periods.sort(key=lambda x: x['total_r_aggregate'])
+    elif sort_by == 'win_rate_desc':
+        periods.sort(key=lambda x: x['win_rate_aggregate'], reverse=True)
+    elif sort_by == 'win_rate_asc':
+        periods.sort(key=lambda x: x['win_rate_aggregate'])
+    else:
+        # Default: date newest
+        periods.sort(key=lambda x: x['modified_time'], reverse=True)
+
+    # Apply search filter (case-insensitive)
+    if search_query:
+        search_lower = search_query.lower()
+        filtered_periods = []
+
+        for period in periods:
+            # Check if period name matches
+            period_matches = search_lower in period['name'].lower()
+
+            # Filter sessions that match search query
+            matching_sessions = [
+                s for s in period['sessions']
+                if search_lower in s['name'].lower()
+            ]
+
+            # Include period if either period name matches OR it has matching sessions
+            if period_matches:
+                # Period name matches - include all sessions
+                filtered_periods.append(period)
+            elif matching_sessions:
+                # Only session names match - include only matching sessions
+                period_copy = period.copy()
+                period_copy['sessions'] = matching_sessions
+                filtered_periods.append(period_copy)
+
+        periods = filtered_periods
 
     # Pagination
     start = (page - 1) * per_page
@@ -119,7 +176,9 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
         "total_pages": total_pages,
         "current_page": page,
         "pairs": all_pairs,
-        "current_pair": pair_filter
+        "current_pair": pair_filter,
+        "sort_by": sort_by,
+        "search_query": search_query
     }
 
 

@@ -12,15 +12,17 @@
 
         <!-- Pair Tabs -->
         {% if pairs and pairs|length > 0 %}
+        {% set sort_param = '?sort=' + sort_by if sort_by else '' %}
+        {% set search_param = '&search=' + search_query if search_query else '' %}
         <div class="pair-tabs" style="padding: 0 1rem; border-bottom: 2px solid #ecf0f1; background-color: #f8f9fa;">
             <div style="display: flex; gap: 0; overflow-x: auto;">
-                <a href="/"
+                <a href="/{{ sort_param }}{{ search_param }}"
                    class="pair-tab {% if not current_pair %}active{% endif %}"
                    style="padding: 0.75rem 1.25rem; text-decoration: none; color: {% if not current_pair %}#3498db{% else %}#666{% endif %}; font-weight: {% if not current_pair %}bold{% else %}normal{% endif %}; border-bottom: 3px solid {% if not current_pair %}#3498db{% else %}transparent{% endif %}; white-space: nowrap;">
                     All Pairs
                 </a>
                 {% for pair in pairs %}
-                <a href="/?pair={{ pair }}"
+                <a href="/?pair={{ pair }}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                    class="pair-tab {% if current_pair == pair %}active{% endif %}"
                    style="padding: 0.75rem 1.25rem; text-decoration: none; color: {% if current_pair == pair %}#3498db{% else %}#666{% endif %}; font-weight: {% if current_pair == pair %}bold{% else %}normal{% endif %}; border-bottom: 3px solid {% if current_pair == pair %}#3498db{% else %}transparent{% endif %}; white-space: nowrap;">
                     {{ pair }}
@@ -31,6 +33,57 @@
         {% endif %}
 
         <div class="card-body">
+            <!-- Sort and Search Controls -->
+            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <!-- Sort Dropdown -->
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label for="sort-select" style="font-weight: 500; color: #2c3e50; margin: 0;">Sort by:</label>
+                    <select id="sort-select" onchange="changeSortOrder(this.value)" style="padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 4px; background-color: white; cursor: pointer; font-size: 0.95rem;">
+                        <option value="date_newest" {% if sort_by == 'date_newest' %}selected{% endif %}>Date (Newest First)</option>
+                        <option value="date_oldest" {% if sort_by == 'date_oldest' %}selected{% endif %}>Date (Oldest First)</option>
+                        <option value="name_asc" {% if sort_by == 'name_asc' %}selected{% endif %}>Name (A-Z)</option>
+                        <option value="name_desc" {% if sort_by == 'name_desc' %}selected{% endif %}>Name (Z-A)</option>
+                        <option value="total_r_desc" {% if sort_by == 'total_r_desc' %}selected{% endif %}>Total R (Highest)</option>
+                        <option value="total_r_asc" {% if sort_by == 'total_r_asc' %}selected{% endif %}>Total R (Lowest)</option>
+                        <option value="win_rate_desc" {% if sort_by == 'win_rate_desc' %}selected{% endif %}>Win Rate (Highest)</option>
+                        <option value="win_rate_asc" {% if sort_by == 'win_rate_asc' %}selected{% endif %}>Win Rate (Lowest)</option>
+                    </select>
+                </div>
+
+                <!-- Search Bar -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; max-width: 400px;">
+                    <label for="search-input" style="font-weight: 500; color: #2c3e50; margin: 0;">Search:</label>
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Filter by period or session name..."
+                        value="{{ search_query or '' }}"
+                        onkeypress="handleSearchKeypress(event)"
+                        style="flex: 1; padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95rem;"
+                    />
+                    <button onclick="applySearch()" class="btn btn-primary btn-small" style="padding: 0.5rem 1rem;">
+                        Search
+                    </button>
+                    {% if search_query %}
+                    <button onclick="clearSearch()" class="btn btn-secondary btn-small" style="padding: 0.5rem 1rem;">
+                        Clear
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Search Results Info -->
+            {% if search_query %}
+            <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background-color: #e8f4f8; border-left: 4px solid #3498db; border-radius: 4px;">
+                <span style="font-weight: 500; color: #2c3e50;">
+                    Search results for: "<strong>{{ search_query }}</strong>"
+                </span>
+                <span style="color: #7f8c8d; margin-left: 0.5rem;">
+                    ({{ periods|length }} period(s) found)
+                </span>
+            </div>
+            {% endif %}
+
             {% if periods %}
                 {% for period in periods %}
                 <div class="card mt-3 mb-3" style="background-color: #f9f9f9; border-left: 4px solid #3498db;">
@@ -97,10 +150,12 @@
                 <!-- Pagination -->
                 {% if total_pages > 1 %}
                 {% set pair_param = '&pair=' + current_pair if current_pair else '' %}
+                {% set sort_param = '&sort=' + sort_by if sort_by else '' %}
+                {% set search_param = '&search=' + search_query if search_query else '' %}
                 <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
                     {% if current_page > 1 %}
-                        <a href="/?page=1{{ pair_param }}" class="btn btn-secondary btn-small">First</a>
-                        <a href="/?page={{ current_page - 1 }}{{ pair_param }}" class="btn btn-secondary btn-small">Previous</a>
+                        <a href="/?page=1{{ pair_param }}{{ sort_param }}{{ search_param }}" class="btn btn-secondary btn-small">First</a>
+                        <a href="/?page={{ current_page - 1 }}{{ pair_param }}{{ sort_param }}{{ search_param }}" class="btn btn-secondary btn-small">Previous</a>
                     {% endif %}
 
                     <span style="padding: 0.5rem 1rem; background-color: #3498db; color: white; border-radius: 4px;">
@@ -108,8 +163,8 @@
                     </span>
 
                     {% if current_page < total_pages %}
-                        <a href="/?page={{ current_page + 1 }}{{ pair_param }}" class="btn btn-secondary btn-small">Next</a>
-                        <a href="/?page={{ total_pages }}{{ pair_param }}" class="btn btn-secondary btn-small">Last</a>
+                        <a href="/?page={{ current_page + 1 }}{{ pair_param }}{{ sort_param }}{{ search_param }}" class="btn btn-secondary btn-small">Next</a>
+                        <a href="/?page={{ total_pages }}{{ pair_param }}{{ sort_param }}{{ search_param }}" class="btn btn-secondary btn-small">Last</a>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -138,4 +193,40 @@
         scrollbar-width: thin;
     }
 </style>
+
+<script>
+function changeSortOrder(sortValue) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('sort', sortValue);
+    urlParams.set('page', '1');  // Reset to first page when changing sort
+    window.location.search = urlParams.toString();
+}
+
+function applySearch() {
+    const searchInput = document.getElementById('search-input');
+    const searchValue = searchInput.value.trim();
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (searchValue) {
+        urlParams.set('search', searchValue);
+    } else {
+        urlParams.delete('search');
+    }
+    urlParams.set('page', '1');  // Reset to first page when searching
+    window.location.search = urlParams.toString();
+}
+
+function clearSearch() {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.delete('search');
+    urlParams.set('page', '1');
+    window.location.search = urlParams.toString();
+}
+
+function handleSearchKeypress(event) {
+    if (event.key === 'Enter') {
+        applySearch();
+    }
+}
+</script>
 {% endblock %}
