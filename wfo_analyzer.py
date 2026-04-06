@@ -742,7 +742,7 @@ class WFOAnalyzer:
 
             # Print summary
             print(f"\n[OK] SESSIONS ENABLED: {', '.join(enabled_sessions)}")
-            print(f"  All sessions with +R and ≥20% win rate are enabled")
+            print(f"  All sessions with +R and >=20% win rate are enabled")
 
             if not enable_london:
                 print(f"  London: DISABLED (negative R or <20% win rate)")
@@ -752,7 +752,7 @@ class WFOAnalyzer:
                 print(f"  Asian: DISABLED (negative R or <20% win rate)")
         else:
             # No viable session found - keep current settings
-            print(f"\n[WARN] SESSION: No viable session meets criteria (+R and ≥20% win rate)")
+            print(f"\n[WARN] SESSION: No viable session meets criteria (+R and >=20% win rate)")
             print(f"  Keeping current session settings unchanged")
             # Keep session enables as-is (don't change them) since none are viable
 
