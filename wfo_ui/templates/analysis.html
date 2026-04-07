@@ -539,10 +539,84 @@
                     </p>
                 </div>
 
-                <div style="margin-top: 15px;">
-                    <a href="/analysis/{{ forward_test.period }}/{{ forward_test.session }}" class="btn btn-primary">
+                <div style="margin-top: 15px; display: flex; gap: 0.5rem;">
+                    <a href="/analysis/{{ forward_test.period }}/{{ forward_test.session }}" class="btn btn-primary" style="flex: 1;">
                         View Forward Test Analysis →
                     </a>
+                    <button onclick="toggleEditForwardTest()" class="btn btn-secondary" style="flex: 0; white-space: nowrap;">
+                        ✏️ Edit
+                    </button>
+                </div>
+
+                <!-- Edit Forward Test Form (Hidden by default) -->
+                <div id="edit-forward-test-form" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #dee2e6;">
+                    <h4 style="color: #2c3e50; margin-bottom: 15px;">Change Forward Test</h4>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                        Select a different forward test analysis or update the current one.
+                    </p>
+                    <form method="POST" action="/add-forward-test/{{ period }}/{{ session }}" id="edit-forward-test-submit-form">
+                        <input type="hidden" name="forward_period" id="edit_forward_period_hidden">
+                        <input type="hidden" name="forward_session" id="edit_forward_session_hidden">
+                        <input type="hidden" name="result_summary" id="edit_result_summary_hidden">
+
+                        <div class="form-group">
+                            <label for="edit_analysis_selector">Select Forward Test Analysis:</label>
+                            <select name="analysis_selector" id="edit_analysis_selector" onchange="selectEditForwardTest()" required style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 1rem;">
+                                <option value="">-- Select an existing backtest analysis --</option>
+                                {% for analysis in available_analyses %}
+                                <option
+                                    value="{{ analysis.period }}|||{{ analysis.session }}"
+                                    data-total-r="{{ analysis.total_r }}"
+                                    data-win-rate="{{ analysis.win_rate }}"
+                                    data-profit-factor="{{ analysis.profit_factor }}"
+                                    data-max-dd="{{ analysis.max_dd }}"
+                                    data-trades="{{ analysis.trades }}"
+                                    {% if forward_test and analysis.period == forward_test.period and analysis.session == forward_test.session %}selected{% endif %}>
+                                    {{ analysis.display }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Preview Card for Edit -->
+                        <div id="edit-forward-test-preview" style="display: {% if forward_test %}block{% else %}none{% endif %}; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                            <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Selected Analysis Preview</h4>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 5px; font-weight: bold; width: 150px;">Period / Session:</td>
+                                    <td style="padding: 5px;" id="edit-preview-period-session">{{ forward_test.period if forward_test else '' }} / {{ forward_test.session if forward_test else '' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 5px; font-weight: bold;">Total R:</td>
+                                    <td style="padding: 5px; font-weight: bold;" id="edit-preview-total-r"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 5px; font-weight: bold;">Win Rate:</td>
+                                    <td style="padding: 5px;" id="edit-preview-win-rate"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 5px; font-weight: bold;">Profit Factor:</td>
+                                    <td style="padding: 5px;" id="edit-preview-pf"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 5px; font-weight: bold;">Max DD:</td>
+                                    <td style="padding: 5px;" id="edit-preview-max-dd"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 5px; font-weight: bold;">Trades:</td>
+                                    <td style="padding: 5px;" id="edit-preview-trades"></td>
+                                </tr>
+                            </table>
+                            <p style="margin: 10px 0 0 0; font-size: 0.9rem; color: #666;">
+                                <strong>Auto-generated summary:</strong> <span id="edit-preview-summary" style="color: #2980b9; font-weight: bold;"></span>
+                            </p>
+                        </div>
+
+                        <div style="margin-top: 20px; display: flex; gap: 0.5rem;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">Update Forward Test</button>
+                            <button type="button" onclick="toggleEditForwardTest()" class="btn btn-secondary">Cancel</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1046,6 +1120,73 @@ function selectForwardTest() {
     // Show preview and enable submit
     document.getElementById('forward-test-preview').style.display = 'block';
     document.getElementById('forward-test-submit-btn').disabled = false;
+}
+
+function toggleEditForwardTest() {
+    var form = document.getElementById('edit-forward-test-form');
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        // Trigger selection update to populate preview
+        selectEditForwardTest();
+    } else {
+        form.style.display = 'none';
+    }
+}
+
+function selectEditForwardTest() {
+    var selector = document.getElementById('edit_analysis_selector');
+    var selectedOption = selector.options[selector.selectedIndex];
+
+    if (!selectedOption.value) {
+        document.getElementById('edit-forward-test-preview').style.display = 'none';
+        return;
+    }
+
+    // Parse period|||session
+    var parts = selectedOption.value.split('|||');
+    var period = parts[0];
+    var session = parts[1];
+
+    // Extract metrics from data attributes
+    var totalR = parseFloat(selectedOption.getAttribute('data-total-r')) || 0;
+    var winRate = parseFloat(selectedOption.getAttribute('data-win-rate')) || 0;
+    var profitFactor = parseFloat(selectedOption.getAttribute('data-profit-factor')) || 0;
+    var maxDD = parseFloat(selectedOption.getAttribute('data-max-dd')) || 0;
+    var trades = parseInt(selectedOption.getAttribute('data-trades')) || 0;
+
+    // Populate hidden fields
+    document.getElementById('edit_forward_period_hidden').value = period;
+    document.getElementById('edit_forward_session_hidden').value = session;
+
+    // Generate result summary
+    var summary = '';
+    if (totalR > 0) {
+        summary = '+' + totalR.toFixed(1) + 'R profit';
+    } else if (totalR < 0) {
+        summary = totalR.toFixed(1) + 'R loss';
+    } else {
+        summary = 'Break even';
+    }
+    summary += ', ' + winRate.toFixed(1) + '% WR, PF ' + profitFactor.toFixed(2);
+    document.getElementById('edit_result_summary_hidden').value = summary;
+
+    // Populate preview
+    document.getElementById('edit-preview-period-session').textContent = period + ' / ' + session;
+
+    var totalRColor = totalR >= 0 ? '#27ae60' : '#e74c3c';
+    document.getElementById('edit-preview-total-r').innerHTML = '<span style="color: ' + totalRColor + ';">' + (totalR >= 0 ? '+' : '') + totalR.toFixed(2) + 'R</span>';
+
+    document.getElementById('edit-preview-win-rate').textContent = winRate.toFixed(1) + '%';
+
+    var pfColor = profitFactor >= 1.5 ? '#27ae60' : (profitFactor >= 1 ? '#f39c12' : '#e74c3c');
+    document.getElementById('edit-preview-pf').innerHTML = '<span style="color: ' + pfColor + ';">' + profitFactor.toFixed(2) + '</span>';
+
+    document.getElementById('edit-preview-max-dd').innerHTML = '<span style="color: #e74c3c;">' + maxDD.toFixed(2) + '%</span>';
+    document.getElementById('edit-preview-trades').textContent = trades;
+    document.getElementById('edit-preview-summary').textContent = summary;
+
+    // Show preview
+    document.getElementById('edit-forward-test-preview').style.display = 'block';
 }
 </script>
 {% endblock %}
