@@ -633,10 +633,22 @@
                 </p>
             </div>
             <div id="forward-test-form" class="card-body" style="display: none;">
-                <p style="margin-bottom: 15px; color: #666;">
-                    After testing these re-optimized parameters on the next period, select the forward test analysis from your existing backtests.
-                </p>
-                <form method="POST" action="/add-forward-test/{{ period }}/{{ session }}" id="forward-test-submit-form">
+                <!-- Tab Navigation -->
+                <div style="display: flex; gap: 0; border-bottom: 2px solid #dee2e6; margin-bottom: 20px;">
+                    <button type="button" onclick="switchForwardTestTab('existing')" id="tab-existing" class="forward-test-tab" style="flex: 1; padding: 0.75rem; border: none; background-color: #3498db; color: white; cursor: pointer; font-weight: bold; border-radius: 4px 4px 0 0;">
+                        From Existing Backtest
+                    </button>
+                    <button type="button" onclick="switchForwardTestTab('new')" id="tab-new" class="forward-test-tab" style="flex: 1; padding: 0.75rem; border: none; background-color: #ecf0f1; color: #7f8c8d; cursor: pointer; border-radius: 4px 4px 0 0;">
+                        New Analysis
+                    </button>
+                </div>
+
+                <!-- Tab Content: From Existing -->
+                <div id="tab-content-existing" style="display: block;">
+                    <p style="margin-bottom: 15px; color: #666;">
+                        Select an already analyzed backtest as your forward test validation.
+                    </p>
+                    <form method="POST" action="/add-forward-test/{{ period }}/{{ session }}" id="forward-test-submit-form">
                     <input type="hidden" name="forward_period" id="forward_period_hidden">
                     <input type="hidden" name="forward_session" id="forward_session_hidden">
                     <input type="hidden" name="result_summary" id="result_summary_hidden">
@@ -696,10 +708,52 @@
                         </p>
                     </div>
 
-                    <div style="margin-top: 20px;">
-                        <button type="submit" class="btn btn-primary" id="forward-test-submit-btn" disabled>Add Forward Test Result</button>
-                    </div>
-                </form>
+                        <div style="margin-top: 20px;">
+                            <button type="submit" class="btn btn-primary" id="forward-test-submit-btn" disabled>Add Forward Test Result</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab Content: New Analysis -->
+                <div id="tab-content-new" style="display: none;">
+                    <p style="margin-bottom: 15px; color: #666;">
+                        Import and analyze a new CSV as forward test. The period and session will be auto-named.
+                    </p>
+                    <form method="POST" action="/import/analyze-as-forward-test/{{ period }}/{{ session }}" enctype="multipart/form-data" id="new-forward-test-form">
+                        <div class="form-group">
+                            <label for="forward_csv_file">Forward Test CSV File:</label>
+                            <select name="csv_file" id="forward_csv_file" required onchange="autoFillForwardTestPeriod()" style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 1rem;">
+                                <option value="">-- Select forward test CSV --</option>
+                                {% if available_csvs %}
+                                    {% for csv in available_csvs %}
+                                    <option value="{{ csv.path }}" data-pair="{{ csv.name.split('_')[1] if '_' in csv.name else '' }}">
+                                        {{ csv.name }} ({{ csv.size }}, {{ csv.date }})
+                                    </option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                            <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                                From: {{ ctrader_path if ctrader_path else 'cTrader logs directory' }}
+                            </small>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="forward_test_period">Forward Test Period Name:</label>
+                            <input type="text" name="forward_test_period" id="forward_test_period" placeholder="e.g., Jul_2025, Aug_2025" required style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px;">
+                            <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                                Period for this forward test (should be after {{ period }})
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info" style="margin-top: 15px; background-color: #e8f4fd; border-left: 4px solid #3498db; padding: 10px;">
+                            <strong>Auto-naming:</strong> Session will be auto-named as <code id="auto-session-name">{{ session }}</code>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <button type="submit" class="btn btn-primary" id="new-forward-test-submit-btn">Analyze & Add as Forward Test</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
         {% endif %}
@@ -1057,9 +1111,62 @@ function toggleForwardTestForm() {
     if (form.style.display === 'none') {
         form.style.display = 'block';
         arrow.textContent = '▲';
+        // Default to "From Existing" tab
+        switchForwardTestTab('existing');
     } else {
         form.style.display = 'none';
         arrow.textContent = '▼';
+    }
+}
+
+function switchForwardTestTab(tab) {
+    // Update tab buttons
+    var tabExisting = document.getElementById('tab-existing');
+    var tabNew = document.getElementById('tab-new');
+    var contentExisting = document.getElementById('tab-content-existing');
+    var contentNew = document.getElementById('tab-content-new');
+
+    if (tab === 'existing') {
+        tabExisting.style.backgroundColor = '#3498db';
+        tabExisting.style.color = 'white';
+        tabExisting.style.fontWeight = 'bold';
+        tabNew.style.backgroundColor = '#ecf0f1';
+        tabNew.style.color = '#7f8c8d';
+        tabNew.style.fontWeight = 'normal';
+        contentExisting.style.display = 'block';
+        contentNew.style.display = 'none';
+    } else if (tab === 'new') {
+        tabNew.style.backgroundColor = '#3498db';
+        tabNew.style.color = 'white';
+        tabNew.style.fontWeight = 'bold';
+        tabExisting.style.backgroundColor = '#ecf0f1';
+        tabExisting.style.color = '#7f8c8d';
+        tabExisting.style.fontWeight = 'normal';
+        contentNew.style.display = 'block';
+        contentExisting.style.display = 'none';
+    }
+}
+
+function autoFillForwardTestPeriod() {
+    var select = document.getElementById('forward_csv_file');
+    var selectedOption = select.options[select.selectedIndex];
+
+    if (selectedOption.value) {
+        // Try to extract period from CSV filename
+        // Example: TradeLog_EURUSD_1092444_20260702_120000.csv → Jul_2025
+        var filename = selectedOption.text;
+        var match = filename.match(/(\d{8})/);
+        if (match) {
+            var dateStr = match[1]; // e.g., 20260702
+            var year = dateStr.substring(0, 4);
+            var month = dateStr.substring(4, 6);
+
+            var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var monthName = monthNames[parseInt(month) - 1];
+
+            // Auto-fill period name
+            document.getElementById('forward_test_period').value = monthName + '_' + year;
+        }
     }
 }
 

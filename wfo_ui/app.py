@@ -137,6 +137,19 @@ def analysis(period, session):
                     'trades': wfo.get('trades', 0)  # WFO cycles use 'trades' not 'total_trades'
                 })
 
+        # Get available CSV files for "New Analysis" forward test option
+        ctrader_path = config.get('paths', {}).get('ctrader_logs', '')
+        available_csvs = []
+        if ctrader_path and Path(ctrader_path).exists():
+            csv_files = sorted(Path(ctrader_path).glob("TradeLog*.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+            for csv_file in csv_files:
+                available_csvs.append({
+                    'path': str(csv_file),
+                    'name': csv_file.name,
+                    'size': f"{csv_file.stat().st_size / 1024:.1f} KB",
+                    'date': datetime.fromtimestamp(csv_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M')
+                })
+
         # Check if this is a re-optimization or has been re-optimized
         reopt_link = config_service.find_reoptimization_link(period, session)
         comparison_data = None
@@ -213,7 +226,9 @@ def analysis(period, session):
             reopt_comparison=comparison_data,
             pending_reopt=pending_reopt,
             forward_test=forward_test_data,
-            available_analyses=available_analyses
+            available_analyses=available_analyses,
+            available_csvs=available_csvs,
+            ctrader_path=ctrader_path
         )
     except Exception as e:
         flash(f'Error loading analysis: {str(e)}', 'error')
@@ -775,6 +790,98 @@ def add_forward_test(period, session):
         return redirect(url_for('analysis', period=period, session=session))
     except Exception as e:
         flash(f'Error adding forward test: {str(e)}', 'error')
+        return redirect(url_for('analysis', period=period, session=session))
+
+
+@app.route('/import/analyze-as-forward-test/<period>/<session>', methods=['POST'])
+def analyze_as_forward_test(period, session):
+    """Import and analyze CSV as forward test, then link to re-optimization"""
+    import subprocess
+    import re
+
+    try:
+        csv_file = request.form.get('csv_file')
+        forward_test_period = request.form.get('forward_test_period', '').strip()
+
+        if not csv_file or not forward_test_period:
+            flash('Please select a CSV file and enter a period name', 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
+        # Use the same session name as the current re-opt
+        forward_session = session
+
+        # Get config
+        config = config_service.load_config()
+        analyzer_script = config.get('paths', {}).get('analyzer_script', 'wfo_analyzer.py')
+        archive_dir = config.get('paths', {}).get('archive', 'data/backtest_archive')
+
+        # Run WFO analyzer
+        flash(f'Running WFO analysis on {Path(csv_file).name}...', 'info')
+
+        cmd = [
+            'python',
+            analyzer_script,
+            csv_file,
+            '--period', forward_test_period,
+            '--session', forward_session,
+            '--archive-dir', archive_dir
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+        if result.returncode != 0:
+            flash(f'Analysis failed: {result.stderr}', 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
+        # Extract metrics from analyzer output for summary
+        total_r = 0
+        win_rate = 0
+
+        for line in result.stdout.split('\n'):
+            if 'Total R:' in line:
+                match = re.search(r'([-+]?\d+\.\d+)R', line)
+                if match:
+                    total_r = float(match.group(1))
+            elif 'Win Rate:' in line:
+                match = re.search(r'(\d+\.\d+)%', line)
+                if match:
+                    win_rate = float(match.group(1))
+
+        # Generate result summary
+        if total_r > 0:
+            result_summary = f'+{total_r:.1f}R profit, {win_rate:.1f}% WR'
+        elif total_r < 0:
+            result_summary = f'{total_r:.1f}R loss, {win_rate:.1f}% WR'
+        else:
+            result_summary = f'Break even, {win_rate:.1f}% WR'
+
+        # Link as forward test
+        success = config_service.add_forward_test_result(
+            period, session,
+            forward_test_period, forward_session,
+            result_summary
+        )
+
+        if success:
+            flash(f'✓ Forward test analyzed and linked: {forward_test_period}/{forward_session}', 'success')
+        else:
+            flash(f'⚠️ Analysis completed but could not link as forward test', 'warning')
+
+        # Clean up CSV if auto-cleanup enabled
+        if config.get('behavior', {}).get('auto_cleanup', True):
+            try:
+                Path(csv_file).unlink()
+                flash(f'Cleaned up CSV file: {Path(csv_file).name}', 'info')
+            except Exception as e:
+                flash(f'Could not clean up CSV: {str(e)}', 'warning')
+
+        return redirect(url_for('analysis', period=period, session=session))
+
+    except subprocess.TimeoutExpired:
+        flash('Analysis timed out (exceeded 5 minutes)', 'error')
+        return redirect(url_for('analysis', period=period, session=session))
+    except Exception as e:
+        flash(f'Error during forward test analysis: {str(e)}', 'error')
         return redirect(url_for('analysis', period=period, session=session))
 
 
