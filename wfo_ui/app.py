@@ -797,7 +797,6 @@ def add_forward_test(period, session):
 @app.route('/import/analyze-as-forward-test/<period>/<session>', methods=['POST'])
 def analyze_as_forward_test(period, session):
     """Import and analyze CSV as forward test, then link to re-optimization"""
-    import subprocess
     import re
 
     try:
@@ -808,51 +807,32 @@ def analyze_as_forward_test(period, session):
             flash('Please select a CSV file and enter a period name', 'error')
             return redirect(url_for('analysis', period=period, session=session))
 
+        if not Path(csv_file).exists():
+            flash('CSV file not found', 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
         # Extract base session name (remove _reopt_timestamp suffix if present)
         # e.g., EURUSD_all_sessions_reopt_20260407_213716 → EURUSD_all_sessions
-        import re as regex
-        reopt_match = regex.match(r'(.+)_reopt_\d{8}_\d{6}$', session)
+        reopt_match = re.match(r'(.+)_reopt_\d{8}_\d{6}$', session)
         if reopt_match:
             forward_session = reopt_match.group(1)  # Use base session name
         else:
             forward_session = session  # Already base name
 
-        # Get config
-        config = config_service.load_config()
-        analyzer_script = config.get('paths', {}).get('analyzer_script', 'wfo_analyzer.py')
-        archive_dir = config.get('paths', {}).get('archive', 'data/backtest_archive')
-
-        # Run WFO analyzer
+        # Run WFO analysis using analysis_service (same as regular import)
         flash(f'Running WFO analysis on {Path(csv_file).name}...', 'info')
+        analysis_result = analysis_service.run_analysis(csv_file, forward_test_period, forward_session)
 
-        cmd = [
-            'python',
-            analyzer_script,
-            csv_file,
-            '--period', forward_test_period,
-            '--session', forward_session,
-            '--archive-dir', archive_dir
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-
-        if result.returncode != 0:
-            flash(f'Analysis failed: {result.stderr}', 'error')
+        if not analysis_result.get('success'):
+            flash(f"Analysis failed: {analysis_result.get('error')}", 'error')
+            if analysis_result.get('details'):
+                flash(f"Details: {analysis_result.get('details')}", 'error')
             return redirect(url_for('analysis', period=period, session=session))
 
-        # Extract metrics from analyzer output for summary
-        total_r = 0
-        win_rate = 0
-
-        for line in result.stdout.split('\n'):
-            if 'Total R:' in line:
-                match = re.search(r'([-+]?\d+\.\d+)R', line)
-                if match:
-                    total_r = float(match.group(1))
-            elif 'Win Rate:' in line:
-                match = re.search(r'(\d+\.\d+)%', line)
-                if match:
-                    win_rate = float(match.group(1))
+        # Get metrics from analysis result
+        metrics = analysis_result.get('metrics', {})
+        total_r = metrics.get('total_r', 0)
+        win_rate = metrics.get('win_rate', 0)
 
         # Generate result summary
         if total_r > 0:
@@ -875,6 +855,7 @@ def analyze_as_forward_test(period, session):
             flash(f'⚠️ Analysis completed but could not link as forward test', 'warning')
 
         # Clean up CSV if auto-cleanup enabled
+        config = config_service.load_config()
         if config.get('behavior', {}).get('auto_cleanup', True):
             try:
                 Path(csv_file).unlink()
@@ -884,9 +865,6 @@ def analyze_as_forward_test(period, session):
 
         return redirect(url_for('analysis', period=period, session=session))
 
-    except subprocess.TimeoutExpired:
-        flash('Analysis timed out (exceeded 5 minutes)', 'error')
-        return redirect(url_for('analysis', period=period, session=session))
     except Exception as e:
         flash(f'Error during forward test analysis: {str(e)}', 'error')
         return redirect(url_for('analysis', period=period, session=session))
