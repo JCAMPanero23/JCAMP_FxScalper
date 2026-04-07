@@ -1822,7 +1822,7 @@ namespace cAlgo.Robots
                 "Volume", "ProfitPips", "ProfitCurrency", "ProfitPercent",
 
                 // ADX Context
-                "ADXValue", "ADXPeriod", "ADXThreshold", "ADXMode",
+                "ADXValue", "ADXPeriod", "ADXThreshold", "ADXMaxThreshold", "ADXMode",
                 "FlipDirectionUsed", "ADXTrending",
 
                 // MTF Alignment
@@ -1909,7 +1909,7 @@ namespace cAlgo.Robots
                 Math.Round(profitPercent, 4),
 
                 // ADX Context
-                Math.Round(ctx.ADXValue, 2), ADXPeriod, ADXMinThreshold,
+                Math.Round(ctx.ADXValue, 2), ADXPeriod, ADXMinThreshold, ADXMaxThreshold,
                 ctx.ADXMode, ctx.FlipDirectionUsed, adxTrending,
 
                 // MTF Alignment

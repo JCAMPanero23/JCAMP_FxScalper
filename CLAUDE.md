@@ -21,7 +21,7 @@ cp "D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs" "C:\Users\Jcamp_Laptop\Documents\cA
 | Timeframe 3 | M15 | Higher TF confirmation |
 | ADX Mode | FlipDirection | Contrarian in ranging |
 | ADX Period | 16 | |
-| ADX Threshold | 35 | Below = flip direction |
+| ADX Threshold | 23 | Below = flip direction (optimize: 15-25) |
 | Minimum RR | 4.0 | High-quality setups only |
 | Daily Loss Limit | -3R | Stops trading for the day |
 | Consecutive Loss Limit | 9 losses | Strategy degradation warning |

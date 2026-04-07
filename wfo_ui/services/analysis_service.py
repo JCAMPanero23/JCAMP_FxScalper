@@ -5,6 +5,7 @@ import json
 import shutil
 from pathlib import Path
 from typing import Dict, Any
+from .config_service import update_current_settings_from_backtest
 
 
 RESULTS_DIR = Path(__file__).parent.parent.parent / "wfo_results"
@@ -75,11 +76,12 @@ def run_analysis(csv_path: str, period: str, session: str) -> Dict[str, Any]:
         }
 
 
-def parse_results(results_dir: str) -> Dict[str, Any]:
+def parse_results(results_dir: str, session: str = None) -> Dict[str, Any]:
     """Parse analysis results from directory
 
     Args:
         results_dir: Path to results directory
+        session: Session name (e.g., 'EURUSD_all_sessions') for config sync
 
     Returns:
         {"metrics": {...}, "recommendations": {...}, "chart_path": str}
@@ -112,9 +114,19 @@ def parse_results(results_dir: str) -> Dict[str, Any]:
     chart_files = list(results_path.glob("analysis_dashboard_*.png"))
     chart_path = str(chart_files[0]) if chart_files else None
 
+    # Auto-sync backtest settings to config.json (latest per pair)
+    backtest_settings = data.get("backtest_settings", {})
+    if backtest_settings and session:
+        # Extract pair from session (e.g., 'EURUSD_all_sessions' -> 'EURUSD')
+        pair = session.split('_')[0] if '_' in session else session
+        synced = update_current_settings_from_backtest(backtest_settings, pair)
+        if synced:
+            print(f"[CONFIG] Auto-synced cbot_current_settings from {pair} backtest")
+
     return {
         "metrics": data.get("performance", {}),
         "recommendations": data.get("parameters", {}),
+        "backtest_settings": backtest_settings,
         "chart_path": chart_path,
         "json_path": str(json_file)
     }

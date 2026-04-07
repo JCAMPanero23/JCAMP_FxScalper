@@ -1,6 +1,7 @@
 """Configuration service for WFO UI"""
 from pathlib import Path
 from typing import Dict, Any
+from datetime import datetime
 import json
 
 CONFIG_PATH = Path(__file__).parent.parent / "config.json"
@@ -49,7 +50,7 @@ def get_default_config() -> Dict[str, Any]:
             "MinimumSLPips": 5.0,
             "ADXMode": "FlipDirection",
             "ADXPeriod": 16,
-            "ADXMinThreshold": 35.0,
+            "ADXMinThreshold": 23.0,
             "ADXMaxThreshold": 40.0,
             "RiskPercent": 1.0,
             "SLBufferPips": 2.0,
@@ -112,6 +113,53 @@ def save_config(config: Dict[str, Any]) -> None:
             json.dump(config, f, indent=2)
     except IOError as e:
         raise IOError(f"Failed to save config to {CONFIG_PATH}: {e}")
+
+def update_current_settings_from_backtest(backtest_settings: Dict[str, Any], pair: str) -> bool:
+    """Update cbot_current_settings from backtest CSV settings (latest per pair only)
+
+    Args:
+        backtest_settings: Settings extracted from backtest CSV
+        pair: Currency pair identifier (e.g., 'EURUSD')
+
+    Returns:
+        True if config was updated, False otherwise
+    """
+    if not backtest_settings:
+        return False
+
+    config = load_config()
+    current_settings = config.get('cbot_current_settings', {})
+
+    # Track which pair this update is for
+    last_updated_pair = config.get('_last_updated_pair', None)
+
+    # Settings to sync from backtest
+    sync_keys = [
+        'MTFSMAPeriod', 'Timeframe2', 'Timeframe3',
+        'ADXMode', 'ADXPeriod', 'ADXMinThreshold', 'ADXMaxThreshold',
+        'ATRPeriod', 'SLATRMultiplier', 'SLBufferPips', 'MinimumSLPips',
+        'RiskPercent', 'MinimumRRRatio', 'MaxPositions',
+        'EnableLondonSession', 'EnableNYSession', 'EnableAsianSession',
+        'ChandelierActivationRR', 'TrailIncrementPips', 'MinChandelierDistance'
+    ]
+
+    updated = False
+    for key in sync_keys:
+        if key in backtest_settings:
+            old_val = current_settings.get(key)
+            new_val = backtest_settings[key]
+            if old_val != new_val:
+                current_settings[key] = new_val
+                updated = True
+
+    if updated:
+        config['cbot_current_settings'] = current_settings
+        config['_last_updated_pair'] = pair
+        config['_last_sync_timestamp'] = datetime.now().isoformat()
+        save_config(config)
+
+    return updated
+
 
 def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """Validate configuration values

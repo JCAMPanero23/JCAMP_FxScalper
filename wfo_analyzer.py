@@ -561,6 +561,8 @@ class WFOAnalyzer:
             settings['ADXPeriod'] = int(first_row['ADXPeriod'])
         if 'ADXThreshold' in first_row:
             settings['ADXMinThreshold'] = float(first_row['ADXThreshold'])
+        if 'ADXMaxThreshold' in first_row:
+            settings['ADXMaxThreshold'] = float(first_row['ADXMaxThreshold'])
         if 'ADXMode' in first_row:
             settings['ADXMode'] = str(first_row['ADXMode'])
 

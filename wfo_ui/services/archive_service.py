@@ -228,12 +228,20 @@ def get_analysis_detail(period: str, session: str) -> Dict[str, Any]:
     csv_files = list(session_dir.glob("TradeLog*.csv"))
     csv_path = str(csv_files[0]) if csv_files else None
 
+    # Auto-sync backtest settings to config.json
+    # This ensures "Current Value" reflects the backtest being viewed
+    backtest_settings = data.get("backtest_settings", {})
+    if backtest_settings:
+        # Extract pair from session name (e.g., 'EURUSD_all_sessions' -> 'EURUSD')
+        pair = session.split('_')[0] if '_' in session else session
+        config_service.update_current_settings_from_backtest(backtest_settings, pair)
+
     return {
         "overall_metrics": data.get("overall_performance", {}),
         "session_breakdown": data.get("session_breakdown", []),
         "metrics": data.get("performance", {}),
         "recommendations": data.get("parameters", {}),
-        "backtest_settings": data.get("backtest_settings", {}),
+        "backtest_settings": backtest_settings,
         "equity_trend": data.get("equity_trend", {}),
         "equity_degradation_detected": data.get("equity_degradation_detected", False),
         "optimization_recommendation": data.get("optimization_recommendation", {}),
