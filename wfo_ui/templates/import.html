@@ -12,6 +12,7 @@
 
         <form method="POST" action="/import/analyze" id="analyze-form" onsubmit="return checkExistingBeforeSubmit(event)">
             <input type="hidden" name="confirm_overwrite" id="confirm_overwrite" value="false">
+            <input type="hidden" name="is_reoptimization" id="is_reoptimization" value="false">
 
             <div class="form-group">
                 <label for="csv_file">Trade Log CSV File:</label>
@@ -109,13 +110,22 @@
                     <li>Trades: <span id="existing-trades"></span></li>
                 </ul>
             </div>
-            <p style="margin-top: 1rem; color: #dc3545; font-weight: 500;">
-                Do you want to overwrite the existing analysis with new results?
+            <p style="margin-top: 1rem; font-weight: 500; color: #2c3e50;">
+                What would you like to do?
             </p>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeOverwriteModal()">Cancel</button>
-            <button type="button" class="btn btn-danger" onclick="confirmOverwrite()">Overwrite</button>
+        <div class="modal-footer" style="flex-direction: column; gap: 0.75rem; align-items: stretch;">
+            <button type="button" class="btn btn-success" onclick="confirmReoptimization()" style="background-color: #27ae60; border-color: #27ae60; width: 100%; padding: 0.75rem;">
+                <strong>✓ This is a Re-Optimization</strong>
+                <small style="display: block; font-weight: normal; margin-top: 0.25rem; opacity: 0.9;">Link for comparison (recommended if you re-optimized parameters)</small>
+            </button>
+            <button type="button" class="btn btn-danger" onclick="confirmOverwrite()" style="width: 100%; padding: 0.75rem;">
+                <strong>⚠️ Overwrite</strong>
+                <small style="display: block; font-weight: normal; margin-top: 0.25rem; opacity: 0.9;">Replace existing analysis (old data will be lost)</small>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="closeOverwriteModal()" style="width: 100%;">
+                Cancel
+            </button>
         </div>
     </div>
 </div>
@@ -339,6 +349,15 @@ function closeOverwriteModal() {
 function confirmOverwrite() {
     // Set the confirm_overwrite flag and submit
     document.getElementById('confirm_overwrite').value = 'true';
+    document.getElementById('is_reoptimization').value = 'false';
+    closeOverwriteModal();
+    document.getElementById('analyze-form').submit();
+}
+
+function confirmReoptimization() {
+    // Set the reoptimization flag and submit
+    document.getElementById('is_reoptimization').value = 'true';
+    document.getElementById('confirm_overwrite').value = 'false';
     closeOverwriteModal();
     document.getElementById('analyze-form').submit();
 }

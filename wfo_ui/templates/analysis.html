@@ -283,10 +283,20 @@
                     <a href="/export/{{ period }}/{{ session }}" class="btn btn-success">
                         Export Current Settings (.cbotset)
                     </a>
+                    <form method="POST" action="/mark-for-reoptimization/{{ period }}/{{ session }}" style="display: inline;">
+                        <button type="submit" class="btn btn-warning" style="background-color: #e67e22; border-color: #e67e22;">
+                            🔖 Mark for Re-Optimization
+                        </button>
+                    </form>
                 </div>
                 <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.9rem; color: #666;">
                     <strong>Targets:</strong> PF 1.3-2.0 | DD &lt;20% | Win Rate 25-45% | 30+ trades
                 </p>
+                {% if pending_reopt and pending_reopt.period == period and pending_reopt.session == session %}
+                <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.9rem; color: #e67e22; font-weight: bold;">
+                    ✓ Marked for re-optimization. Next analysis for this pair will be auto-linked.
+                </p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -332,6 +342,148 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Re-Optimization Comparison -->
+    {% if reopt_comparison and reopt_comparison.type == 'reoptimization' %}
+    <div class="card">
+        <div class="card-header" style="background-color: #27ae60; color: white;">
+            <h3>✓ Re-Optimization Results Comparison</h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">
+                Comparing original (degraded) vs re-optimized backtest - Focus on equity curve stability
+            </p>
+        </div>
+        <div class="card-body">
+            <!-- Equity Curve Comparison (MOST IMPORTANT) -->
+            <h4 style="margin-top: 0; color: #27ae60;">📈 Equity Curve Stability (Priority #1)</h4>
+            <table style="margin-bottom: 30px;">
+                <thead>
+                    <tr>
+                        <th>Period</th>
+                        <th>Original ({{ reopt_comparison.original.period }})</th>
+                        <th>Re-Optimized ({{ reopt_comparison.new.period }})</th>
+                        <th>Improvement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>First Third</strong></td>
+                        <td>{{ "%.2f"|format(reopt_comparison.original.equity_trend.get('first_third_r', 0)) }}R</td>
+                        <td>{{ "%.2f"|format(reopt_comparison.new.equity_trend.get('first_third_r', 0)) }}R</td>
+                        <td style="color: {% if reopt_comparison.new.equity_trend.get('first_third_r', 0) > reopt_comparison.original.equity_trend.get('first_third_r', 0) %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%+.2f"|format(reopt_comparison.new.equity_trend.get('first_third_r', 0) - reopt_comparison.original.equity_trend.get('first_third_r', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Second Third</strong></td>
+                        <td>{{ "%.2f"|format(reopt_comparison.original.equity_trend.get('second_third_r', 0)) }}R</td>
+                        <td>{{ "%.2f"|format(reopt_comparison.new.equity_trend.get('second_third_r', 0)) }}R</td>
+                        <td style="color: {% if reopt_comparison.new.equity_trend.get('second_third_r', 0) > reopt_comparison.original.equity_trend.get('second_third_r', 0) %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%+.2f"|format(reopt_comparison.new.equity_trend.get('second_third_r', 0) - reopt_comparison.original.equity_trend.get('second_third_r', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr style="background-color: #d5f4e6;">
+                        <td><strong>Final Third (Most Critical)</strong></td>
+                        <td style="font-weight: bold;">{{ "%.2f"|format(reopt_comparison.original.equity_trend.get('final_third_r', 0)) }}R</td>
+                        <td style="font-weight: bold;">{{ "%.2f"|format(reopt_comparison.new.equity_trend.get('final_third_r', 0)) }}R</td>
+                        <td style="color: {% if reopt_comparison.new.equity_trend.get('final_third_r', 0) > reopt_comparison.original.equity_trend.get('final_third_r', 0) %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold; font-size: 1.1em;">
+                            {{ "%+.2f"|format(reopt_comparison.new.equity_trend.get('final_third_r', 0) - reopt_comparison.original.equity_trend.get('final_third_r', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Equity Degradation</strong></td>
+                        <td style="color: #e74c3c;">
+                            {{ "%.2f"|format(reopt_comparison.original.equity_trend.get('final_third_r', 0) - reopt_comparison.original.equity_trend.get('first_third_r', 0)) }}R
+                        </td>
+                        <td style="color: {% if (reopt_comparison.new.equity_trend.get('final_third_r', 0) - reopt_comparison.new.equity_trend.get('first_third_r', 0)) > -3 %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%.2f"|format(reopt_comparison.new.equity_trend.get('final_third_r', 0) - reopt_comparison.new.equity_trend.get('first_third_r', 0)) }}R
+                        </td>
+                        <td>
+                            {% set orig_deg = reopt_comparison.original.equity_trend.get('final_third_r', 0) - reopt_comparison.original.equity_trend.get('first_third_r', 0) %}
+                            {% set new_deg = reopt_comparison.new.equity_trend.get('final_third_r', 0) - reopt_comparison.new.equity_trend.get('first_third_r', 0) %}
+                            {% if new_deg > orig_deg %}
+                            <span style="color: #27ae60; font-weight: bold;">✓ Reduced</span>
+                            {% else %}
+                            <span style="color: #e74c3c;">✗ Worse</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Other Metrics Comparison -->
+            <h4 style="color: #2c3e50;">Other Performance Metrics</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Original</th>
+                        <th>Re-Optimized</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Max Drawdown</strong></td>
+                        <td>{{ "%.2f"|format(reopt_comparison.original.overall_metrics.get('max_drawdown', 0)) }}R</td>
+                        <td>{{ "%.2f"|format(reopt_comparison.new.overall_metrics.get('max_drawdown', 0)) }}R</td>
+                        <td style="color: {% if reopt_comparison.new.overall_metrics.get('max_drawdown', 0) > reopt_comparison.original.overall_metrics.get('max_drawdown', 0) %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%+.2f"|format(reopt_comparison.new.overall_metrics.get('max_drawdown', 0) - reopt_comparison.original.overall_metrics.get('max_drawdown', 0)) }}R
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Profit Factor</strong></td>
+                        <td>{{ "%.2f"|format(reopt_comparison.original.overall_metrics.get('profit_factor', 0)) }}</td>
+                        <td>{{ "%.2f"|format(reopt_comparison.new.overall_metrics.get('profit_factor', 0)) }}</td>
+                        <td style="color: {% if reopt_comparison.new.overall_metrics.get('profit_factor', 0) > reopt_comparison.original.overall_metrics.get('profit_factor', 0) %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%+.2f"|format(reopt_comparison.new.overall_metrics.get('profit_factor', 0) - reopt_comparison.original.overall_metrics.get('profit_factor', 0)) }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Win Rate</strong></td>
+                        <td>{{ "%.1f"|format(reopt_comparison.original.overall_metrics.get('win_rate', 0)) }}%</td>
+                        <td>{{ "%.1f"|format(reopt_comparison.new.overall_metrics.get('win_rate', 0)) }}%</td>
+                        <td style="color: {% if reopt_comparison.new.overall_metrics.get('win_rate', 0) > reopt_comparison.original.overall_metrics.get('win_rate', 0) %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%+.1f"|format(reopt_comparison.new.overall_metrics.get('win_rate', 0) - reopt_comparison.original.overall_metrics.get('win_rate', 0)) }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total R</strong></td>
+                        <td>{{ "%.2f"|format(reopt_comparison.original.overall_metrics.get('total_r', 0)) }}R</td>
+                        <td>{{ "%.2f"|format(reopt_comparison.new.overall_metrics.get('total_r', 0)) }}R</td>
+                        <td style="color: {% if reopt_comparison.new.overall_metrics.get('total_r', 0) > reopt_comparison.original.overall_metrics.get('total_r', 0) %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {{ "%+.2f"|format(reopt_comparison.new.overall_metrics.get('total_r', 0) - reopt_comparison.original.overall_metrics.get('total_r', 0)) }}R
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 20px; padding: 15px; background-color: #e8f6f3; border-left: 4px solid #27ae60; border-radius: 4px;">
+                <p style="margin: 0; font-weight: bold; color: #27ae60;">
+                    💡 Remember: Equity curve stability (especially Final Third) is more important than total profit.
+                    A strategy with slightly lower profit but consistent performance is more robust for live trading.
+                </p>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <a href="/analysis/{{ reopt_comparison.original.period }}/{{ reopt_comparison.original.session }}" class="btn btn-secondary">
+                    View Original Analysis
+                </a>
+            </div>
+        </div>
+    </div>
+    {% elif reopt_comparison and reopt_comparison.type == 'has_reoptimization' %}
+    <div class="card">
+        <div class="card-header" style="background-color: #3498db; color: white;">
+            <h3>ℹ️ This Analysis Has Been Re-Optimized</h3>
+        </div>
+        <div class="card-body">
+            <p>A newer re-optimized version of this analysis is available:</p>
+            <a href="/analysis/{{ reopt_comparison.new_period }}/{{ reopt_comparison.new_session }}" class="btn btn-primary" style="margin-top: 10px;">
+                View Re-Optimized Version →
+            </a>
         </div>
     </div>
     {% endif %}

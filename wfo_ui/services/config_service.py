@@ -81,6 +81,10 @@ def get_default_config() -> Dict[str, Any]:
             "theme": "light",
             "chart_max_width": 1200,
             "sidebar_width": 300
+        },
+        "reoptimization_tracking": {
+            "pending": None,
+            "history": []
         }
     }
 
@@ -159,6 +163,84 @@ def update_current_settings_from_backtest(backtest_settings: Dict[str, Any], pai
         save_config(config)
 
     return updated
+
+
+def mark_for_reoptimization(period: str, session: str, reason: str = "equity_degradation") -> None:
+    """Mark a period/session as needing re-optimization
+
+    Args:
+        period: Period name (e.g., 'Apr_Jun_2025')
+        session: Session name (e.g., 'EURUSD_all_sessions')
+        reason: Reason for re-optimization
+    """
+    config = load_config()
+    config['reoptimization_tracking']['pending'] = {
+        'period': period,
+        'session': session,
+        'reason': reason,
+        'marked_at': datetime.now().isoformat()
+    }
+    save_config(config)
+
+
+def get_pending_reoptimization() -> Dict[str, Any]:
+    """Get pending re-optimization marker
+
+    Returns:
+        Pending re-optimization info or None
+    """
+    config = load_config()
+    return config.get('reoptimization_tracking', {}).get('pending')
+
+
+def link_reoptimization(original_period: str, original_session: str,
+                       new_period: str, new_session: str) -> None:
+    """Link a new analysis as re-optimization of an original
+
+    Args:
+        original_period: Original period name
+        original_session: Original session name
+        new_period: New (re-optimized) period name
+        new_session: New (re-optimized) session name
+    """
+    config = load_config()
+
+    # Add to history
+    if 'reoptimization_tracking' not in config:
+        config['reoptimization_tracking'] = {'pending': None, 'history': []}
+
+    config['reoptimization_tracking']['history'].append({
+        'original': f"{original_period}/{original_session}",
+        'reoptimized': f"{new_period}/{new_session}",
+        'linked_at': datetime.now().isoformat()
+    })
+
+    # Clear pending
+    config['reoptimization_tracking']['pending'] = None
+
+    save_config(config)
+
+
+def find_reoptimization_link(period: str, session: str) -> Dict[str, Any]:
+    """Find if this analysis is a re-optimization or has been re-optimized
+
+    Returns:
+        {'is_reoptimization_of': 'period/session'} or
+        {'has_reoptimization': 'period/session'} or
+        None
+    """
+    config = load_config()
+    history = config.get('reoptimization_tracking', {}).get('history', [])
+
+    current = f"{period}/{session}"
+
+    for entry in history:
+        if entry['reoptimized'] == current:
+            return {'is_reoptimization_of': entry['original']}
+        if entry['original'] == current:
+            return {'has_reoptimization': entry['reoptimized']}
+
+    return None
 
 
 def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:

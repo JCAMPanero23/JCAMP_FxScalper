@@ -121,6 +121,43 @@ def analysis(period, session):
         # Get backtest settings from the analysis (extracted from CSV)
         backtest_settings = analysis_detail.get('backtest_settings', {})
 
+        # Check if this is a re-optimization or has been re-optimized
+        reopt_link = config_service.find_reoptimization_link(period, session)
+        comparison_data = None
+        pending_reopt = config_service.get_pending_reoptimization()
+
+        if reopt_link:
+            # Load the linked analysis for comparison
+            if 'is_reoptimization_of' in reopt_link:
+                # This IS a re-optimization - load original for comparison
+                orig_period, orig_session = reopt_link['is_reoptimization_of'].split('/')
+                original_analysis = archive_service.get_analysis_detail(orig_period, orig_session)
+                comparison_data = {
+                    'type': 'reoptimization',
+                    'original': {
+                        'period': orig_period,
+                        'session': orig_session,
+                        'overall_metrics': original_analysis.get('overall_metrics', {}),
+                        'equity_trend': original_analysis.get('equity_trend', {}),
+                        'metrics': original_analysis.get('metrics', {})
+                    },
+                    'new': {
+                        'period': period,
+                        'session': session,
+                        'overall_metrics': analysis_detail.get('overall_metrics', {}),
+                        'equity_trend': analysis_detail.get('equity_trend', {}),
+                        'metrics': analysis_detail.get('metrics', {})
+                    }
+                }
+            elif 'has_reoptimization' in reopt_link:
+                # This HAS been re-optimized - show link to new version
+                new_period, new_session = reopt_link['has_reoptimization'].split('/')
+                comparison_data = {
+                    'type': 'has_reoptimization',
+                    'new_period': new_period,
+                    'new_session': new_session
+                }
+
         return render_template(
             'analysis.html',
             period=period,
@@ -136,7 +173,9 @@ def analysis(period, session):
             chart_path=chart_url,
             csv_path=csv_url,
             current_settings=current_settings,
-            comparison=comparison
+            comparison=comparison,
+            reopt_comparison=comparison_data,
+            pending_reopt=pending_reopt
         )
     except Exception as e:
         flash(f'Error loading analysis: {str(e)}', 'error')
@@ -525,6 +564,7 @@ def import_analyze():
         period = request.form.get('period', '').strip()
         session = request.form.get('session', '').strip()
         confirm_overwrite = request.form.get('confirm_overwrite', 'false') == 'true'
+        is_reoptimization = request.form.get('is_reoptimization', 'false') == 'true'
 
         if not csv_path or not period or not session:
             flash('Please fill in all fields', 'error')
@@ -536,17 +576,28 @@ def import_analyze():
 
         # Check for existing analysis results
         existing = archive_service.check_existing_analysis(period, session)
-        if existing['exists'] and not confirm_overwrite:
-            # Return to import page with warning - this shouldn't happen
-            # if JS is working, but handle it as fallback
-            flash(f'Analysis already exists for {period}/{session}. Please confirm overwrite.', 'warning')
-            return redirect(url_for('import_page'))
 
-        # If overwriting, delete existing results first
-        if existing['exists'] and confirm_overwrite:
-            delete_result = archive_service.delete_analysis_results(period, session)
-            if not delete_result['success']:
-                flash(f"Failed to delete existing results: {delete_result['error']}", 'error')
+        # Store original period/session for re-optimization linking
+        original_period = period
+        original_session = session
+
+        if existing['exists']:
+            if is_reoptimization:
+                # This is a re-optimization - create new session name
+                # Append timestamp to make it unique
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                session = f"{session}_reopt_{timestamp}"
+                flash(f'Creating re-optimization analysis: {period}/{session}', 'info')
+            elif confirm_overwrite:
+                # Overwrite - delete existing results first
+                delete_result = archive_service.delete_analysis_results(period, session)
+                if not delete_result['success']:
+                    flash(f"Failed to delete existing results: {delete_result['error']}", 'error')
+                    return redirect(url_for('import_page'))
+            else:
+                # Neither reopt nor overwrite confirmed - shouldn't happen with JS, but handle it
+                flash(f'Analysis already exists for {period}/{session}. Please confirm action.', 'warning')
                 return redirect(url_for('import_page'))
 
         # Run WFO analysis
@@ -566,6 +617,34 @@ def import_analyze():
             csv_path=csv_path,
             results_path=results_path
         )
+
+        # Handle re-optimization linking
+        if is_reoptimization:
+            # Link the new analysis to the original
+            config_service.link_reoptimization(
+                original_period,
+                original_session,
+                period,
+                session
+            )
+            flash(f'✓ Linked as re-optimization of {original_period}/{original_session}', 'success')
+        else:
+            # Check if this should be auto-linked as a re-optimization (from pending marker)
+            pending = config_service.get_pending_reoptimization()
+            if pending:
+                # Extract pair from session name
+                new_pair = session.split('_')[0] if '_' in session else session
+                pending_pair = pending['session'].split('_')[0] if '_' in pending['session'] else pending['session']
+
+                # Auto-link if same pair
+                if new_pair == pending_pair:
+                    config_service.link_reoptimization(
+                        pending['period'],
+                        pending['session'],
+                        period,
+                        session
+                    )
+                    flash(f'✓ Auto-linked as re-optimization of {pending["period"]}/{pending["session"]}', 'success')
 
         action = 'overwritten and re-analyzed' if confirm_overwrite else 'analyzed and archived'
         flash(f'Successfully {action}: {period} / {session}', 'success')
@@ -598,6 +677,37 @@ def rename_session(period, session):
 
     except Exception as e:
         flash(f'Error renaming session: {str(e)}', 'error')
+        return redirect(url_for('analysis', period=period, session=session))
+
+
+@app.route('/mark-for-reoptimization/<period>/<session>', methods=['POST'])
+def mark_for_reoptimization(period, session):
+    """Mark this analysis for re-optimization"""
+    try:
+        config_service.mark_for_reoptimization(period, session, reason="equity_degradation")
+        flash(f'Marked {period}/{session} for re-optimization. Next imported analysis for this pair will be linked automatically.', 'success')
+        return redirect(url_for('analysis', period=period, session=session))
+    except Exception as e:
+        flash(f'Error marking for re-optimization: {str(e)}', 'error')
+        return redirect(url_for('analysis', period=period, session=session))
+
+
+@app.route('/link-reoptimization/<period>/<session>', methods=['POST'])
+def link_reoptimization_manual(period, session):
+    """Manually link this analysis as re-optimization of another"""
+    try:
+        original_period = request.form.get('original_period')
+        original_session = request.form.get('original_session')
+
+        if not original_period or not original_session:
+            flash('Please select an original analysis to link to', 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
+        config_service.link_reoptimization(original_period, original_session, period, session)
+        flash(f'Linked as re-optimization of {original_period}/{original_session}', 'success')
+        return redirect(url_for('analysis', period=period, session=session))
+    except Exception as e:
+        flash(f'Error linking re-optimization: {str(e)}', 'error')
         return redirect(url_for('analysis', period=period, session=session))
 
 
