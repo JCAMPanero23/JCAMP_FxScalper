@@ -158,7 +158,7 @@
                                         <!-- Action Buttons -->
                                         <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
                                             <!-- View Details Button -->
-                                            {% set view_session = wfo.reopt.name if wfo.reopt else wfo.original.name %}
+                                            {% set view_session = wfo.reopt['name'] if wfo.reopt else wfo.original['name'] %}
                                             <a href="/analysis/{{ period.name }}/{{ view_session }}" class="btn btn-primary btn-small" style="text-align: center;">
                                                 View Details
                                             </a>
@@ -171,12 +171,12 @@
                                                 </summary>
                                                 <div style="padding: 0.5rem; background-color: #f8f9fa; border-radius: 0 0 4px 4px; display: flex; flex-direction: column; gap: 0.25rem;">
                                                     {% if wfo.original %}
-                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.original.name }}" style="margin: 0;" onsubmit="return confirm('Delete original analysis?');">
+                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.original['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete original analysis?');">
                                                         <button type="submit" class="btn btn-secondary btn-small" style="width: 100%; font-size: 0.8rem;">Delete Original</button>
                                                     </form>
                                                     {% endif %}
                                                     {% if wfo.reopt %}
-                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.reopt.name }}" style="margin: 0;" onsubmit="return confirm('Delete re-optimized version?');">
+                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.reopt['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete re-optimized version?');">
                                                         <button type="submit" class="btn btn-secondary btn-small" style="width: 100%; font-size: 0.8rem;">Delete Re-opt</button>
                                                     </form>
                                                     {% endif %}
@@ -189,12 +189,12 @@
                                                 </summary>
                                                 <div style="padding: 0.5rem; background-color: #f8f9fa; border-radius: 0 0 4px 4px; display: flex; flex-direction: column; gap: 0.25rem;">
                                                     {% if wfo.original %}
-                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.original.name }}" style="margin: 0;" onsubmit="return confirm('Delete original analysis?');">
+                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.original['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete original analysis?');">
                                                         <button type="submit" class="btn btn-secondary btn-small" style="width: 100%; font-size: 0.8rem;">Delete Original</button>
                                                     </form>
                                                     {% endif %}
                                                     {% if wfo.reopt %}
-                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.reopt.name }}" style="margin: 0;" onsubmit="return confirm('Delete re-optimized version? This will reset to original.');">
+                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.reopt['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete re-optimized version? This will reset to original.');">
                                                         <button type="submit" class="btn btn-danger btn-small" style="width: 100%; font-size: 0.8rem;">Delete Re-opt</button>
                                                     </form>
                                                     {% endif %}
