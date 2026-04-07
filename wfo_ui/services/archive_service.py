@@ -100,7 +100,9 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
                         "pair": pair,
                         "total_r": perf.get("total_r", 0),
                         "win_rate": perf.get("win_rate", 0),
-                        "trades": perf.get("total_trades", 0)
+                        "trades": perf.get("total_trades", 0),
+                        "profit_factor": perf.get("profit_factor", 0),
+                        "max_dd": perf.get("max_drawdown_percent", 0)
                     })
 
         # Only add period if it has sessions (after filtering)

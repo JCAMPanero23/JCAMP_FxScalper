@@ -121,10 +121,27 @@ def analysis(period, session):
         # Get backtest settings from the analysis (extracted from CSV)
         backtest_settings = analysis_detail.get('backtest_settings', {})
 
+        # Get all available analyses for forward test selection
+        archive_data = archive_service.get_archive_tree(per_page=1000)
+        available_analyses = []
+        for p in archive_data.get('periods', []):
+            for s in p.get('sessions', []):
+                available_analyses.append({
+                    'period': p['name'],
+                    'session': s['name'],
+                    'display': f"{p['name']} / {s['name']} ({s['total_r']:+.1f}R)",
+                    'total_r': s.get('total_r', 0),
+                    'win_rate': s.get('win_rate', 0),
+                    'profit_factor': s.get('profit_factor', 0),
+                    'max_dd': s.get('max_dd', 0),
+                    'trades': s.get('total_trades', 0)
+                })
+
         # Check if this is a re-optimization or has been re-optimized
         reopt_link = config_service.find_reoptimization_link(period, session)
         comparison_data = None
         pending_reopt = config_service.get_pending_reoptimization()
+        forward_test_data = None
 
         if reopt_link:
             # Load the linked analysis for comparison
@@ -149,6 +166,25 @@ def analysis(period, session):
                         'metrics': analysis_detail.get('metrics', {})
                     }
                 }
+
+                # Check for forward test result
+                config = config_service.load_config()
+                history = config.get('reoptimization_tracking', {}).get('history', [])
+                current_key = f"{period}/{session}"
+                for entry in history:
+                    if entry.get('reoptimized') == current_key and entry.get('forward_test'):
+                        ft = entry['forward_test']
+                        # Load forward test analysis
+                        forward_analysis = archive_service.get_analysis_detail(ft['period'], ft['session'])
+                        forward_test_data = {
+                            'period': ft['period'],
+                            'session': ft['session'],
+                            'result': ft['result'],
+                            'overall_metrics': forward_analysis.get('overall_metrics', {}),
+                            'equity_trend': forward_analysis.get('equity_trend', {})
+                        }
+                        break
+
             elif 'has_reoptimization' in reopt_link:
                 # This HAS been re-optimized - show link to new version
                 new_period, new_session = reopt_link['has_reoptimization'].split('/')
@@ -175,7 +211,9 @@ def analysis(period, session):
             current_settings=current_settings,
             comparison=comparison,
             reopt_comparison=comparison_data,
-            pending_reopt=pending_reopt
+            pending_reopt=pending_reopt,
+            forward_test=forward_test_data,
+            available_analyses=available_analyses
         )
     except Exception as e:
         flash(f'Error loading analysis: {str(e)}', 'error')
@@ -708,6 +746,35 @@ def link_reoptimization_manual(period, session):
         return redirect(url_for('analysis', period=period, session=session))
     except Exception as e:
         flash(f'Error linking re-optimization: {str(e)}', 'error')
+        return redirect(url_for('analysis', period=period, session=session))
+
+
+@app.route('/add-forward-test/<period>/<session>', methods=['POST'])
+def add_forward_test(period, session):
+    """Add forward test validation result to a re-optimization"""
+    try:
+        forward_period = request.form.get('forward_period')
+        forward_session = request.form.get('forward_session')
+        result_summary = request.form.get('result_summary', '').strip()
+
+        if not forward_period or not forward_session or not result_summary:
+            flash('Please fill in all forward test fields', 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
+        success = config_service.add_forward_test_result(
+            period, session,
+            forward_period, forward_session,
+            result_summary
+        )
+
+        if success:
+            flash(f'✓ Added forward test result: {forward_period}/{forward_session} → {result_summary}', 'success')
+        else:
+            flash('Could not find re-optimization entry to update', 'error')
+
+        return redirect(url_for('analysis', period=period, session=session))
+    except Exception as e:
+        flash(f'Error adding forward test: {str(e)}', 'error')
         return redirect(url_for('analysis', period=period, session=session))
 
 

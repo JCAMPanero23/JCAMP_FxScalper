@@ -474,6 +474,162 @@
             </div>
         </div>
     </div>
+
+    <!-- Forward Test Result (WFO Validation) -->
+    {% if reopt_comparison and reopt_comparison.type == 'reoptimization' %}
+        {% if forward_test %}
+        <div class="card">
+            <div class="card-header" style="background-color: #3498db; color: white;">
+                <h3>🎯 Forward Test Validation (Out-of-Sample)</h3>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">
+                    Re-optimized parameters tested on {{ forward_test.period }} ({{ forward_test.session }})
+                </p>
+            </div>
+            <div class="card-body">
+                <div style="background-color: #e8f4fd; border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #3498db;">Result: {{ forward_test.result }}</h4>
+                    <p style="margin: 0; font-size: 0.9rem;">
+                        Parameters optimized on <strong>{{ period }}</strong> were validated on <strong>{{ forward_test.period }}</strong> to ensure robustness.
+                    </p>
+                </div>
+
+                <h4 style="color: #2c3e50; margin-top: 20px;">Forward Test Performance</h4>
+                <table style="margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Total Trades</strong></td>
+                            <td>{{ forward_test.overall_metrics.get('total_trades', 'N/A') }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Win Rate</strong></td>
+                            <td style="color: {% if forward_test.overall_metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %};">
+                                {{ "%.1f"|format(forward_test.overall_metrics.get('win_rate', 0)) }}%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total R</strong></td>
+                            <td style="color: {% if forward_test.overall_metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                {{ "%.2f"|format(forward_test.overall_metrics.get('total_r', 0)) }}R
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Profit Factor</strong></td>
+                            <td style="color: {% if forward_test.overall_metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif forward_test.overall_metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %};">
+                                {{ "%.2f"|format(forward_test.overall_metrics.get('profit_factor', 0)) }}
+                            </td>
+                        </tr>
+                        <tr style="background-color: #d5f4e6;">
+                            <td><strong>Final Third R</strong></td>
+                            <td style="color: {% if forward_test.equity_trend.get('final_third_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                {{ "%.2f"|format(forward_test.equity_trend.get('final_third_r', 0)) }}R
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="background-color: #d5f4e6; border-left: 4px solid #27ae60; padding: 15px; border-radius: 4px;">
+                    <p style="margin: 0; font-weight: bold; color: #27ae60;">
+                        ✅ WFO Complete: In-Sample → Re-Optimization → Out-of-Sample Validation
+                    </p>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <a href="/analysis/{{ forward_test.period }}/{{ forward_test.session }}" class="btn btn-primary">
+                        View Forward Test Analysis →
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Add Forward Test Form -->
+        <div class="card">
+            <div class="card-header" style="background-color: #95a5a6; color: white; cursor: pointer;" onclick="toggleForwardTestForm()">
+                <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>➕ Add Forward Test Result</span>
+                    <span id="forward-test-arrow" style="font-size: 0.8em;">▼</span>
+                </h3>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">
+                    Complete the WFO cycle by adding out-of-sample validation results
+                </p>
+            </div>
+            <div id="forward-test-form" class="card-body" style="display: none;">
+                <p style="margin-bottom: 15px; color: #666;">
+                    After testing these re-optimized parameters on the next period, select the forward test analysis from your existing backtests.
+                </p>
+                <form method="POST" action="/add-forward-test/{{ period }}/{{ session }}" id="forward-test-submit-form">
+                    <input type="hidden" name="forward_period" id="forward_period_hidden">
+                    <input type="hidden" name="forward_session" id="forward_session_hidden">
+                    <input type="hidden" name="result_summary" id="result_summary_hidden">
+
+                    <div class="form-group">
+                        <label for="analysis_selector">Select Forward Test Analysis:</label>
+                        <select name="analysis_selector" id="analysis_selector" onchange="selectForwardTest()" required style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 1rem;">
+                            <option value="">-- Select an existing backtest analysis --</option>
+                            {% for analysis in available_analyses %}
+                            <option
+                                value="{{ analysis.period }}|||{{ analysis.session }}"
+                                data-total-r="{{ analysis.total_r }}"
+                                data-win-rate="{{ analysis.win_rate }}"
+                                data-profit-factor="{{ analysis.profit_factor }}"
+                                data-max-dd="{{ analysis.max_dd }}"
+                                data-trades="{{ analysis.trades }}">
+                                {{ analysis.display }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                            Choose the forward test period (should be after {{ period }})
+                        </small>
+                    </div>
+
+                    <!-- Preview Card -->
+                    <div id="forward-test-preview" style="display: none; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                        <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Selected Analysis Preview</h4>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold; width: 150px;">Period / Session:</td>
+                                <td style="padding: 5px;" id="preview-period-session"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold;">Total R:</td>
+                                <td style="padding: 5px; font-weight: bold;" id="preview-total-r"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold;">Win Rate:</td>
+                                <td style="padding: 5px;" id="preview-win-rate"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold;">Profit Factor:</td>
+                                <td style="padding: 5px;" id="preview-pf"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold;">Max DD:</td>
+                                <td style="padding: 5px;" id="preview-max-dd"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold;">Trades:</td>
+                                <td style="padding: 5px;" id="preview-trades"></td>
+                            </tr>
+                        </table>
+                        <p style="margin: 10px 0 0 0; font-size: 0.9rem; color: #666;">
+                            <strong>Auto-generated summary:</strong> <span id="preview-summary" style="color: #2980b9; font-weight: bold;"></span>
+                        </p>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary" id="forward-test-submit-btn" disabled>Add Forward Test Result</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
     {% elif reopt_comparison and reopt_comparison.type == 'has_reoptimization' %}
     <div class="card">
         <div class="card-header" style="background-color: #3498db; color: white;">
@@ -819,6 +975,77 @@ function toggleSettings() {
         details.style.display = 'none';
         arrow.textContent = '▼';
     }
+}
+
+function toggleForwardTestForm() {
+    var form = document.getElementById('forward-test-form');
+    var arrow = document.getElementById('forward-test-arrow');
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        arrow.textContent = '▲';
+    } else {
+        form.style.display = 'none';
+        arrow.textContent = '▼';
+    }
+}
+
+function selectForwardTest() {
+    var selector = document.getElementById('analysis_selector');
+    var selectedOption = selector.options[selector.selectedIndex];
+
+    if (!selectedOption.value) {
+        // No selection, hide preview and disable submit
+        document.getElementById('forward-test-preview').style.display = 'none';
+        document.getElementById('forward-test-submit-btn').disabled = true;
+        return;
+    }
+
+    // Parse period|||session
+    var parts = selectedOption.value.split('|||');
+    var period = parts[0];
+    var session = parts[1];
+
+    // Extract metrics from data attributes
+    var totalR = parseFloat(selectedOption.getAttribute('data-total-r')) || 0;
+    var winRate = parseFloat(selectedOption.getAttribute('data-win-rate')) || 0;
+    var profitFactor = parseFloat(selectedOption.getAttribute('data-profit-factor')) || 0;
+    var maxDD = parseFloat(selectedOption.getAttribute('data-max-dd')) || 0;
+    var trades = parseInt(selectedOption.getAttribute('data-trades')) || 0;
+
+    // Populate hidden fields
+    document.getElementById('forward_period_hidden').value = period;
+    document.getElementById('forward_session_hidden').value = session;
+
+    // Generate result summary
+    var summary = '';
+    if (totalR > 0) {
+        summary = '+' + totalR.toFixed(1) + 'R profit';
+    } else if (totalR < 0) {
+        summary = totalR.toFixed(1) + 'R loss';
+    } else {
+        summary = 'Break even';
+    }
+    summary += ', ' + winRate.toFixed(1) + '% WR, PF ' + profitFactor.toFixed(2);
+    document.getElementById('result_summary_hidden').value = summary;
+
+    // Populate preview
+    document.getElementById('preview-period-session').textContent = period + ' / ' + session;
+
+    var totalRColor = totalR >= 0 ? '#27ae60' : '#e74c3c';
+    document.getElementById('preview-total-r').innerHTML = '<span style="color: ' + totalRColor + ';">' + (totalR >= 0 ? '+' : '') + totalR.toFixed(2) + 'R</span>';
+
+    document.getElementById('preview-win-rate').textContent = winRate.toFixed(1) + '%';
+
+    var pfColor = profitFactor >= 1.5 ? '#27ae60' : (profitFactor >= 1 ? '#f39c12' : '#e74c3c');
+    document.getElementById('preview-pf').innerHTML = '<span style="color: ' + pfColor + ';">' + profitFactor.toFixed(2) + '</span>';
+
+    document.getElementById('preview-max-dd').innerHTML = '<span style="color: #e74c3c;">' + maxDD.toFixed(2) + '%</span>';
+    document.getElementById('preview-trades').textContent = trades;
+    document.getElementById('preview-summary').textContent = summary;
+
+    // Show preview and enable submit
+    document.getElementById('forward-test-preview').style.display = 'block';
+    document.getElementById('forward-test-submit-btn').disabled = false;
 }
 </script>
 {% endblock %}
