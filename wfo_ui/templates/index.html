@@ -158,7 +158,14 @@
                                         <!-- Action Buttons -->
                                         <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
                                             <!-- View Details Button -->
-                                            {% set view_session = wfo.reopt['name'] if wfo.reopt else wfo.original['name'] %}
+                                            {# Use reopt if exists (latest version), otherwise original #}
+                                            {% if wfo.reopt %}
+                                                {% set view_session = wfo.reopt['name'] %}
+                                            {% elif wfo.original %}
+                                                {% set view_session = wfo.original['name'] %}
+                                            {% else %}
+                                                {% set view_session = wfo.display_name %}
+                                            {% endif %}
                                             <a href="/analysis/{{ period.name }}/{{ view_session }}" class="btn btn-primary btn-small" style="text-align: center;">
                                                 View Details
                                             </a>
