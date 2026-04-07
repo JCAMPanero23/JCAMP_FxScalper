@@ -551,72 +551,128 @@
                 <!-- Edit Forward Test Form (Hidden by default) -->
                 <div id="edit-forward-test-form" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #dee2e6;">
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">Change Forward Test</h4>
-                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
-                        Select a different forward test analysis or update the current one.
-                    </p>
-                    <form method="POST" action="/add-forward-test/{{ period }}/{{ session }}" id="edit-forward-test-submit-form">
-                        <input type="hidden" name="forward_period" id="edit_forward_period_hidden">
-                        <input type="hidden" name="forward_session" id="edit_forward_session_hidden">
-                        <input type="hidden" name="result_summary" id="edit_result_summary_hidden">
 
-                        <div class="form-group">
-                            <label for="edit_analysis_selector">Select Forward Test Analysis:</label>
-                            <select name="analysis_selector" id="edit_analysis_selector" onchange="selectEditForwardTest()" required style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 1rem;">
-                                <option value="">-- Select an existing backtest analysis --</option>
-                                {% for analysis in available_analyses %}
-                                <option
-                                    value="{{ analysis.period }}|||{{ analysis.session }}"
-                                    data-total-r="{{ analysis.total_r }}"
-                                    data-win-rate="{{ analysis.win_rate }}"
-                                    data-profit-factor="{{ analysis.profit_factor }}"
-                                    data-max-dd="{{ analysis.max_dd }}"
-                                    data-trades="{{ analysis.trades }}"
-                                    {% if forward_test and analysis.period == forward_test.period and analysis.session == forward_test.session %}selected{% endif %}>
-                                    {{ analysis.display }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    <!-- Tab Navigation for Edit -->
+                    <div style="display: flex; gap: 0; border-bottom: 2px solid #dee2e6; margin-bottom: 20px;">
+                        <button type="button" onclick="switchEditForwardTestTab('existing')" id="edit-tab-existing" class="edit-forward-test-tab" style="flex: 1; padding: 0.75rem; border: none; background-color: #3498db; color: white; cursor: pointer; font-weight: bold; border-radius: 4px 4px 0 0;">
+                            From Existing Backtest
+                        </button>
+                        <button type="button" onclick="switchEditForwardTestTab('new')" id="edit-tab-new" class="edit-forward-test-tab" style="flex: 1; padding: 0.75rem; border: none; background-color: #ecf0f1; color: #7f8c8d; cursor: pointer; border-radius: 4px 4px 0 0;">
+                            New Analysis
+                        </button>
+                    </div>
 
-                        <!-- Preview Card for Edit -->
-                        <div id="edit-forward-test-preview" style="display: {% if forward_test %}block{% else %}none{% endif %}; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
-                            <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Selected Analysis Preview</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr>
-                                    <td style="padding: 5px; font-weight: bold; width: 150px;">Period / Session:</td>
-                                    <td style="padding: 5px;" id="edit-preview-period-session">{{ forward_test.period if forward_test else '' }} / {{ forward_test.session if forward_test else '' }}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 5px; font-weight: bold;">Total R:</td>
-                                    <td style="padding: 5px; font-weight: bold;" id="edit-preview-total-r"></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 5px; font-weight: bold;">Win Rate:</td>
-                                    <td style="padding: 5px;" id="edit-preview-win-rate"></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 5px; font-weight: bold;">Profit Factor:</td>
-                                    <td style="padding: 5px;" id="edit-preview-pf"></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 5px; font-weight: bold;">Max DD:</td>
-                                    <td style="padding: 5px;" id="edit-preview-max-dd"></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 5px; font-weight: bold;">Trades:</td>
-                                    <td style="padding: 5px;" id="edit-preview-trades"></td>
-                                </tr>
-                            </table>
-                            <p style="margin: 10px 0 0 0; font-size: 0.9rem; color: #666;">
-                                <strong>Auto-generated summary:</strong> <span id="edit-preview-summary" style="color: #2980b9; font-weight: bold;"></span>
-                            </p>
-                        </div>
+                    <!-- Tab Content: From Existing (Edit) -->
+                    <div id="edit-tab-content-existing" style="display: block;">
+                        <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                            Select a different forward test analysis from existing backtests.
+                        </p>
+                        <form method="POST" action="/add-forward-test/{{ period }}/{{ session }}" id="edit-forward-test-submit-form">
+                            <input type="hidden" name="forward_period" id="edit_forward_period_hidden">
+                            <input type="hidden" name="forward_session" id="edit_forward_session_hidden">
+                            <input type="hidden" name="result_summary" id="edit_result_summary_hidden">
 
-                        <div style="margin-top: 20px; display: flex; gap: 0.5rem;">
-                            <button type="submit" class="btn btn-primary" style="flex: 1;">Update Forward Test</button>
-                            <button type="button" onclick="toggleEditForwardTest()" class="btn btn-secondary">Cancel</button>
-                        </div>
-                    </form>
+                            <div class="form-group">
+                                <label for="edit_analysis_selector">Select Forward Test Analysis:</label>
+                                <select name="analysis_selector" id="edit_analysis_selector" onchange="selectEditForwardTest()" required style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 1rem;">
+                                    <option value="">-- Select an existing backtest analysis --</option>
+                                    {% for analysis in available_analyses %}
+                                    <option
+                                        value="{{ analysis.period }}|||{{ analysis.session }}"
+                                        data-total-r="{{ analysis.total_r }}"
+                                        data-win-rate="{{ analysis.win_rate }}"
+                                        data-profit-factor="{{ analysis.profit_factor }}"
+                                        data-max-dd="{{ analysis.max_dd }}"
+                                        data-trades="{{ analysis.trades }}"
+                                        {% if forward_test and analysis.period == forward_test.period and analysis.session == forward_test.session %}selected{% endif %}>
+                                        {{ analysis.display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Preview Card for Edit -->
+                            <div id="edit-forward-test-preview" style="display: {% if forward_test %}block{% else %}none{% endif %}; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Selected Analysis Preview</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 5px; font-weight: bold; width: 150px;">Period / Session:</td>
+                                        <td style="padding: 5px;" id="edit-preview-period-session">{{ forward_test.period if forward_test else '' }} / {{ forward_test.session if forward_test else '' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px; font-weight: bold;">Total R:</td>
+                                        <td style="padding: 5px; font-weight: bold;" id="edit-preview-total-r"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px; font-weight: bold;">Win Rate:</td>
+                                        <td style="padding: 5px;" id="edit-preview-win-rate"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px; font-weight: bold;">Profit Factor:</td>
+                                        <td style="padding: 5px;" id="edit-preview-pf"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px; font-weight: bold;">Max DD:</td>
+                                        <td style="padding: 5px;" id="edit-preview-max-dd"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px; font-weight: bold;">Trades:</td>
+                                        <td style="padding: 5px;" id="edit-preview-trades"></td>
+                                    </tr>
+                                </table>
+                                <p style="margin: 10px 0 0 0; font-size: 0.9rem; color: #666;">
+                                    <strong>Auto-generated summary:</strong> <span id="edit-preview-summary" style="color: #2980b9; font-weight: bold;"></span>
+                                </p>
+                            </div>
+
+                            <div style="margin-top: 20px; display: flex; gap: 0.5rem;">
+                                <button type="submit" class="btn btn-primary" style="flex: 1;">Update Forward Test</button>
+                                <button type="button" onclick="toggleEditForwardTest()" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tab Content: New Analysis (Edit) -->
+                    <div id="edit-tab-content-new" style="display: none;">
+                        <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                            Import and analyze a new CSV as forward test replacement.
+                        </p>
+                        <form method="POST" action="/import/analyze-as-forward-test/{{ period }}/{{ session }}" enctype="multipart/form-data" id="edit-new-forward-test-form">
+                            <div class="form-group">
+                                <label for="edit_forward_csv_file">Forward Test CSV File:</label>
+                                <select name="csv_file" id="edit_forward_csv_file" required onchange="autoFillEditForwardTestPeriod()" style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 1rem;">
+                                    <option value="">-- Select forward test CSV --</option>
+                                    {% if available_csvs %}
+                                        {% for csv in available_csvs %}
+                                        <option value="{{ csv.path }}" data-pair="{{ csv.name.split('_')[1] if '_' in csv.name else '' }}">
+                                            {{ csv.name }} ({{ csv.size }}, {{ csv.date }})
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                                    From: {{ ctrader_path if ctrader_path else 'cTrader logs directory' }}
+                                </small>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label for="edit_forward_test_period">Forward Test Period Name:</label>
+                                <input type="text" name="forward_test_period" id="edit_forward_test_period" placeholder="e.g., Jul_2025, Aug_2025" required style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px;">
+                                <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                                    Period for this forward test (should be after {{ period }})
+                                </small>
+                            </div>
+
+                            <div class="alert alert-info" style="margin-top: 15px; background-color: #e8f4fd; border-left: 4px solid #3498db; padding: 10px;">
+                                <strong>Auto-naming:</strong> Session will be auto-named as <code>{{ session }}</code>
+                            </div>
+
+                            <div style="margin-top: 20px; display: flex; gap: 0.5rem;">
+                                <button type="submit" class="btn btn-primary" style="flex: 1;">Analyze & Update Forward Test</button>
+                                <button type="button" onclick="toggleEditForwardTest()" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1233,10 +1289,62 @@ function toggleEditForwardTest() {
     var form = document.getElementById('edit-forward-test-form');
     if (form.style.display === 'none') {
         form.style.display = 'block';
+        // Default to "From Existing" tab
+        switchEditForwardTestTab('existing');
         // Trigger selection update to populate preview
         selectEditForwardTest();
     } else {
         form.style.display = 'none';
+    }
+}
+
+function switchEditForwardTestTab(tab) {
+    // Update tab buttons
+    var tabExisting = document.getElementById('edit-tab-existing');
+    var tabNew = document.getElementById('edit-tab-new');
+    var contentExisting = document.getElementById('edit-tab-content-existing');
+    var contentNew = document.getElementById('edit-tab-content-new');
+
+    if (tab === 'existing') {
+        tabExisting.style.backgroundColor = '#3498db';
+        tabExisting.style.color = 'white';
+        tabExisting.style.fontWeight = 'bold';
+        tabNew.style.backgroundColor = '#ecf0f1';
+        tabNew.style.color = '#7f8c8d';
+        tabNew.style.fontWeight = 'normal';
+        contentExisting.style.display = 'block';
+        contentNew.style.display = 'none';
+    } else if (tab === 'new') {
+        tabNew.style.backgroundColor = '#3498db';
+        tabNew.style.color = 'white';
+        tabNew.style.fontWeight = 'bold';
+        tabExisting.style.backgroundColor = '#ecf0f1';
+        tabExisting.style.color = '#7f8c8d';
+        tabExisting.style.fontWeight = 'normal';
+        contentNew.style.display = 'block';
+        contentExisting.style.display = 'none';
+    }
+}
+
+function autoFillEditForwardTestPeriod() {
+    var select = document.getElementById('edit_forward_csv_file');
+    var selectedOption = select.options[select.selectedIndex];
+
+    if (selectedOption.value) {
+        // Try to extract period from CSV filename
+        var filename = selectedOption.text;
+        var match = filename.match(/(\d{8})/);
+        if (match) {
+            var dateStr = match[1];
+            var year = dateStr.substring(0, 4);
+            var month = dateStr.substring(4, 6);
+
+            var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var monthName = monthNames[parseInt(month) - 1];
+
+            // Auto-fill period name
+            document.getElementById('edit_forward_test_period').value = monthName + '_' + year;
+        }
     }
 }
 
