@@ -808,8 +808,14 @@ def analyze_as_forward_test(period, session):
             flash('Please select a CSV file and enter a period name', 'error')
             return redirect(url_for('analysis', period=period, session=session))
 
-        # Use the same session name as the current re-opt
-        forward_session = session
+        # Extract base session name (remove _reopt_timestamp suffix if present)
+        # e.g., EURUSD_all_sessions_reopt_20260407_213716 → EURUSD_all_sessions
+        import re as regex
+        reopt_match = regex.match(r'(.+)_reopt_\d{8}_\d{6}$', session)
+        if reopt_match:
+            forward_session = reopt_match.group(1)  # Use base session name
+        else:
+            forward_session = session  # Already base name
 
         # Get config
         config = config_service.load_config()
