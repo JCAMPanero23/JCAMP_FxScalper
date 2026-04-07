@@ -45,6 +45,104 @@ def get_all_pairs() -> List[str]:
     return sorted(pairs)
 
 
+def build_wfo_cycles(sessions: List[Dict[str, Any]], period_name: str) -> List[Dict[str, Any]]:
+    """Group sessions into WFO cycles with status badges
+
+    Args:
+        sessions: List of session dicts with name, pair, metrics
+        period_name: Period name for this group
+
+    Returns:
+        List of WFO cycle dicts with status, original, reopt, forward_test fields
+    """
+    # Load re-optimization tracking data
+    config = config_service.load_config()
+    reopt_history = config.get('reoptimization_tracking', {}).get('history', [])
+
+    # Group sessions by base name (remove _reopt_timestamp suffix)
+    wfo_groups = {}
+    reopt_pattern = re.compile(r'(.+)_reopt_\d{8}_\d{6}$')
+
+    for session in sessions:
+        session_name = session['name']
+        match = reopt_pattern.match(session_name)
+
+        if match:
+            # This is a re-optimized version
+            base_name = match.group(1)
+            if base_name not in wfo_groups:
+                wfo_groups[base_name] = {'original': None, 'reopts': []}
+            wfo_groups[base_name]['reopts'].append(session)
+        else:
+            # This is an original analysis
+            if session_name not in wfo_groups:
+                wfo_groups[session_name] = {'original': None, 'reopts': []}
+            wfo_groups[session_name]['original'] = session
+
+    # Build WFO cycle data
+    wfo_cycles = []
+
+    for base_name, group in wfo_groups.items():
+        original = group['original']
+        reopts = group['reopts']
+
+        # Find latest re-optimization (if any)
+        latest_reopt = reopts[-1] if reopts else None
+
+        # Find forward test data from config
+        forward_test = None
+        if latest_reopt:
+            reopt_key = f"{period_name}/{latest_reopt['name']}"
+            for entry in reopt_history:
+                if entry.get('reoptimized') == reopt_key and entry.get('forward_test'):
+                    forward_test = entry['forward_test']
+                    break
+
+        # Determine WFO status
+        if forward_test:
+            status = 'complete'
+            status_label = '✓ Complete'
+            status_color = '#27ae60'
+        elif latest_reopt:
+            status = 'reoptimized'
+            status_label = 'Re-optimized'
+            status_color = '#3498db'
+        elif original:
+            # Check if equity degradation detected (needs re-opt)
+            # This would require loading the analysis detail, skip for now
+            status = 'active'
+            status_label = 'Active'
+            status_color = '#95a5a6'
+        else:
+            status = 'incomplete'
+            status_label = 'Incomplete'
+            status_color = '#e74c3c'
+
+        # Use original if exists, otherwise use first reopt
+        display_session = original if original else latest_reopt
+
+        if display_session:
+            wfo_cycles.append({
+                'base_name': base_name,
+                'status': status,
+                'status_label': status_label,
+                'status_color': status_color,
+                'original': original,
+                'reopt': latest_reopt,
+                'all_reopts': reopts,
+                'forward_test': forward_test,
+                # Display metrics (from latest version)
+                'display_name': original['name'] if original else latest_reopt['name'],
+                'pair': display_session['pair'],
+                'total_r': latest_reopt['total_r'] if latest_reopt else (original['total_r'] if original else 0),
+                'win_rate': latest_reopt['win_rate'] if latest_reopt else (original['win_rate'] if original else 0),
+                'trades': latest_reopt['trades'] if latest_reopt else (original['trades'] if original else 0),
+                'profit_factor': latest_reopt.get('profit_factor', 0) if latest_reopt else (original.get('profit_factor', 0) if original else 0)
+            })
+
+    return wfo_cycles
+
+
 def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[str] = None, sort_by: str = 'date_newest', search_query: Optional[str] = None) -> Dict[str, Any]:
     """Get archive directory structure
 
@@ -107,13 +205,17 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
 
         # Only add period if it has sessions (after filtering)
         if sessions:
+            # Group sessions into WFO cycles
+            wfo_cycles = build_wfo_cycles(sessions, period_dir.name)
+
             # Calculate aggregate metrics for sorting
-            total_r_sum = sum(s['total_r'] for s in sessions)
-            avg_win_rate = sum(s['win_rate'] for s in sessions) / len(sessions) if sessions else 0
+            total_r_sum = sum(s['total_r'] for s in wfo_cycles)
+            avg_win_rate = sum(s['win_rate'] for s in wfo_cycles) / len(wfo_cycles) if wfo_cycles else 0
 
             periods.append({
                 "name": period_dir.name,
-                "sessions": sessions,
+                "wfo_cycles": wfo_cycles,  # Changed from sessions to wfo_cycles
+                "sessions": wfo_cycles,  # Keep for backward compatibility
                 "modified_time": period_dir.stat().st_mtime,  # For date sorting
                 "total_r_aggregate": total_r_sum,
                 "win_rate_aggregate": avg_win_rate
