@@ -212,13 +212,48 @@ def link_reoptimization(original_period: str, original_session: str,
     config['reoptimization_tracking']['history'].append({
         'original': f"{original_period}/{original_session}",
         'reoptimized': f"{new_period}/{new_session}",
-        'linked_at': datetime.now().isoformat()
+        'linked_at': datetime.now().isoformat(),
+        'forward_test': None
     })
 
     # Clear pending
     config['reoptimization_tracking']['pending'] = None
 
     save_config(config)
+
+
+def add_forward_test_result(reopt_period: str, reopt_session: str,
+                            forward_period: str, forward_session: str,
+                            result_summary: str) -> bool:
+    """Add forward test validation result to a re-optimization entry
+
+    Args:
+        reopt_period: Re-optimized period name
+        reopt_session: Re-optimized session name
+        forward_period: Forward test period name
+        forward_session: Forward test session name
+        result_summary: Brief result (e.g., "+5% equity", "15R profit")
+
+    Returns:
+        True if successful, False if entry not found
+    """
+    config = load_config()
+    history = config.get('reoptimization_tracking', {}).get('history', [])
+
+    reopt_key = f"{reopt_period}/{reopt_session}"
+
+    for entry in history:
+        if entry.get('reoptimized') == reopt_key:
+            entry['forward_test'] = {
+                'period': forward_period,
+                'session': forward_session,
+                'result': result_summary,
+                'added_at': datetime.now().isoformat()
+            }
+            save_config(config)
+            return True
+
+    return False
 
 
 def find_reoptimization_link(period: str, session: str) -> Dict[str, Any]:

@@ -80,6 +80,9 @@ def index():
 def analysis(period, session):
     """Analysis detail page"""
     try:
+        # Check for WFO-only view mode
+        wfo_only = request.args.get('wfo_only', 'false') == 'true'
+
         # Sanitize period and session parameters (basic security)
         if not (period.isalnum() or '_' in period):
             flash('Invalid period name', 'error')
@@ -229,7 +232,8 @@ def analysis(period, session):
             forward_test=forward_test_data,
             available_analyses=available_analyses,
             available_csvs=available_csvs,
-            ctrader_path=ctrader_path
+            ctrader_path=ctrader_path,
+            wfo_only=wfo_only
         )
     except Exception as e:
         flash(f'Error loading analysis: {str(e)}', 'error')
@@ -272,6 +276,19 @@ def compare():
         archive_data = archive_service.get_archive_tree(per_page=1000)
         periods = archive_data.get('periods', [])
 
+        # Build list of available WFO cycles (complete ones with forward test)
+        wfo_cycles = []
+        config = config_service.load_config()
+        reopt_history = config.get('reoptimization_tracking', {}).get('history', [])
+        for entry in reopt_history:
+            if entry.get('forward_test'):
+                wfo_cycles.append({
+                    'original': entry.get('original'),
+                    'reoptimized': entry.get('reoptimized'),
+                    'forward_test': entry.get('forward_test'),
+                    'display': f"{entry.get('original', '').split('/')[0]} - {entry.get('original', '').split('/')[-1]}"
+                })
+
         # Initialize comparison data
         comparison_data = {
             'period1': None,
@@ -282,7 +299,88 @@ def compare():
             'analysis2': None
         }
 
-        # Handle query parameters or form submission
+        # Check for WFO cycle validation mode (single cycle view)
+        wfo_cycle_id = request.args.get('wfo_cycle')
+        wfo_comparison = None
+
+        # Check for cross-cycle comparison mode
+        wfo_left = request.args.get('wfo_left')
+        wfo_right = request.args.get('wfo_right')
+        cross_cycle_comparison = None
+
+        if wfo_left is not None and wfo_right is not None:
+            try:
+                left_idx = int(wfo_left)
+                right_idx = int(wfo_right)
+                if left_idx < len(wfo_cycles) and right_idx < len(wfo_cycles):
+                    left_cycle = wfo_cycles[left_idx]
+                    right_cycle = wfo_cycles[right_idx]
+
+                    # Load forward test data for both cycles
+                    left_ft = left_cycle['forward_test']
+                    right_ft = right_cycle['forward_test']
+
+                    left_analysis = archive_service.get_analysis_detail(left_ft['period'], left_ft['session'])
+                    right_analysis = archive_service.get_analysis_detail(right_ft['period'], right_ft['session'])
+
+                    cross_cycle_comparison = {
+                        'left': {
+                            'cycle_name': left_cycle['display'],
+                            'period': left_ft['period'],
+                            'session': left_ft['session'],
+                            'metrics': left_analysis.get('overall_metrics', {}),
+                            'equity_trend': left_analysis.get('equity_trend', {})
+                        },
+                        'right': {
+                            'cycle_name': right_cycle['display'],
+                            'period': right_ft['period'],
+                            'session': right_ft['session'],
+                            'metrics': right_analysis.get('overall_metrics', {}),
+                            'equity_trend': right_analysis.get('equity_trend', {})
+                        }
+                    }
+            except Exception as e:
+                flash(f'Error loading cross-cycle comparison: {str(e)}', 'error')
+
+        if wfo_cycle_id is not None and wfo_cycle_id != '' and int(wfo_cycle_id) < len(wfo_cycles):
+            # Load WFO cycle comparison (3-column: original, reopt, forward test)
+            cycle = wfo_cycles[int(wfo_cycle_id)]
+            orig_parts = cycle['original'].split('/')
+            reopt_parts = cycle['reoptimized'].split('/')
+            ft = cycle['forward_test']
+
+            try:
+                original_analysis = archive_service.get_analysis_detail(orig_parts[0], orig_parts[1])
+                reopt_analysis = archive_service.get_analysis_detail(reopt_parts[0], reopt_parts[1])
+                forward_analysis = archive_service.get_analysis_detail(ft['period'], ft['session'])
+
+                wfo_comparison = {
+                    'original': {
+                        'period': orig_parts[0],
+                        'session': orig_parts[1],
+                        'label': 'In-Sample (Original)',
+                        'metrics': original_analysis.get('overall_metrics', {}),
+                        'equity_trend': original_analysis.get('equity_trend', {})
+                    },
+                    'reopt': {
+                        'period': reopt_parts[0],
+                        'session': reopt_parts[1],
+                        'label': 'Re-Optimization',
+                        'metrics': reopt_analysis.get('overall_metrics', {}),
+                        'equity_trend': reopt_analysis.get('equity_trend', {})
+                    },
+                    'forward': {
+                        'period': ft['period'],
+                        'session': ft['session'],
+                        'label': 'Out-of-Sample (Forward Test)',
+                        'metrics': forward_analysis.get('overall_metrics', {}),
+                        'equity_trend': forward_analysis.get('equity_trend', {})
+                    }
+                }
+            except Exception as e:
+                flash(f'Error loading WFO cycle: {str(e)}', 'error')
+
+        # Handle query parameters or form submission for regular comparison
         period1 = request.args.get('period1') or request.form.get('period1')
         session1 = request.args.get('session1') or request.form.get('session1')
         period2 = request.args.get('period2') or request.form.get('period2')
@@ -312,13 +410,18 @@ def compare():
             selected_session1=session1,
             selected_period2=period2,
             selected_session2=session2,
-            comparison_data=comparison_data
+            comparison_data=comparison_data,
+            wfo_cycles=wfo_cycles,
+            wfo_comparison=wfo_comparison,
+            cross_cycle_comparison=cross_cycle_comparison,
+            wfo_left=wfo_left,
+            wfo_right=wfo_right
         )
     except Exception as e:
         flash(f'Error loading comparison page: {str(e)}', 'error')
         archive_data = archive_service.get_archive_tree(per_page=1000)
         periods = archive_data.get('periods', [])
-        return render_template('compare.html', periods=periods, comparison_data={}), 500
+        return render_template('compare.html', periods=periods, comparison_data={}, wfo_cycles=[], wfo_comparison=None, cross_cycle_comparison=None, wfo_left=None, wfo_right=None), 500
 
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -829,8 +932,27 @@ def analyze_as_forward_test(period, session):
                 flash(f"Details: {analysis_result.get('details')}", 'error')
             return redirect(url_for('analysis', period=period, session=session))
 
-        # Get metrics from analysis result
-        metrics = analysis_result.get('metrics', {})
+        # Archive the results (this was missing - results were created but not archived!)
+        results_path = analysis_result.get('results_path')
+        try:
+            archive_result = archive_service.create_archive_entry(
+                period=forward_test_period,
+                session=forward_session,
+                csv_path=csv_file,
+                results_path=results_path
+            )
+        except Exception as e:
+            flash(f"Archiving failed: {str(e)}", 'error')
+            return redirect(url_for('analysis', period=period, session=session))
+
+        # Parse the archived results to get metrics
+        config = config_service.load_config()
+        archive_dir = Path(config.get('paths', {}).get('archive', 'data/backtest_archive'))
+        archived_results_path = archive_dir / forward_test_period / forward_session / 'analysis_results'
+        parsed = analysis_service.parse_results(str(archived_results_path), forward_session)
+
+        # Get metrics from parsed archived results
+        metrics = parsed.get('metrics', {})
         total_r = metrics.get('total_r', 0)
         win_rate = metrics.get('win_rate', 0)
 

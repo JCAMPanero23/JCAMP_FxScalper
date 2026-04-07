@@ -4,7 +4,302 @@
 
 {% block content %}
 <div class="container">
+    <!-- WFO Cycle Validation Section -->
+    {% if wfo_cycles %}
     <div class="card">
+        <div class="card-header" style="background-color: #9b59b6; color: white;">
+            <h2>WFO Cycle Validation (Full View)</h2>
+            <p style="opacity: 0.9; margin: 0;">Detailed view of In-Sample → Re-Optimization → Out-of-Sample stages (also shown in archive cards)</p>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="/compare">
+                <div class="form-group">
+                    <label for="wfo_cycle"><strong>Select WFO Cycle to Validate:</strong></label>
+                    <select name="wfo_cycle" id="wfo_cycle" style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px;">
+                        <option value="">-- Select a complete WFO cycle --</option>
+                        {% for cycle in wfo_cycles %}
+                        <option value="{{ loop.index0 }}">{{ cycle.display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="background-color: #9b59b6; border-color: #9b59b6;">View WFO Validation</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- WFO Cross-Cycle Comparison -->
+    {% if wfo_cycles|length > 1 %}
+    <div class="card" style="margin-top: 1rem;">
+        <div class="card-header" style="background-color: #27ae60; color: white;">
+            <h2>Compare WFO Cycles</h2>
+            <p style="opacity: 0.9; margin: 0;">Compare forward test performance across different optimization periods</p>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="/compare">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="wfo_left"><strong>WFO Cycle (Left):</strong></label>
+                        <select name="wfo_left" id="wfo_left" style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px;">
+                            <option value="">-- Select cycle --</option>
+                            {% for cycle in wfo_cycles %}
+                            <option value="{{ loop.index0 }}" {% if wfo_left == loop.index0|string %}selected{% endif %}>{{ cycle.display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="wfo_right"><strong>WFO Cycle (Right):</strong></label>
+                        <select name="wfo_right" id="wfo_right" style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px;">
+                            <option value="">-- Select cycle --</option>
+                            {% for cycle in wfo_cycles %}
+                            <option value="{{ loop.index0 }}" {% if wfo_right == loop.index0|string %}selected{% endif %}>{{ cycle.display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="background-color: #27ae60; border-color: #27ae60; margin-top: 1rem;">Compare Forward Tests</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- WFO 3-Column Comparison Results -->
+    {% if wfo_comparison %}
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header" style="background-color: #27ae60; color: white;">
+            <h3>Walk-Forward Optimization Analysis</h3>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+        <!-- In-Sample (Original) -->
+        <div class="card">
+            <div class="card-header" style="background-color: #3498db; color: white;">
+                <h4 style="margin: 0;">{{ wfo_comparison.original.label }}</h4>
+                <small>{{ wfo_comparison.original.period }}/{{ wfo_comparison.original.session }}</small>
+            </div>
+            <div class="card-body">
+                <table style="margin-bottom: 0;">
+                    <tbody>
+                        <tr><td><strong>Total Trades</strong></td><td style="text-align: right;">{{ wfo_comparison.original.metrics.get('total_trades', 'N/A') }}</td></tr>
+                        <tr><td><strong>Win Rate</strong></td><td style="text-align: right; color: {% if wfo_comparison.original.metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.1f"|format(wfo_comparison.original.metrics.get('win_rate', 0)) }}%</td></tr>
+                        <tr><td><strong>Profit Factor</strong></td><td style="text-align: right; color: {% if wfo_comparison.original.metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif wfo_comparison.original.metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.original.metrics.get('profit_factor', 0)) }}</td></tr>
+                        <tr><td><strong>Total R</strong></td><td style="text-align: right; color: {% if wfo_comparison.original.metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.original.metrics.get('total_r', 0)) }}R</td></tr>
+                        <tr><td><strong>Max Drawdown</strong></td><td style="text-align: right; color: {% if wfo_comparison.original.metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif wfo_comparison.original.metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(wfo_comparison.original.metrics.get('max_drawdown', 0)) }}R</td></tr>
+                        <tr style="background-color: #e8f4fd;"><td><strong>Final Third R</strong></td><td style="text-align: right; color: {% if wfo_comparison.original.equity_trend.get('final_third_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.original.equity_trend.get('final_third_r', 0)) }}R</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 1rem;">
+                    <a href="/analysis/{{ wfo_comparison.original.period }}/{{ wfo_comparison.original.session }}" class="btn btn-small btn-secondary" style="width: 100%;">View Details</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Re-Optimization -->
+        <div class="card">
+            <div class="card-header" style="background-color: #9b59b6; color: white;">
+                <h4 style="margin: 0;">{{ wfo_comparison.reopt.label }}</h4>
+                <small>{{ wfo_comparison.reopt.period }}/{{ wfo_comparison.reopt.session }}</small>
+            </div>
+            <div class="card-body">
+                <table style="margin-bottom: 0;">
+                    <tbody>
+                        <tr><td><strong>Total Trades</strong></td><td style="text-align: right;">{{ wfo_comparison.reopt.metrics.get('total_trades', 'N/A') }}</td></tr>
+                        <tr><td><strong>Win Rate</strong></td><td style="text-align: right; color: {% if wfo_comparison.reopt.metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.1f"|format(wfo_comparison.reopt.metrics.get('win_rate', 0)) }}%</td></tr>
+                        <tr><td><strong>Profit Factor</strong></td><td style="text-align: right; color: {% if wfo_comparison.reopt.metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif wfo_comparison.reopt.metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.reopt.metrics.get('profit_factor', 0)) }}</td></tr>
+                        <tr><td><strong>Total R</strong></td><td style="text-align: right; color: {% if wfo_comparison.reopt.metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.reopt.metrics.get('total_r', 0)) }}R</td></tr>
+                        <tr><td><strong>Max Drawdown</strong></td><td style="text-align: right; color: {% if wfo_comparison.reopt.metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif wfo_comparison.reopt.metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(wfo_comparison.reopt.metrics.get('max_drawdown', 0)) }}R</td></tr>
+                        <tr style="background-color: #f3e8fa;"><td><strong>Final Third R</strong></td><td style="text-align: right; color: {% if wfo_comparison.reopt.equity_trend.get('final_third_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.reopt.equity_trend.get('final_third_r', 0)) }}R</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 1rem;">
+                    <a href="/analysis/{{ wfo_comparison.reopt.period }}/{{ wfo_comparison.reopt.session }}" class="btn btn-small btn-secondary" style="width: 100%;">View Details</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Out-of-Sample (Forward Test) -->
+        <div class="card">
+            <div class="card-header" style="background-color: #27ae60; color: white;">
+                <h4 style="margin: 0;">{{ wfo_comparison.forward.label }}</h4>
+                <small>{{ wfo_comparison.forward.period }}/{{ wfo_comparison.forward.session }}</small>
+            </div>
+            <div class="card-body">
+                <table style="margin-bottom: 0;">
+                    <tbody>
+                        <tr><td><strong>Total Trades</strong></td><td style="text-align: right;">{{ wfo_comparison.forward.metrics.get('total_trades', 'N/A') }}</td></tr>
+                        <tr><td><strong>Win Rate</strong></td><td style="text-align: right; color: {% if wfo_comparison.forward.metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.1f"|format(wfo_comparison.forward.metrics.get('win_rate', 0)) }}%</td></tr>
+                        <tr><td><strong>Profit Factor</strong></td><td style="text-align: right; color: {% if wfo_comparison.forward.metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif wfo_comparison.forward.metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.forward.metrics.get('profit_factor', 0)) }}</td></tr>
+                        <tr><td><strong>Total R</strong></td><td style="text-align: right; color: {% if wfo_comparison.forward.metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.forward.metrics.get('total_r', 0)) }}R</td></tr>
+                        <tr><td><strong>Max Drawdown</strong></td><td style="text-align: right; color: {% if wfo_comparison.forward.metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif wfo_comparison.forward.metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(wfo_comparison.forward.metrics.get('max_drawdown', 0)) }}R</td></tr>
+                        <tr style="background-color: #d5f4e6;"><td><strong>Final Third R</strong></td><td style="text-align: right; color: {% if wfo_comparison.forward.equity_trend.get('final_third_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(wfo_comparison.forward.equity_trend.get('final_third_r', 0)) }}R</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 1rem;">
+                    <a href="/analysis/{{ wfo_comparison.forward.period }}/{{ wfo_comparison.forward.session }}" class="btn btn-small btn-secondary" style="width: 100%;">View Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WFO Validation Summary -->
+    <div class="card" style="margin-top: 1rem;">
+        <div class="card-header">
+            <h4 style="margin: 0;">WFO Validation Summary</h4>
+        </div>
+        <div class="card-body">
+            {% set reopt_vs_original_r = wfo_comparison.reopt.metrics.get('total_r', 0) - wfo_comparison.original.metrics.get('total_r', 0) %}
+            {% set forward_vs_reopt_r = wfo_comparison.forward.metrics.get('total_r', 0) %}
+            {% set forward_pf = wfo_comparison.forward.metrics.get('profit_factor', 0) %}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="padding: 1rem; border-radius: 4px; background-color: {% if reopt_vs_original_r >= 0 %}#d5f4e6{% else %}#fdeaea{% endif %};">
+                    <strong>Re-opt vs Original:</strong>
+                    <span style="color: {% if reopt_vs_original_r >= 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                        {{ "%+.2f"|format(reopt_vs_original_r) }}R
+                    </span>
+                </div>
+                <div style="padding: 1rem; border-radius: 4px; background-color: {% if forward_vs_reopt_r > 0 %}#d5f4e6{% elif forward_vs_reopt_r >= -2 %}#fef3cd{% else %}#fdeaea{% endif %};">
+                    <strong>Forward Test Result:</strong>
+                    <span style="color: {% if forward_vs_reopt_r > 0 %}#27ae60{% elif forward_vs_reopt_r >= -2 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                        {{ "%+.2f"|format(forward_vs_reopt_r) }}R
+                    </span>
+                    {% if forward_pf > 1 %}
+                    <span style="color: #27ae60;">(PF: {{ "%.2f"|format(forward_pf) }})</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem; padding: 1rem; border-radius: 4px; background-color: {% if forward_vs_reopt_r > 0 and forward_pf > 1 %}#d5f4e6{% elif forward_vs_reopt_r >= -2 %}#fef3cd{% else %}#fdeaea{% endif %}; border-left: 4px solid {% if forward_vs_reopt_r > 0 and forward_pf > 1 %}#27ae60{% elif forward_vs_reopt_r >= -2 %}#f39c12{% else %}#e74c3c{% endif %};">
+                <strong>Verdict:</strong>
+                {% if forward_vs_reopt_r > 0 and forward_pf > 1 %}
+                ✅ <span style="color: #27ae60;">Strategy validated - profitable on unseen data with PF > 1</span>
+                {% elif forward_vs_reopt_r >= 0 %}
+                ✓ <span style="color: #27ae60;">Strategy validated - break-even or better on forward test</span>
+                {% elif forward_vs_reopt_r >= -2 %}
+                ⚠️ <span style="color: #f39c12;">Marginal - small loss on forward test, monitor closely</span>
+                {% else %}
+                ❌ <span style="color: #e74c3c;">Strategy may be overfit - significant loss on forward test</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Cross-Cycle Comparison Results -->
+    {% if cross_cycle_comparison %}
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header" style="background-color: #27ae60; color: white;">
+            <h3>Forward Test Comparison</h3>
+            <p style="opacity: 0.9; margin: 0;">Comparing out-of-sample performance across WFO cycles</p>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+        <!-- Left Cycle -->
+        <div class="card">
+            <div class="card-header" style="background-color: #3498db; color: white;">
+                <h4 style="margin: 0;">{{ cross_cycle_comparison.left.cycle_name }}</h4>
+                <small>Forward Test: {{ cross_cycle_comparison.left.period }}/{{ cross_cycle_comparison.left.session }}</small>
+            </div>
+            <div class="card-body">
+                <table style="margin-bottom: 0;">
+                    <tbody>
+                        <tr><td><strong>Total Trades</strong></td><td style="text-align: right;">{{ cross_cycle_comparison.left.metrics.get('total_trades', 'N/A') }}</td></tr>
+                        <tr><td><strong>Win Rate</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.left.metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.1f"|format(cross_cycle_comparison.left.metrics.get('win_rate', 0)) }}%</td></tr>
+                        <tr><td><strong>Profit Factor</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.left.metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif cross_cycle_comparison.left.metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(cross_cycle_comparison.left.metrics.get('profit_factor', 0)) }}</td></tr>
+                        <tr><td><strong>Total R</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.left.metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(cross_cycle_comparison.left.metrics.get('total_r', 0)) }}R</td></tr>
+                        <tr><td><strong>Max Drawdown</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.left.metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif cross_cycle_comparison.left.metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(cross_cycle_comparison.left.metrics.get('max_drawdown', 0)) }}R</td></tr>
+                        <tr style="background-color: #e8f4fd;"><td><strong>Final Third R</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.left.equity_trend.get('final_third_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(cross_cycle_comparison.left.equity_trend.get('final_third_r', 0)) }}R</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 1rem;">
+                    <a href="/analysis/{{ cross_cycle_comparison.left.period }}/{{ cross_cycle_comparison.left.session }}" class="btn btn-small btn-secondary" style="width: 100%;">View Details</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Cycle -->
+        <div class="card">
+            <div class="card-header" style="background-color: #e67e22; color: white;">
+                <h4 style="margin: 0;">{{ cross_cycle_comparison.right.cycle_name }}</h4>
+                <small>Forward Test: {{ cross_cycle_comparison.right.period }}/{{ cross_cycle_comparison.right.session }}</small>
+            </div>
+            <div class="card-body">
+                <table style="margin-bottom: 0;">
+                    <tbody>
+                        <tr><td><strong>Total Trades</strong></td><td style="text-align: right;">{{ cross_cycle_comparison.right.metrics.get('total_trades', 'N/A') }}</td></tr>
+                        <tr><td><strong>Win Rate</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.right.metrics.get('win_rate', 0) >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.1f"|format(cross_cycle_comparison.right.metrics.get('win_rate', 0)) }}%</td></tr>
+                        <tr><td><strong>Profit Factor</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.right.metrics.get('profit_factor', 0) > 1.5 %}#27ae60{% elif cross_cycle_comparison.right.metrics.get('profit_factor', 0) > 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(cross_cycle_comparison.right.metrics.get('profit_factor', 0)) }}</td></tr>
+                        <tr><td><strong>Total R</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.right.metrics.get('total_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(cross_cycle_comparison.right.metrics.get('total_r', 0)) }}R</td></tr>
+                        <tr><td><strong>Max Drawdown</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.right.metrics.get('max_drawdown', 0) > -10 %}#27ae60{% elif cross_cycle_comparison.right.metrics.get('max_drawdown', 0) > -20 %}#f39c12{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(cross_cycle_comparison.right.metrics.get('max_drawdown', 0)) }}R</td></tr>
+                        <tr style="background-color: #fef3e2;"><td><strong>Final Third R</strong></td><td style="text-align: right; color: {% if cross_cycle_comparison.right.equity_trend.get('final_third_r', 0) > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ "%.2f"|format(cross_cycle_comparison.right.equity_trend.get('final_third_r', 0)) }}R</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 1rem;">
+                    <a href="/analysis/{{ cross_cycle_comparison.right.period }}/{{ cross_cycle_comparison.right.session }}" class="btn btn-small btn-secondary" style="width: 100%;">View Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cross-Cycle Comparison Summary -->
+    <div class="card" style="margin-top: 1rem;">
+        <div class="card-header">
+            <h4 style="margin: 0;">Comparison Summary</h4>
+        </div>
+        <div class="card-body">
+            {% set left_r = cross_cycle_comparison.left.metrics.get('total_r', 0) %}
+            {% set right_r = cross_cycle_comparison.right.metrics.get('total_r', 0) %}
+            {% set left_pf = cross_cycle_comparison.left.metrics.get('profit_factor', 0) %}
+            {% set right_pf = cross_cycle_comparison.right.metrics.get('profit_factor', 0) %}
+            {% set r_diff = right_r - left_r %}
+            {% set pf_diff = right_pf - left_pf %}
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>{{ cross_cycle_comparison.left.cycle_name }}</th>
+                        <th>{{ cross_cycle_comparison.right.cycle_name }}</th>
+                        <th>Winner</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total R</strong></td>
+                        <td style="color: {% if left_r > 0 %}#27ae60{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(left_r) }}R</td>
+                        <td style="color: {% if right_r > 0 %}#27ae60{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(right_r) }}R</td>
+                        <td style="font-weight: bold; color: {% if r_diff > 0 %}#e67e22{% elif r_diff < 0 %}#3498db{% else %}#7f8c8d{% endif %};">
+                            {% if r_diff > 0 %}Right{% elif r_diff < 0 %}Left{% else %}Tie{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Profit Factor</strong></td>
+                        <td style="color: {% if left_pf > 1 %}#27ae60{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(left_pf) }}</td>
+                        <td style="color: {% if right_pf > 1 %}#27ae60{% else %}#e74c3c{% endif %};">{{ "%.2f"|format(right_pf) }}</td>
+                        <td style="font-weight: bold; color: {% if pf_diff > 0 %}#e67e22{% elif pf_diff < 0 %}#3498db{% else %}#7f8c8d{% endif %};">
+                            {% if pf_diff > 0 %}Right{% elif pf_diff < 0 %}Left{% else %}Tie{% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 1rem; padding: 1rem; border-radius: 4px; background-color: #f8f9fa; border-left: 4px solid {% if left_r > 0 and right_r > 0 %}#27ae60{% elif left_r > 0 or right_r > 0 %}#f39c12{% else %}#e74c3c{% endif %};">
+                <strong>Overall:</strong>
+                {% if left_r > 0 and right_r > 0 %}
+                ✅ Both cycles validated with positive forward test results
+                {% elif left_r > 0 or right_r > 0 %}
+                ⚠️ Mixed results - one cycle performed better than the other
+                {% else %}
+                ❌ Both cycles showed losses on forward testing
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-top: 2rem;">
         <div class="card-header">
             <h2>Compare Analysis Results</h2>
             <p class="text-muted">Side-by-side comparison of two periods or sessions</p>
@@ -246,8 +541,13 @@
 </div>
 
 <style>
-    .card h3 {
+    .card h3, .card h4 {
         margin: 0 !important;
+    }
+    @media (max-width: 1024px) {
+        [style*="display: grid; grid-template-columns: 1fr 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+        }
     }
     @media (max-width: 768px) {
         [style*="display: grid; grid-template-columns: 1fr 1fr"] {

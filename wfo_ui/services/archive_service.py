@@ -89,13 +89,34 @@ def build_wfo_cycles(sessions: List[Dict[str, Any]], period_name: str) -> List[D
         # Find latest re-optimization (if any)
         latest_reopt = reopts[-1] if reopts else None
 
-        # Find forward test data from config
+        # Find forward test data from config and load its metrics
         forward_test = None
         if latest_reopt:
             reopt_key = f"{period_name}/{latest_reopt['name']}"
             for entry in reopt_history:
                 if entry.get('reoptimized') == reopt_key and entry.get('forward_test'):
-                    forward_test = entry['forward_test']
+                    ft = entry['forward_test']
+                    # Load forward test metrics from archive
+                    ft_path = ARCHIVE_ROOT / ft['period'] / ft['session'] / 'analysis_results'
+                    ft_metrics = {}
+                    ft_equity_trend = {}
+                    if ft_path.exists():
+                        json_files = sorted(ft_path.glob("recommended_settings*.json"), reverse=True)
+                        if json_files:
+                            try:
+                                with open(json_files[0]) as f:
+                                    ft_data = json.load(f)
+                                    ft_metrics = ft_data.get('overall_performance', ft_data.get('performance', {}))
+                                    ft_equity_trend = ft_data.get('equity_trend', {})
+                            except:
+                                pass
+                    forward_test = {
+                        'period': ft['period'],
+                        'session': ft['session'],
+                        'result': ft.get('result', ''),
+                        'metrics': ft_metrics,
+                        'equity_trend': ft_equity_trend
+                    }
                     break
 
         # Determine WFO status
@@ -162,6 +183,17 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
     # Get all available pairs for tabs
     all_pairs = get_all_pairs()
 
+    # Build set of forward test keys to exclude from main listing
+    # These are already shown as part of their parent WFO cycle
+    config = config_service.load_config()
+    reopt_history = config.get('reoptimization_tracking', {}).get('history', [])
+    forward_test_keys = set()
+    for entry in reopt_history:
+        ft = entry.get('forward_test')
+        if ft:
+            # Key format: "period/session"
+            forward_test_keys.add(f"{ft['period']}/{ft['session']}")
+
     periods = []
 
     for period_dir in ARCHIVE_ROOT.iterdir():
@@ -171,6 +203,11 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
         sessions = []
         for session_dir in sorted(period_dir.iterdir()):
             if not session_dir.is_dir():
+                continue
+
+            # Skip sessions that are forward tests (already shown in parent WFO cycle)
+            session_key = f"{period_dir.name}/{session_dir.name}"
+            if session_key in forward_test_keys:
                 continue
 
             # Extract pair from CSV filename

@@ -117,15 +117,81 @@
 
                                         <!-- WFO Progress Info -->
                                         {% if wfo.status == 'complete' %}
-                                        <div style="background-color: #d5f4e6; border-left: 3px solid #27ae60; padding: 0.5rem; margin-bottom: 0.75rem; font-size: 0.85rem;">
-                                            <strong>WFO Complete:</strong><br>
-                                            Original → Re-opt → Forward Test ({{ wfo.forward_test.period }})
+                                        <!-- WFO Complete - Preview with verdict -->
+                                        {% set ft_r = wfo.forward_test.metrics.get('total_r', 0) %}
+                                        {% set ft_pf = wfo.forward_test.metrics.get('profit_factor', 0) %}
+
+                                        <!-- Verdict Badge -->
+                                        <div style="padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.75rem; text-align: center; background-color: {% if ft_r > 0 and ft_pf > 1 %}#d5f4e6{% elif ft_r >= 0 %}#fef3cd{% else %}#fdeaea{% endif %}; border: 2px solid {% if ft_r > 0 and ft_pf > 1 %}#27ae60{% elif ft_r >= 0 %}#f39c12{% else %}#e74c3c{% endif %};">
+                                            {% if ft_r > 0 and ft_pf > 1 %}
+                                            ✅ <strong>Optimization Successful</strong>
+                                            {% elif ft_r >= 0 %}
+                                            ⚠️ <strong>Marginal Result</strong>
+                                            {% else %}
+                                            ❌ <strong>Needs Review</strong>
+                                            {% endif %}
                                         </div>
+
+                                        <!-- Forward Test Summary -->
+                                        <div style="background-color: #f8f9fa; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.75rem; font-size: 0.85rem;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                                <span style="color: #666;">Forward Test:</span>
+                                                <span style="font-weight: bold; color: {% if ft_r > 0 %}#27ae60{% else %}#e74c3c{% endif %};">{{ "%.1f"|format(ft_r) }}R</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #666;">Win Rate:</span>
+                                                <span style="font-weight: bold;">{{ "%.0f"|format(wfo.forward_test.metrics.get('win_rate', 0)) }}%</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Re-opt Metrics -->
+                                        <div style="margin-bottom: 1rem;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 500; color: #555;">Re-opt Total R</span>
+                                                <span style="color: {% if wfo.total_r > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                                    {{ "%.2f"|format(wfo.total_r) }}R
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 500; color: #555;">Profit Factor</span>
+                                                <span style="color: {% if wfo.profit_factor >= 1.5 %}#27ae60{% elif wfo.profit_factor >= 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                                    {{ "%.2f"|format(wfo.profit_factor) }}
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="font-weight: 500; color: #555;">Trades</span>
+                                                <span style="color: #2c3e50; font-weight: bold;">{{ wfo.trades }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Action Buttons for Complete -->
+                                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <a href="/analysis/{{ period.name }}/{{ wfo.reopt['name'] }}?wfo_only=true" class="btn btn-primary btn-small" style="text-align: center;">
+                                                View WFO Details
+                                            </a>
+                                            <details style="margin-top: 0.25rem;">
+                                                <summary style="cursor: pointer; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; font-size: 0.85rem; color: #666;">
+                                                    Manage Versions ▼
+                                                </summary>
+                                                <div style="padding: 0.5rem; background-color: #f8f9fa; border-radius: 0 0 4px 4px; display: flex; flex-direction: column; gap: 0.25rem;">
+                                                    {% if wfo.original %}
+                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.original['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete original analysis?');">
+                                                        <button type="submit" class="btn btn-secondary btn-small" style="width: 100%; font-size: 0.8rem;">Delete Original</button>
+                                                    </form>
+                                                    {% endif %}
+                                                    {% if wfo.reopt %}
+                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.reopt['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete re-optimized version?');">
+                                                        <button type="submit" class="btn btn-secondary btn-small" style="width: 100%; font-size: 0.8rem;">Delete Re-opt</button>
+                                                    </form>
+                                                    {% endif %}
+                                                </div>
+                                            </details>
+                                        </div>
+
                                         {% elif wfo.status == 'reoptimized' %}
                                         <div style="background-color: #ebf5fb; border-left: 3px solid #3498db; padding: 0.5rem; margin-bottom: 0.75rem; font-size: 0.85rem;">
                                             <strong>Next Step:</strong> Run forward test on next period
                                         </div>
-                                        {% endif %}
 
                                         <!-- Metrics -->
                                         <div style="margin-bottom: 1rem;">
@@ -158,7 +224,6 @@
                                         <!-- Action Buttons -->
                                         <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
                                             <!-- View Details Button -->
-                                            {# Use reopt if exists (latest version), otherwise original #}
                                             {% if wfo.reopt %}
                                                 {% set view_session = wfo.reopt['name'] %}
                                             {% elif wfo.original %}
@@ -170,26 +235,6 @@
                                                 View Details
                                             </a>
 
-                                            <!-- State-specific Actions -->
-                                            {% if wfo.status == 'complete' %}
-                                            <details style="margin-top: 0.25rem;">
-                                                <summary style="cursor: pointer; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; font-size: 0.85rem; color: #666;">
-                                                    Manage Versions ▼
-                                                </summary>
-                                                <div style="padding: 0.5rem; background-color: #f8f9fa; border-radius: 0 0 4px 4px; display: flex; flex-direction: column; gap: 0.25rem;">
-                                                    {% if wfo.original %}
-                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.original['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete original analysis?');">
-                                                        <button type="submit" class="btn btn-secondary btn-small" style="width: 100%; font-size: 0.8rem;">Delete Original</button>
-                                                    </form>
-                                                    {% endif %}
-                                                    {% if wfo.reopt %}
-                                                    <form method="POST" action="/delete/{{ period.name }}/{{ wfo.reopt['name'] }}" style="margin: 0;" onsubmit="return confirm('Delete re-optimized version?');">
-                                                        <button type="submit" class="btn btn-secondary btn-small" style="width: 100%; font-size: 0.8rem;">Delete Re-opt</button>
-                                                    </form>
-                                                    {% endif %}
-                                                </div>
-                                            </details>
-                                            {% elif wfo.status == 'reoptimized' %}
                                             <details style="margin-top: 0.25rem;">
                                                 <summary style="cursor: pointer; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; font-size: 0.85rem; color: #666;">
                                                     Manage Versions ▼
@@ -207,15 +252,50 @@
                                                     {% endif %}
                                                 </div>
                                             </details>
-                                            {% else %}
-                                            <!-- Active status - simple delete -->
+                                        </div>
+
+                                        {% else %}
+                                        <!-- Active/Other status - show regular metrics -->
+                                        <!-- Metrics -->
+                                        <div style="margin-bottom: 1rem;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 500; color: #555;">Win Rate</span>
+                                                <span style="color: {% if wfo.win_rate >= 40 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                                    {{ "%.1f"|format(wfo.win_rate) }}%
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 500; color: #555;">Total R</span>
+                                                <span style="color: {% if wfo.total_r > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                                    {{ "%.2f"|format(wfo.total_r) }}R
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 500; color: #555;">Profit Factor</span>
+                                                <span style="color: {% if wfo.profit_factor >= 1.5 %}#27ae60{% elif wfo.profit_factor >= 1 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: bold;">
+                                                    {{ "%.2f"|format(wfo.profit_factor) }}
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="font-weight: 500; color: #555;">Trades</span>
+                                                <span style="color: #2c3e50; font-weight: bold;">
+                                                    {{ wfo.trades }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Action Buttons -->
+                                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                                            <a href="/analysis/{{ period.name }}/{{ wfo.display_name }}" class="btn btn-primary btn-small" style="text-align: center;">
+                                                View Details
+                                            </a>
                                             <form method="POST" action="/delete/{{ period.name }}/{{ wfo.display_name }}" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete {{ period.name }}/{{ wfo.display_name }}?');">
                                                 <button type="submit" class="btn btn-danger btn-small" style="width: 100%;">
                                                     Delete
                                                 </button>
                                             </form>
-                                            {% endif %}
                                         </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}
