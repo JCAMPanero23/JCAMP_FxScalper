@@ -125,16 +125,16 @@ def analysis(period, session):
         archive_data = archive_service.get_archive_tree(per_page=1000)
         available_analyses = []
         for p in archive_data.get('periods', []):
-            for s in p.get('sessions', []):
+            for wfo in p.get('sessions', []):  # sessions now contains wfo_cycles
                 available_analyses.append({
                     'period': p['name'],
-                    'session': s['name'],
-                    'display': f"{p['name']} / {s['name']} ({s['total_r']:+.1f}R)",
-                    'total_r': s.get('total_r', 0),
-                    'win_rate': s.get('win_rate', 0),
-                    'profit_factor': s.get('profit_factor', 0),
-                    'max_dd': s.get('max_dd', 0),
-                    'trades': s.get('total_trades', 0)
+                    'session': wfo['display_name'],  # Use display_name from WFO cycle
+                    'display': f"{p['name']} / {wfo['display_name']} ({wfo['total_r']:+.1f}R)",
+                    'total_r': wfo.get('total_r', 0),
+                    'win_rate': wfo.get('win_rate', 0),
+                    'profit_factor': wfo.get('profit_factor', 0),
+                    'max_dd': wfo.get('max_dd', 0),
+                    'trades': wfo.get('trades', 0)  # WFO cycles use 'trades' not 'total_trades'
                 })
 
         # Check if this is a re-optimization or has been re-optimized
