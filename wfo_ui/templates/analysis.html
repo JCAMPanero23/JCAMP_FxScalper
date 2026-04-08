@@ -361,8 +361,10 @@
         </div>
     </div>
     {% endif %}
+    {% endif %}
 
-    <!-- Re-Optimization Comparison -->
+    <!-- Re-Optimization Comparison (2-column, not shown in wfo_only mode) -->
+    {% if not wfo_only %}
     {% if reopt_comparison and reopt_comparison.type == 'reoptimization' %}
     <div class="card">
         <div class="card-header" style="background-color: #27ae60; color: white;">
@@ -490,6 +492,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     {% endif %}
 
     <!-- WFO Complete - Full 3-Column Comparison -->
@@ -888,7 +891,7 @@
         {% endif %}
         {% endif %}
     {% endif %}
-    {% elif reopt_comparison and reopt_comparison.type == 'has_reoptimization' %}
+    {% if reopt_comparison and reopt_comparison.type == 'has_reoptimization' %}
     <div class="card">
         <div class="card-header" style="background-color: #3498db; color: white;">
             <h3>ℹ️ This Analysis Has Been Re-Optimized</h3>
