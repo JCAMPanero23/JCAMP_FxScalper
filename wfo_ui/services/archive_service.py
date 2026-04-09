@@ -2,6 +2,7 @@
 import json
 import re
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -10,6 +11,32 @@ from . import file_service
 
 
 ARCHIVE_ROOT = Path(__file__).parent.parent.parent / "data" / "backtest_archive"
+
+
+def format_date_range(start_date, end_date):
+    """Format backtest date range for display
+
+    Args:
+        start_date: datetime object or None
+        end_date: datetime object or None
+
+    Returns:
+        Formatted string like "Jan 15 - Mar 31, 2026" or None
+
+    Examples:
+        >>> format_date_range(datetime(2026, 1, 15), datetime(2026, 3, 31))
+        "Jan 15 - Mar 31, 2026"
+        >>> format_date_range(None, None)
+        None
+    """
+    if not start_date or not end_date:
+        return None
+
+    # Format: "Jan 15 - Mar 31, 2026"
+    start_str = start_date.strftime("%b %d")
+    end_str = end_date.strftime("%b %d, %Y")
+
+    return f"{start_str} - {end_str}"
 
 
 def extract_pair_from_csv(csv_path: Path) -> str:
