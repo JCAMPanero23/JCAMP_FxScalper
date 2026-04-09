@@ -326,9 +326,16 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
 
     # Apply sorting
     if sort_by == 'date_newest':
-        periods.sort(key=lambda x: x['modified_time'], reverse=True)
+        # Sort by backtest end date (latest first), fallback to modified_time
+        periods.sort(
+            key=lambda x: x['backtest_end_date'] or datetime.fromtimestamp(x['modified_time']),
+            reverse=True
+        )
     elif sort_by == 'date_oldest':
-        periods.sort(key=lambda x: x['modified_time'])
+        # Sort by backtest end date (earliest first), fallback to modified_time
+        periods.sort(
+            key=lambda x: x['backtest_end_date'] or datetime.fromtimestamp(x['modified_time'])
+        )
     elif sort_by == 'name_asc':
         periods.sort(key=lambda x: x['name'])
     elif sort_by == 'name_desc':
@@ -342,8 +349,11 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
     elif sort_by == 'win_rate_asc':
         periods.sort(key=lambda x: x['win_rate_aggregate'])
     else:
-        # Default: date newest
-        periods.sort(key=lambda x: x['modified_time'], reverse=True)
+        # Default: date newest (by backtest end date)
+        periods.sort(
+            key=lambda x: x['backtest_end_date'] or datetime.fromtimestamp(x['modified_time']),
+            reverse=True
+        )
 
     # Apply search filter (case-insensitive)
     if search_query:
