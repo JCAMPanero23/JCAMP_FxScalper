@@ -4,6 +4,8 @@ MTF SMA Alignment Strategy with ADX FlipDirection mode, Chandelier Trailing SL, 
 
 ## Quick Start
 
+### cBot (Trading Bot)
+
 ```bash
 # Edit source
 D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs
@@ -11,6 +13,46 @@ D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs
 # Copy to cAlgo and rebuild
 cp "D:\JCAMP_FxScalper\Jcamp_1M_scalping.cs" "C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Robots\Jcamp_1M_scalping\Jcamp_1M_scalping\Jcamp_1M_scalping.cs"
 ```
+
+### Indicator (Visual Entry Signals)
+
+```bash
+# Edit source
+D:\JCAMP_FxScalper\Indicator\JCAMP_MTF_MultiSMA_v2.cs
+
+# Copy to cAlgo and rebuild
+cp "D:\JCAMP_FxScalper\Indicator\JCAMP_MTF_MultiSMA_v2.cs" "C:\Users\Jcamp_Laptop\Documents\cAlgo\Sources\Indicators\JCAMP_MTF_MultiSMA_v2\JCAMP_MTF_MultiSMA_v2\JCAMP_MTF_MultiSMA_v2.cs"
+```
+
+## MTF SMA Indicator (v3 - cBot-aligned)
+
+Visual indicator that shows the same entry signals as the cBot. Use on M1 chart for real-time signal alerts.
+
+### Entry Logic
+- **Signal Type**: M1 price crosses M1 SMA when higher TFs (TF1 + TF2) already aligned
+- **BUY Arrow**: TF1+TF2 aligned BULL → M1 price crosses ABOVE M1 SMA
+- **SELL Arrow**: TF1+TF2 aligned BEAR → M1 price crosses BELOW M1 SMA
+- **Bar Close**: Enabled by default (no repaints)
+
+### Recommended Settings (Match cBot)
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| SMA Period | 275 | Match cBot's MTFSMAPeriod |
+| TF1 Timeframe | Minute4 | Match cBot's Timeframe2 |
+| TF2 Timeframe | Minute15 | Match cBot's Timeframe3 |
+| Require All TFs Aligned | false | 2/2 alignment mode |
+| Require Bar Close | true | No repaints |
+| Enable Signal Layer | true | Show arrows |
+
+### Features
+- 3 MTF SMA lines (M1, M4, M15)
+- Real-time alignment status panel (top-left)
+- Entry signal arrows (green BUY, red SELL)
+- Audio alerts on signal
+- No repaint mode (bar-close confirmation)
+
+---
 
 ## Current Parameters (v4.4.0-WFO)
 
@@ -100,7 +142,8 @@ If monthly DD limit (10%) hit → re-optimize immediately.
 |------|---------|
 | `Jcamp_1M_scalping.cs` | Main bot (edit this) |
 | `Jcamp_1M_scalping_MTF.cs` | Clean backup reference |
-| `TrendModeRectangleIndicator.cs` | Visual indicator |
+| `Indicator/JCAMP_MTF_MultiSMA_v2.cs` | **MTF SMA Entry Indicator (cBot-aligned)** |
+| `TrendModeRectangleIndicator.cs` | Old visual indicator (deprecated) |
 | `optimization_sets/` | Saved optimization configs |
 | `Backtest/` | Backtest results |
 | `archive/` | Old docs and code |

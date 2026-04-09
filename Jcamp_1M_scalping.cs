@@ -18,9 +18,9 @@ namespace cAlgo.Robots
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.4.2-WFO";
-        private const string VERSION_DATE = "2026-04-05";
-        private const string VERSION_NOTES = "Fix: CSV only created when EnableCSVExport=true + Re-optimization instructions";
+        private const string BOT_VERSION = "4.5.0-WFO";
+        private const string VERSION_DATE = "2026-04-08";
+        private const string VERSION_NOTES = "NEW: Smart notification system - MTF changes, blocked signals, 3h updates, daily summary";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -248,14 +248,29 @@ namespace cAlgo.Robots
 
         #region Parameters - Diagnostics
 
+        [Parameter("=== NOTIFICATIONS ===", DefaultValue = "")]
+        public string NotificationsHeader { get; set; }
+
+        [Parameter("Enable Notifications", DefaultValue = true, Group = "Notifications")]
+        public bool EnableNotifications { get; set; }
+
+        [Parameter("Notify MTF Changes", DefaultValue = true, Group = "Notifications")]
+        public bool NotifyMTFChanges { get; set; }
+
+        [Parameter("Notify Blocked Signals", DefaultValue = true, Group = "Notifications")]
+        public bool NotifyBlockedSignals { get; set; }
+
+        [Parameter("Notify Trades", DefaultValue = true, Group = "Notifications")]
+        public bool NotifyTrades { get; set; }
+
+        [Parameter("Status Update Interval (hours)", DefaultValue = 3, MinValue = 1, MaxValue = 24, Group = "Notifications")]
+        public int StatusUpdateIntervalHours { get; set; }
+
+        [Parameter("Daily Summary Hour (UTC)", DefaultValue = 17, MinValue = 0, MaxValue = 23, Group = "Notifications")]
+        public int DailySummaryHour { get; set; }
+
         [Parameter("=== DIAGNOSTICS ===", DefaultValue = "")]
         public string DiagnosticsHeader { get; set; }
-
-        [Parameter("Enable Diagnostics", DefaultValue = false, Group = "Diagnostics")]
-        public bool EnableDiagnostics { get; set; }
-
-        [Parameter("Diagnostic Interval (bars)", DefaultValue = 60, MinValue = 5, MaxValue = 240, Step = 5, Group = "Diagnostics")]
-        public int DiagnosticIntervalBars { get; set; }
 
         [Parameter("Enable CSV Export", DefaultValue = true, Group = "Diagnostics")]
         public bool EnableCSVExport { get; set; }
@@ -358,6 +373,26 @@ namespace cAlgo.Robots
         // Trade logging for WFO analysis
         private string _tradeLogPath;
         private bool _logHeaderWritten = false;
+
+        // SMA Debug CSV Export
+        private System.IO.StreamWriter _smaDebugWriter;
+        private string _smaDebugPath;
+
+        // Notification state tracking
+        private bool _previousMTFAligned = false;
+        private string _previousMTFDirection = "NONE";
+        private DateTime _lastStatusUpdate = DateTime.MinValue;
+        private DateTime _lastDailySummary = DateTime.MinValue;
+        private int _dailySignalsBlocked = 0;
+        private Dictionary<string, int> _dailyBlockReasons = new Dictionary<string, int>();
+        private int _dailyMTFAlignedMinutes = 0;
+        private DateTime _lastMTFAlignedCheck = DateTime.MinValue;
+
+        // Deduplication tracking
+        private string _lastNotificationMessage = "";
+        private DateTime _lastNotificationTime = DateTime.MinValue;
+        private string _lastBlockedReason = "";
+        private DateTime _lastBlockedNotification = DateTime.MinValue;
 
         // Track entry context for each position
         private class TradeContext
@@ -497,6 +532,16 @@ namespace cAlgo.Robots
 
                 Print("[WFO-LOG] Trade log initialized: {0}", _tradeLogPath);
                 WriteLogHeader();
+
+                // Initialize SMA Debug CSV
+                _smaDebugPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    string.Format("JCAMP_cBot_SMA_Debug_{0}_{1}.csv", SymbolName, DateTime.Now.ToString("yyyyMMdd_HHmmss")));
+
+                _smaDebugWriter = new System.IO.StreamWriter(_smaDebugPath, false);
+                _smaDebugWriter.WriteLine("Timestamp,BarIndex,Price_M1,SMA_M1,Align_M1,SMA_TF2,Align_TF2,SMA_TF3,Align_TF3,MTF_Aligned,MTF_Direction,M1_Crossover");
+                _smaDebugWriter.Flush();
+
+                Print("[SMA-DEBUG] CSV export enabled: {0}", _smaDebugPath);
             }
             else
             {
@@ -507,8 +552,16 @@ namespace cAlgo.Robots
             Print("ADX Filter: {0} | Exhaustion Exit: {1}", EnableADXFilter, EnableExhaustionExit);
             Print("Daily Limit: {0} | Consecutive Loss Limit: {1} | Monthly DD Limit: {2} | Close on DD: {3}", EnableDailyLossLimit, EnableConsecutiveLossLimit, EnableMonthlyDrawdownLimit, ClosePositionsOnMonthlyDD);
             Print("Risk: {0:F1}% | Min RR: {1:F1} | Max Positions: {2}", RiskPercent, MinimumRRRatio, MaxPositions);
-            Print("Diagnostics: {0} | Interval: {1} bars ({2} min on M1)", EnableDiagnostics, DiagnosticIntervalBars, DiagnosticIntervalBars);
+            Print("Notifications: {0} | Status Updates: Every {1}h | Daily Summary: {2}:00 UTC",
+                EnableNotifications, StatusUpdateIntervalHours, DailySummaryHour);
             Print("========================================");
+
+            // Send startup notification
+            if (EnableNotifications)
+            {
+                SendNotification(string.Format("cBot Started v{0} | {1} | Equity: {2:C}",
+                    BOT_VERSION, SymbolName, Account.Equity), forceLog: true);
+            }
         }
 
         #endregion
@@ -517,15 +570,37 @@ namespace cAlgo.Robots
 
         protected override void OnBar()
         {
-            // DIAGNOSTIC: Log heartbeat to verify cBot is running
-            if (EnableDiagnostics && Bars.Count % DiagnosticIntervalBars == 0)
-            {
-                Print("[DIAGNOSTIC] cBot is running | Time: {0} | Equity: {1:F2}",
-                    Server.Time, Account.Equity);
-            }
-
             // Check daily reset
             CheckDailyReset();
+
+            // Periodic status updates (every X hours)
+            if (EnableNotifications && (Server.Time - _lastStatusUpdate).TotalHours >= StatusUpdateIntervalHours)
+            {
+                SendStatusUpdate();
+                _lastStatusUpdate = Server.Time;
+            }
+
+            // Daily summary (once per day at specified hour)
+            if (EnableNotifications && Server.Time.Hour == DailySummaryHour && _lastDailySummary.Date != Server.Time.Date)
+            {
+                SendDailySummary();
+                _lastDailySummary = Server.Time;
+                ResetDailyCounters();
+            }
+
+            // Track MTF aligned time for daily summary
+            if (_lastMTFAlignedCheck.Date == Server.Time.Date && (Server.Time - _lastMTFAlignedCheck).TotalMinutes >= 1)
+            {
+                if (_previousMTFAligned)
+                {
+                    _dailyMTFAlignedMinutes++;
+                }
+                _lastMTFAlignedCheck = Server.Time;
+            }
+            else if (_lastMTFAlignedCheck.Date != Server.Time.Date)
+            {
+                _lastMTFAlignedCheck = Server.Time;
+            }
 
             // Draw session boxes
             if (ShowSessionBoxes)
@@ -533,14 +608,51 @@ namespace cAlgo.Robots
                 DrawSessionBoxes();
             }
 
+            // SMA Debug CSV Export (log confirmed bar values)
+            // IMPORTANT: This runs AFTER ProcessMTFSMAEntry to avoid interfering with crossover detection
+            bool shouldLogSMA = EnableCSVExport && _smaDebugWriter != null && m1Bars != null && tf2Bars != null && tf3Bars != null;
+
             // Process MTF SMA entry
             if (EnableMTFSMAEntry)
             {
                 ProcessMTFSMAEntry();
             }
-            else if (EnableDiagnostics && Bars.Count % DiagnosticIntervalBars == 0)
+
+            // SMA Debug CSV Export - LOG AFTER ProcessMTFSMAEntry to avoid interfering
+            if (shouldLogSMA)
             {
-                Print("[DIAGNOSTIC] MTF SMA Entry is DISABLED in parameters");
+                double priceM1 = m1Bars.ClosePrices.LastValue;
+                double smaM1 = CalculateSMAForBars(m1Bars, MTFSMAPeriod);
+                double smaTF2 = CalculateSMAForBars(tf2Bars, MTFSMAPeriod);
+                double smaTF3 = CalculateSMAForBars(tf3Bars, MTFSMAPeriod);
+
+                string alignM1 = GetSMAAlignment(m1Bars);
+                string alignTF2 = GetSMAAlignment(tf2Bars);
+                string alignTF3 = GetSMAAlignment(tf3Bars);
+
+                // Read-only check - don't call DetectM1Crossover (has side effects!)
+                string currentM1 = GetSMAAlignment(m1Bars);
+                bool m1Crossed = (!string.IsNullOrEmpty(_previousM1Alignment)
+                    && _previousM1Alignment != "NONE"
+                    && _previousM1Alignment != currentM1
+                    && currentM1 != "NONE");
+
+                bool mtfAligned = CheckMTFAlignment(out string mtfDirection);
+
+                _smaDebugWriter.WriteLine(string.Format("{0},{1},{2:F5},{3:F5},{4},{5:F5},{6},{7:F5},{8},{9},{10},{11}",
+                    Server.Time.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Bars.Count,
+                    priceM1,
+                    smaM1,
+                    alignM1,
+                    smaTF2,
+                    alignTF2,
+                    smaTF3,
+                    alignTF3,
+                    mtfAligned ? "TRUE" : "FALSE",
+                    mtfDirection,
+                    m1Crossed ? currentM1 : "NONE"));
+                _smaDebugWriter.Flush();
             }
 
             // Process chandelier trailing stops
@@ -632,39 +744,26 @@ namespace cAlgo.Robots
 
         private void ProcessMTFSMAEntry()
         {
-            // DIAGNOSTIC: Show why entries are blocked
-            bool showDiagnostics = EnableDiagnostics && (Bars.Count % DiagnosticIntervalBars == 0);
-
-            if (showDiagnostics)
-            {
-                Print("[DIAGNOSTIC] ProcessMTFSMAEntry called - checking entry conditions...");
-            }
-
             // Skip if trading disabled or position open
             if (!EnableTrading)
             {
-                if (showDiagnostics) Print("[DIAGNOSTIC] Trading is DISABLED");
                 return;
             }
 
             if (HasOpenPosition())
             {
-                if (showDiagnostics) Print("[DIAGNOSTIC] Position already open");
                 return;
             }
 
             // Check daily loss limit
             if (IsDailyLimitReached())
             {
-                if (showDiagnostics) Print("[DIAGNOSTIC] Daily limit reached | R Loss: {0:F2} | Losses: {1}",
-                    _dailyRLoss, _dailyLosingTrades);
                 return;
             }
 
             // Check monthly drawdown limit
             if (IsMonthlyLimitReached())
             {
-                if (showDiagnostics) Print("[DIAGNOSTIC] Monthly limit reached");
                 return;
             }
 
@@ -683,8 +782,7 @@ namespace cAlgo.Robots
 
                 if (!sessionAllowed)
                 {
-                    if (showDiagnostics) Print("[DIAGNOSTIC] Session blocked | Current: {0} | London: {1} | NY: {2} | Asian: {3}",
-                        period, EnableLondonSession, EnableNYSession, EnableAsianSession);
+                    TrackBlockedSignal("Session", string.Format("Current: {0}", period));
                     return;
                 }
             }
@@ -708,8 +806,8 @@ namespace cAlgo.Robots
 
                 if (!hourAllowed)
                 {
-                    if (showDiagnostics) Print("[DIAGNOSTIC] Hour blocked | Current: {0:D2}:XX UTC | Range: {1:D2}:00-{2:D2}:00",
-                        currentHour, StartHour, EndHour);
+                    TrackBlockedSignal("Hour", string.Format("Current: {0:D2}:XX, Need: {1:D2}:00-{2:D2}:00",
+                        currentHour, StartHour, EndHour));
                     return;
                 }
             }
@@ -732,7 +830,7 @@ namespace cAlgo.Robots
 
                 if (!dayAllowed)
                 {
-                    if (showDiagnostics) Print("[DIAGNOSTIC] Day blocked | Current: {0}", currentDay);
+                    TrackBlockedSignal("Day", string.Format("Current: {0}", currentDay));
                     return;
                 }
             }
@@ -747,8 +845,7 @@ namespace cAlgo.Robots
                 // Check ADX Max Threshold (block if ADX too high)
                 if (ADXMaxThreshold > 0 && adxValue > ADXMaxThreshold)
                 {
-                    if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter blocking entry | ADX: {0:F1} > Max Threshold: {1:F1}",
-                        adxValue, ADXMaxThreshold);
+                    TrackBlockedSignal("ADX", string.Format("ADX {0:F1} > Max {1:F1}", adxValue, ADXMaxThreshold));
                     return;
                 }
 
@@ -758,43 +855,71 @@ namespace cAlgo.Robots
                     if (ADXMode == ADXFilterMode.BlockEntry)
                     {
                         // Ranging market, skip entry
-                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter blocking entry | ADX: {0:F1} < Min Threshold: {1:F1} | Mode: BlockEntry",
-                            adxValue, ADXMinThreshold);
+                        TrackBlockedSignal("ADX", string.Format("ADX {0:F1} < Min {1:F1} (BlockEntry mode)", adxValue, ADXMinThreshold));
                         return;
                     }
                     else if (ADXMode == ADXFilterMode.FlipDirection)
                     {
                         // Ranging market, flip direction (contrarian)
                         flipDirection = true;
-                        if (showDiagnostics) Print("[DIAGNOSTIC] ADX filter will flip direction | ADX: {0:F1} < Min Threshold: {1:F1}",
-                            adxValue, ADXMinThreshold);
                     }
-                }
-                else if (showDiagnostics)
-                {
-                    Print("[DIAGNOSTIC] ADX filter passed | ADX: {0:F1} >= Min Threshold: {1:F1}", adxValue, ADXMinThreshold);
                 }
             }
 
             // Check MTF alignment
-            if (!CheckMTFAlignment(out string alignmentDirection))
+            bool currentMTFAligned = CheckMTFAlignment(out string alignmentDirection);
+
+            // Detect MTF alignment state changes
+            if (EnableNotifications && NotifyMTFChanges)
             {
-                if (showDiagnostics)
+                // MTF alignment changed (FALSE -> TRUE or TRUE -> FALSE)
+                if (currentMTFAligned != _previousMTFAligned)
                 {
                     string m1 = GetSMAAlignment(m1Bars);
                     string tf2 = GetSMAAlignment(tf2Bars);
                     string tf3 = GetSMAAlignment(tf3Bars);
-                    Print("[DIAGNOSTIC] MTF not aligned | M1: {0} | TF2: {1} | TF3: {2}", m1, tf2, tf3);
+
+                    if (currentMTFAligned)
+                    {
+                        // MTF just became aligned
+                        SendNotification(string.Format("MTF Aligned {0} | M1:{1} TF2:{2} TF3:{3} | Waiting for M1 crossover",
+                            alignmentDirection, m1, tf2, tf3));
+                    }
+                    else
+                    {
+                        // MTF lost alignment - "Waiting for M1 crossover CANCELLED"
+                        SendNotification(string.Format("MTF Lost Alignment (was waiting for M1 crossover) | M1:{0} TF2:{1} TF3:{2}",
+                            m1, tf2, tf3));
+                    }
+
+                    _previousMTFAligned = currentMTFAligned;
+                    _previousMTFDirection = alignmentDirection;
                 }
-                return;
+                // MTF direction changed while still aligned
+                else if (currentMTFAligned && alignmentDirection != _previousMTFDirection && _previousMTFDirection != "NONE")
+                {
+                    string m1 = GetSMAAlignment(m1Bars);
+                    string tf2 = GetSMAAlignment(tf2Bars);
+                    string tf3 = GetSMAAlignment(tf3Bars);
+
+                    SendNotification(string.Format("MTF Direction Changed: {0} → {1} | M1:{2} TF2:{3} TF3:{4}",
+                        _previousMTFDirection, alignmentDirection, m1, tf2, tf3));
+
+                    _previousMTFDirection = alignmentDirection;
+                }
             }
-            else if (showDiagnostics)
+
+            // Update state even if notifications disabled
+            if (!EnableNotifications || !NotifyMTFChanges)
             {
-                string m1 = GetSMAAlignment(m1Bars);
-                string tf2 = GetSMAAlignment(tf2Bars);
-                string tf3 = GetSMAAlignment(tf3Bars);
-                Print("[DIAGNOSTIC] MTF aligned {0} | M1: {1} | TF2: {2} | TF3: {3} | Waiting for M1 crossover...",
-                    alignmentDirection, m1, tf2, tf3);
+                _previousMTFAligned = currentMTFAligned;
+                _previousMTFDirection = alignmentDirection;
+            }
+
+            // If not aligned, exit
+            if (!currentMTFAligned)
+            {
+                return;
             }
 
             // Check for M1 crossover
@@ -823,7 +948,7 @@ namespace cAlgo.Robots
                         case DirectionFilterMode.BuyOnly:
                             if (tradeDirection == "SELL")
                             {
-                                if (showDiagnostics) Print("[DIAGNOSTIC] Direction blocked | SELL not allowed (BuyOnly mode)");
+                                TrackBlockedSignal("Direction", "SELL not allowed (BuyOnly mode)");
                                 directionAllowed = false;
                             }
                             break;
@@ -831,7 +956,7 @@ namespace cAlgo.Robots
                         case DirectionFilterMode.SellOnly:
                             if (tradeDirection == "BUY")
                             {
-                                if (showDiagnostics) Print("[DIAGNOSTIC] Direction blocked | BUY not allowed (SellOnly mode)");
+                                TrackBlockedSignal("Direction", "BUY not allowed (SellOnly mode)");
                                 directionAllowed = false;
                             }
                             break;
@@ -840,7 +965,7 @@ namespace cAlgo.Robots
                             // Skip SELL 2 out of 3 times (keep every 3rd SELL)
                             if (tradeDirection == "SELL" && (History.Count % 3) != 0)
                             {
-                                if (showDiagnostics) Print("[DIAGNOSTIC] Direction blocked | SELL skipped (BuyBias mode, keep 1/3)");
+                                TrackBlockedSignal("Direction", "SELL skipped (BuyBias mode)");
                                 directionAllowed = false;
                             }
                             break;
@@ -947,6 +1072,14 @@ namespace cAlgo.Robots
                     DayOfWeek = Server.Time.DayOfWeek.ToString()
                 };
                 LogTradeEntry(result.Position, context);
+
+                // Send trade notification
+                if (EnableNotifications && NotifyTrades)
+                {
+                    string flipMsg = flipDirection ? " (ADX Flip)" : "";
+                    SendNotification(string.Format("BUY Trade Executed{0} | Entry: {1:F5} | SL: {2:F1}p | RR: {3:F1} | Vol: {4}",
+                        flipMsg, entryPrice, riskPips, MinimumRRRatio, volume));
+                }
             }
             else
             {
@@ -1035,6 +1168,14 @@ namespace cAlgo.Robots
                     DayOfWeek = Server.Time.DayOfWeek.ToString()
                 };
                 LogTradeEntry(result.Position, context);
+
+                // Send trade notification
+                if (EnableNotifications && NotifyTrades)
+                {
+                    string flipMsg = flipDirection ? " (ADX Flip)" : "";
+                    SendNotification(string.Format("SELL Trade Executed{0} | Entry: {1:F5} | SL: {2:F1}p | RR: {3:F1} | Vol: {4}",
+                        flipMsg, entryPrice, riskPips, MinimumRRRatio, volume));
+                }
             }
             else
             {
@@ -2144,6 +2285,154 @@ namespace cAlgo.Robots
                 History.Count, profitFactor, maxDrawdown, netProfitPercent, winRate * 100, equitySlope, finalThirdScore, fitness);
 
             return fitness;
+        }
+
+        #endregion
+
+        #region Notification Helpers
+
+        private void SendNotification(string message, bool forceLog = false)
+        {
+            if (!EnableNotifications)
+                return;
+
+            // Skip duplicate messages (unless forced or it's been > 1 hour)
+            if (!forceLog && message == _lastNotificationMessage &&
+                (Server.Time - _lastNotificationTime).TotalHours < 1)
+            {
+                return; // Skip duplicate within 1 hour
+            }
+
+            string fullMessage = string.Format("[NOTIFY] {0} | {1}", SymbolName, message);
+            Print(fullMessage);
+
+            // Update last notification tracking
+            _lastNotificationMessage = message;
+            _lastNotificationTime = Server.Time;
+
+            // Play sound alert for important notifications
+            if (message.Contains("Trade Executed") || message.Contains("MTF Aligned") || message.Contains("MTF Lost"))
+            {
+                Notifications.PlaySound("alert");
+            }
+        }
+
+        private void TrackBlockedSignal(string reason, string details)
+        {
+            _dailySignalsBlocked++;
+
+            if (!_dailyBlockReasons.ContainsKey(reason))
+                _dailyBlockReasons[reason] = 0;
+
+            _dailyBlockReasons[reason]++;
+
+            // Send notification if enabled (with deduplication)
+            if (EnableNotifications && NotifyBlockedSignals)
+            {
+                string blockKey = string.Format("{0}:{1}", reason, details);
+
+                // Only notify if it's a different reason OR it's been > 30 minutes
+                if (blockKey != _lastBlockedReason ||
+                    (Server.Time - _lastBlockedNotification).TotalMinutes > 30)
+                {
+                    SendNotification(string.Format("Signal Blocked: {0} | {1}", reason, details));
+                    _lastBlockedReason = blockKey;
+                    _lastBlockedNotification = Server.Time;
+                }
+            }
+        }
+
+        private void SendStatusUpdate()
+        {
+            if (!EnableNotifications)
+                return;
+
+            // Get current MTF alignment
+            bool mtfAligned = CheckMTFAlignment(out string direction);
+            string m1 = GetSMAAlignment(m1Bars);
+            string tf2 = GetSMAAlignment(tf2Bars);
+            string tf3 = GetSMAAlignment(tf3Bars);
+
+            string status;
+            if (mtfAligned)
+            {
+                status = string.Format("MTF Aligned {0} | Waiting for M1 crossover | M1:{1} TF2:{2} TF3:{3}",
+                    direction, m1, tf2, tf3);
+            }
+            else
+            {
+                status = string.Format("MTF Not Aligned | M1:{0} TF2:{1} TF3:{2}",
+                    m1, tf2, tf3);
+            }
+
+            // Add position info
+            var positions = Positions.FindAll("Jcamp_1M_scalping", SymbolName);
+            if (positions.Length > 0)
+            {
+                var pos = positions[0];
+                double pnl = pos.NetProfit;
+                status += string.Format(" | Position: {0} {1:+0.00;-0.00}",
+                    pos.TradeType, pnl);
+            }
+
+            // Add equity
+            status += string.Format(" | Equity: {0:C}", Account.Equity);
+
+            // Always send status updates (even if duplicate) - add timestamp to make unique
+            status = string.Format("[Status Update] {0}", status);
+            SendNotification(status, forceLog: true);
+        }
+
+        private void SendDailySummary()
+        {
+            if (!EnableNotifications)
+                return;
+
+            // Calculate MTF aligned percentage
+            int totalMinutes = 1440; // 24 hours * 60 minutes
+            double alignedPercent = (_dailyMTFAlignedMinutes / (double)totalMinutes) * 100;
+
+            // Build summary message
+            string summary = string.Format("Daily Summary | MTF Aligned: {0}% ({1}m)",
+                alignedPercent.ToString("F0"), _dailyMTFAlignedMinutes);
+
+            if (_dailySignalsBlocked > 0)
+            {
+                summary += string.Format(" | Signals Blocked: {0}", _dailySignalsBlocked);
+
+                if (_dailyBlockReasons.Count > 0)
+                {
+                    summary += " (";
+                    var reasons = new List<string>();
+                    foreach (var kvp in _dailyBlockReasons.OrderByDescending(x => x.Value))
+                    {
+                        reasons.Add(string.Format("{0}:{1}", kvp.Key, kvp.Value));
+                    }
+                    summary += string.Join(", ", reasons);
+                    summary += ")";
+                }
+            }
+            else
+            {
+                summary += " | No signals blocked";
+            }
+
+            // Add trade count
+            int tradesToday = History.Count(h => h.ClosingTime.Date == Server.Time.Date);
+            summary += string.Format(" | Trades: {0}", tradesToday);
+
+            // Add equity change
+            summary += string.Format(" | Equity: {0:C}", Account.Equity);
+
+            // Always send daily summary (once per day)
+            SendNotification(summary, forceLog: true);
+        }
+
+        private void ResetDailyCounters()
+        {
+            _dailySignalsBlocked = 0;
+            _dailyBlockReasons.Clear();
+            _dailyMTFAlignedMinutes = 0;
         }
 
         #endregion

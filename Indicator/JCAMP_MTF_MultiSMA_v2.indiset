@@ -1,0 +1,53 @@
+﻿{
+  "Lines": [
+    {
+      "IsEnabled": true,
+      "LineName": "Sma0Result",
+      "Color": "#FF1E90FF",
+      "LineType": "Solid",
+      "LineWidth": 1.0
+    },
+    {
+      "IsEnabled": true,
+      "LineName": "Sma1Result",
+      "Color": "#FFFFD700",
+      "LineType": "Solid",
+      "LineWidth": 2.0
+    },
+    {
+      "IsEnabled": true,
+      "LineName": "Sma2Result",
+      "Color": "#FFFF4500",
+      "LineType": "Solid",
+      "LineWidth": 2.0
+    }
+  ],
+  "Bars": [],
+  "Levels": [],
+  "Parameters": {
+    "SmaPeriod": "250",
+    "ShowInfoPanel": "True",
+    "AlertOnSignal": "False",
+    "AlertSoundFile": "alert.wav",
+    "EnableSma0": "True",
+    "Sma0Color": "DodgerBlue",
+    "Sma0Thickness": "1",
+    "Sma0Style": "0",
+    "EnableSma1": "True",
+    "Tf1": "m4",
+    "Sma1Color": "Gold",
+    "Sma1Thickness": "2",
+    "Sma1Style": "0",
+    "EnableSma2": "True",
+    "Tf2": "m15",
+    "Sma2Color": "OrangeRed",
+    "Sma2Thickness": "2",
+    "Sma2Style": "0",
+    "EnableSignalLayer": "True",
+    "RequireAllTFsAligned": "True",
+    "BuyArrowColor": "LimeGreen",
+    "SellArrowColor": "Red",
+    "ArrowOffsetPips": "5",
+    "RequireBarClose": "True"
+  }
+}
