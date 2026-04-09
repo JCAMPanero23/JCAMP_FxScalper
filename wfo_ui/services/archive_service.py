@@ -256,6 +256,7 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
                 with open(json_path) as f:
                     data = json.load(f)
                     perf = data.get("performance", {})
+                    data_range = data.get("data_range", {})
 
                     sessions.append({
                         "name": session_dir.name,
@@ -264,7 +265,9 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
                         "win_rate": perf.get("win_rate", 0),
                         "trades": perf.get("total_trades", 0),
                         "profit_factor": perf.get("profit_factor", 0),
-                        "max_dd": perf.get("max_drawdown_percent", 0)
+                        "max_dd": perf.get("max_drawdown_percent", 0),
+                        "backtest_start_date": data_range.get("start"),
+                        "backtest_end_date": data_range.get("end")
                     })
 
         # Only add period if it has sessions (after filtering)
