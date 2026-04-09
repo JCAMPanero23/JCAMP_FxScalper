@@ -1,5 +1,19 @@
 # WFO Browser UI - Changelog
 
+## [Unreleased] - Backtest Date Sorting
+
+### Added
+- Backtest date-based sorting in WFO Browser
+  - Periods now sorted by actual backtest data date range (end date) instead of import date
+  - Sort dropdown labels updated to "Backtest Period (Latest/Earliest)"
+  - Hover tooltips show backtest date range on period names
+  - Graceful fallback to import date for archives without date metadata
+
+### Changed
+- Date sorting now uses `data_range.end` from analysis JSON as primary sort key
+
+---
+
 ## 2026-04-02 - Initial WFO Browser UI Implementation
 
 ### Features Added
