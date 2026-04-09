@@ -88,7 +88,7 @@
                 {% for period in periods %}
                 <div class="card mt-3 mb-3" style="background-color: #f9f9f9; border-left: 4px solid #3498db;">
                     <div class="card-header" style="border-bottom: 1px solid #ddd; margin-bottom: 1rem; padding-bottom: 0.75rem;">
-                        <h3 style="margin: 0; color: #2c3e50; font-size: 1.25rem;">
+                        <h3 style="margin: 0; color: #2c3e50; font-size: 1.25rem;" title="{% if period.backtest_date_range %}Backtest period: {{ period.backtest_date_range }}{% else %}Backtest period unavailable{% endif %}">
                             {{ period.name }}
                         </h3>
                     </div>
