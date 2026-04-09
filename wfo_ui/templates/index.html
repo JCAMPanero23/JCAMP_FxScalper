@@ -39,8 +39,8 @@
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <label for="sort-select" style="font-weight: 500; color: #2c3e50; margin: 0;">Sort by:</label>
                     <select id="sort-select" onchange="changeSortOrder(this.value)" style="padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 4px; background-color: white; cursor: pointer; font-size: 0.95rem;">
-                        <option value="date_newest" {% if sort_by == 'date_newest' %}selected{% endif %}>Date (Newest First)</option>
-                        <option value="date_oldest" {% if sort_by == 'date_oldest' %}selected{% endif %}>Date (Oldest First)</option>
+                        <option value="date_newest" {% if sort_by == 'date_newest' %}selected{% endif %}>Backtest Period (Latest)</option>
+                        <option value="date_oldest" {% if sort_by == 'date_oldest' %}selected{% endif %}>Backtest Period (Earliest)</option>
                         <option value="name_asc" {% if sort_by == 'name_asc' %}selected{% endif %}>Name (A-Z)</option>
                         <option value="name_desc" {% if sort_by == 'name_desc' %}selected{% endif %}>Name (Z-A)</option>
                         <option value="total_r_desc" {% if sort_by == 'total_r_desc' %}selected{% endif %}>Total R (Highest)</option>
