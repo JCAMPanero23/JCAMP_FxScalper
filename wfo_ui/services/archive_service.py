@@ -185,7 +185,9 @@ def build_wfo_cycles(sessions: List[Dict[str, Any]], period_name: str) -> List[D
                 'total_r': latest_reopt['total_r'] if latest_reopt else (original['total_r'] if original else 0),
                 'win_rate': latest_reopt['win_rate'] if latest_reopt else (original['win_rate'] if original else 0),
                 'trades': latest_reopt['trades'] if latest_reopt else (original['trades'] if original else 0),
-                'profit_factor': latest_reopt.get('profit_factor', 0) if latest_reopt else (original.get('profit_factor', 0) if original else 0)
+                'profit_factor': latest_reopt.get('profit_factor', 0) if latest_reopt else (original.get('profit_factor', 0) if original else 0),
+                'backtest_start_date': display_session.get('backtest_start_date'),
+                'backtest_end_date': display_session.get('backtest_end_date')
             })
 
     return wfo_cycles
