@@ -279,11 +279,45 @@ def get_archive_tree(page: int = 1, per_page: int = 20, pair_filter: Optional[st
             total_r_sum = sum(s['total_r'] for s in wfo_cycles)
             avg_win_rate = sum(s['win_rate'] for s in wfo_cycles) / len(wfo_cycles) if wfo_cycles else 0
 
+            # Calculate backtest date range for this period
+            backtest_dates = [
+                (s.get('backtest_start_date'), s.get('backtest_end_date'))
+                for s in wfo_cycles
+                if s.get('backtest_start_date') and s.get('backtest_end_date')
+            ]
+
+            backtest_start = None
+            backtest_end = None
+
+            if backtest_dates:
+                parsed_dates = []
+                for start_str, end_str in backtest_dates:
+                    try:
+                        start = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                        end = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
+
+                        # Validate: start should be before end
+                        if start <= end:
+                            parsed_dates.append((start, end))
+                    except (ValueError, AttributeError, TypeError):
+                        # Skip invalid dates
+                        pass
+
+                if parsed_dates:
+                    backtest_start = min(d[0] for d in parsed_dates)
+                    backtest_end = max(d[1] for d in parsed_dates)
+
+            # Format date range for display
+            backtest_date_range = format_date_range(backtest_start, backtest_end)
+
             periods.append({
                 "name": period_dir.name,
                 "wfo_cycles": wfo_cycles,  # Changed from sessions to wfo_cycles
                 "sessions": wfo_cycles,  # Keep for backward compatibility
                 "modified_time": period_dir.stat().st_mtime,  # For date sorting
+                "backtest_start_date": backtest_start,      # datetime or None
+                "backtest_end_date": backtest_end,          # datetime or None
+                "backtest_date_range": backtest_date_range, # formatted string or None
                 "total_r_aggregate": total_r_sum,
                 "win_rate_aggregate": avg_win_rate
             })
