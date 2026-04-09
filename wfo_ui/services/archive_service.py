@@ -13,7 +13,7 @@ from . import file_service
 ARCHIVE_ROOT = Path(__file__).parent.parent.parent / "data" / "backtest_archive"
 
 
-def format_date_range(start_date, end_date):
+def format_date_range(start_date: Optional[datetime], end_date: Optional[datetime]) -> Optional[str]:
     """Format backtest date range for display
 
     Args:
