@@ -2309,12 +2309,6 @@ namespace cAlgo.Robots
             // Update last notification tracking
             _lastNotificationMessage = message;
             _lastNotificationTime = Server.Time;
-
-            // Play sound alert for important notifications
-            if (message.Contains("Trade Executed") || message.Contains("MTF Aligned") || message.Contains("MTF Lost"))
-            {
-                Notifications.PlaySound("alert");
-            }
         }
 
         private void TrackBlockedSignal(string reason, string details)
