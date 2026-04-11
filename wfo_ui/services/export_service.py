@@ -68,9 +68,18 @@ DEFAULT_CBOT_PARAMS = {
     "MaxConsecutiveLosses": 9,
     "EnableMonthlyDrawdownLimit": True,
     "MaxMonthlyDrawdownPercent": 10.0,
+    "ClosePositionsOnMonthlyDD": True,
+    "NotificationsHeader": "",
+    "EnableNotifications": True,
+    "NotifyMTFChanges": True,
+    "NotifyBlockedSignals": True,
+    "NotifyTrades": True,
+    "StatusUpdateIntervalHours": 3,
+    "DailySummaryHour": 17,
     "DiagnosticsHeader": "",
     "EnableDiagnostics": False,
-    "DiagnosticIntervalBars": 60
+    "DiagnosticIntervalBars": 60,
+    "EnableCSVExport": True
 }
 
 # Mapping from WFO analyzer/config output names to cBot parameter names
@@ -123,6 +132,14 @@ PARAM_NAME_MAPPING = {
     "MaxDailyLosingTrades": "MaxDailyLosingTrades",
     "MaxConsecutiveLosses": "MaxConsecutiveLosses",
     "MaxMonthlyDrawdownPercent": "MaxMonthlyDrawdownPercent",
+    "ClosePositionsOnMonthlyDD": "ClosePositionsOnMonthlyDD",
+    "EnableNotifications": "EnableNotifications",
+    "NotifyMTFChanges": "NotifyMTFChanges",
+    "NotifyBlockedSignals": "NotifyBlockedSignals",
+    "NotifyTrades": "NotifyTrades",
+    "StatusUpdateIntervalHours": "StatusUpdateIntervalHours",
+    "DailySummaryHour": "DailySummaryHour",
+    "EnableCSVExport": "EnableCSVExport",
 }
 
 # ADX Mode string to int mapping
