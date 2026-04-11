@@ -150,7 +150,29 @@ If monthly DD limit (10%) hit → re-optimize immediately.
 
 ## Version History
 
-### v4.4.0-WFO (Current)
+### v4.6.0-WFO (Current - 2026-04-10)
+- **🎯 NEW: 4-Timeframe MTF System** - Separates entry trigger from alignment confirmation
+  - **TF0 (M2-M6)**: Entry trigger - crossover detection (replaces noisy M1)
+  - **TF1 (M7-M10)**: Medium-term alignment (renamed from TF2)
+  - **TF2 (M15/M20/M30)**: Higher-term alignment (renamed from TF3)
+  - **M1**: Chart timeframe - still part of alignment check
+  - **Rationale**: M1 too noisy for crossover signals → TF0 provides cleaner entry triggers
+  - **Impact**: Reduces false signals from M1 whipsaws while maintaining responsive entries
+  - **Parameters**: Added `Timeframe0` (default: M4), renamed `Timeframe2→Timeframe1`, `Timeframe3→Timeframe2`
+  - **CSV Logging**: Updated to track all 4 TFs with TF0_Crossover column
+  - **Notifications**: Show M1:X TF0:X TF1:X TF2:X format
+  - ⚠️ **Breaking Change**: Requires re-optimization (parameter structure changed)
+
+### v4.5.1-WFO (2026-04-10)
+- **🚨 CRITICAL BUG FIX**: M1 crossover detection now updates every bar
+  - **Problem**: `_previousM1Alignment` only updated when MTF aligned → stale values from hours/days ago
+  - **Symptom**: Trades triggered on TF2 (M2) crossovers, NOT M1 crossovers as intended
+  - **Example**: 2026-04-10 10:41 trade - M1 was SELL for 3+ bars, but trade executed when M2 crossed
+  - **Fix**: Update `_previousM1Alignment` every bar in `OnBar()`, after `ProcessMTFSMAEntry()`
+  - **Impact**: Ensures accurate M1 crossover detection using immediate previous bar, not stale data
+  - **Note**: Led to discovery that M1 too noisy → v4.6.0 introduces TF0 trigger system
+
+### v4.4.0-WFO
 - **CRITICAL BUG FIX**: Chandelier SL safety check - restores SL if position loses it
 - **NEW**: Close all positions when Monthly DD limit hit (prevents unprotected trades)
 - **FIX**: Use saved SL from state instead of position.StopLoss (may be null)

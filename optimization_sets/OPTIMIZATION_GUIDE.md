@@ -1,319 +1,202 @@
-# Entry Optimization Guide - JCAMP FxScalper
+# Re-Optimization Guide - JCAMP FxScalper v4.4.0-WFO
 
-**Date:** 2025-03-15
-**Purpose:** Optimize entry quality without code changes
-
----
-
-## 📁 Optimization Files Overview
-
-### Optimization Set Files (.optset)
-Four optimization configuration files are provided for systematic testing:
-
-1. **`quick_test.optset`** - Fast initial test (12 combinations)
-2. **`phase1_core_quality.optset`** - Core quality filters (36 combinations)
-3. **`phase2_impulse_strength.optset`** - Impulse strength (16 combinations)
-4. **`entry_quality_optimization.optset`** - Comprehensive (all parameters)
-
-### Preset Configuration Files (.cbotset)
-Three pre-configured parameter sets are provided for different trading styles:
-
-### 1. `entry_quality_high.cbotset` - CONSERVATIVE
-**Goal:** Maximum win rate, fewer trades
-**Best for:** Low drawdown, high accuracy
-
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| Min Swing Score | 0.70 | Only best swing points |
-| Min FVG Size | 2.0 pips | Only significant gaps |
-| Min RR Ratio | 3.5 | Higher reward requirement |
-| Max Dynamic RR | 4.5 | Cap extended TPs |
-| ATR Multiplier | 1.75 | Strong impulse required |
-| Min PRE-Zone Score | 0.55 | Higher quality zones |
-| Max Distance to Arm | 8 pips | Tighter entry |
-| Session Weight | 0.30 | Session timing important |
-
-**Expected:** 30-40% fewer trades, 5-10% higher win rate
+**Last Updated:** 2026-04-04
+**Version:** v4.4.0-WFO (MTF SMA Alignment + ADX FlipDirection)
 
 ---
 
-### 2. `entry_balanced.cbotset` - MODERATE (RECOMMENDED START)
-**Goal:** Balance between quality and frequency
-**Best for:** General use, baseline testing
+## When to Re-Optimize
 
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| Min Swing Score | 0.65 | Moderate filtering |
-| Min FVG Size | 1.5 pips | Standard gap size |
-| Min RR Ratio | 3.0 | Standard risk/reward |
-| Max Dynamic RR | 5.0 | Full dynamic range |
-| ATR Multiplier | 1.5 | Moderate impulse |
-| Min PRE-Zone Score | 0.50 | Standard threshold |
-| Max Distance to Arm | 10 pips | Moderate flexibility |
-| Session Weight | 0.25 | Balanced importance |
-
-**Expected:** Balanced trade frequency and quality
+Re-optimization is triggered when:
+1. **Monthly DD Limit Hit** (10%) - Bot stops trading, re-optimize immediately
+2. **Consecutive Loss Limit** (9 losses) - Strategy degradation detected
+3. **Quarterly Review** - Scheduled parameter refresh
 
 ---
 
-### 3. `entry_frequency_high.cbotset` - AGGRESSIVE
-**Goal:** Maximum trades, lower filtering
-**Best for:** High volume testing, active trading
+## Quick Start: Re-Optimization Workflow
 
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| Min Swing Score | 0.60 | Lower threshold |
-| Min FVG Size | 1.0 pips | Smaller gaps accepted |
-| Min RR Ratio | 2.5 | Lower reward requirement |
-| Max Dynamic RR | 5.0 | Full dynamic range |
-| ATR Multiplier | 1.25 | Easier impulse threshold |
-| Min PRE-Zone Score | 0.45 | Lower zone quality |
-| Max Distance to Arm | 12 pips | More flexible entry |
-| Session Weight | 0.20 | Less time-dependent |
+### Step 1: Load Optimization File
+```
+File: Jcamp_1M_scalping, EURUSD m1.optset
+Location: C:\Users\Jcamp_Laptop\Downloads\ (or optimization_sets folder)
+```
 
-**Expected:** 40-60% more trades, potentially lower win rate
+### Step 2: Set Backtest Period
+- **Optimization Period:** Last 3 months of data
+- **Walk-Forward Validation:** Next 1 month (out-of-sample)
+
+### Step 3: Run Optimization
+1. Open cTrader → Automate → Your Bot → Optimize
+2. Import the `.optset` file
+3. Start optimization (genetic algorithm recommended)
 
 ---
 
-## 🎯 How to Use Optimization Files
+## Optimization Priority Order
 
-### Method 1: Using .optset Files (Recommended)
+### Priority 1: Core Parameters (Monthly)
 
-**Step 1: Load in cAlgo Optimizer**
-1. Open cAlgo
-2. Load your bot (Jcamp_1M_scalping)
-3. Click **Optimize** button
-4. Click **Import** and select an `.optset` file
-5. All parameter ranges will be loaded automatically
+| Parameter | Current | Range | Step | Impact |
+|-----------|---------|-------|------|--------|
+| **ADX Min Threshold** | 23 | 15-35 | 5 | HIGH - Entry filtering |
+| **ADX Period** | 16 | 7-28 | 1 | HIGH - Trend detection |
+| **MTF SMA Period** | 250 | 50-300 | 25 | HIGH - Trend alignment |
 
-**Step 2: Start with Quick Test**
-1. Load `quick_test.optset` (only 12 combinations)
-2. Run optimization on 1-2 months data
-3. Review results to understand parameter impact
-4. This takes ~5-10 minutes
+### Priority 2: Timeframe Alignment (Quarterly)
 
-**Step 3: Phase 1 - Core Quality**
-1. Load `phase1_core_quality.optset` (36 combinations)
-2. Run on 3 months data
-3. Identify top 3 performing combinations
-4. Note the best values for: MinSwingScore, MinFVGSize, MinRRRatio
+| Parameter | Current | Options | Impact |
+|-----------|---------|---------|--------|
+| **Timeframe 2** | m4 | m2, m3, m4, m5 | MEDIUM - MTF confirmation |
+| **Timeframe 3** | m15 | m6, m10, m15, m20, m30 | MEDIUM - Higher TF filter |
 
-**Step 4: Phase 2 - Impulse Strength**
-1. Edit `phase2_impulse_strength.optset`
-2. Set the FIXED parameters to your Phase 1 winners
-3. Load and run (16 combinations)
-4. Find overall best configuration
+### Priority 3: Entry Quality (Quarterly)
 
-### Method 2: Using .cbotset Presets
-
-### Step 1: Baseline Test
-1. Load `entry_balanced.cbotset` in cAlgo
-2. Run backtest on your standard period (e.g., 3 months)
-3. Record metrics:
-   - Total trades
-   - Win rate %
-   - Average RR
-   - Max drawdown
-   - Profit factor
-
-### Step 2: Compare Extremes
-4. Test `entry_quality_high.cbotset`
-5. Test `entry_frequency_high.cbotset`
-6. Compare all three results
-
-### Step 3: Fine-Tune Winner
-7. Take the best-performing preset
-8. Use the optimization matrix below for fine-tuning
+| Parameter | Current | Range | Step | Impact |
+|-----------|---------|-------|------|--------|
+| **ATR Period** | 16 | 10-20 | 2 | LOW - SL sizing |
+| **SL ATR Multiplier** | 2.0 | 1.0-2.5 | 0.25 | MEDIUM - SL distance |
+| **Minimum RR Ratio** | 4.0 | 2.0-5.0 | 0.5 | HIGH - Trade quality |
 
 ---
 
-## 🔬 Manual Optimization Matrix
+## Target Metrics (Fitness Criteria)
 
-Use cAlgo's built-in optimizer with these parameter ranges:
+| Priority | Metric | Target | Warning |
+|----------|--------|--------|---------|
+| 1st | **Profit Factor** | 1.3 - 2.0 | > 3.0 = overfitting |
+| 2nd | **Max Drawdown** | < 20% | > 25% = reject |
+| 3rd | **Net Profit** | > 0 | Negative = reject |
+| 4th | **Win Rate** | 25-45% | > 60% = overfitting |
+| 5th | **Trade Count** | 30+ | < 30 = insufficient data |
 
-### Priority 1: Core Quality Filters (Optimize First)
-
-| Parameter | Start | Range | Step | Goal |
-|-----------|-------|-------|------|------|
-| **Min Swing Score** | 0.65 | 0.60 → 0.75 | 0.05 | Higher = fewer/better trades |
-| **Min FVG Size** | 1.5 | 1.0 → 2.0 | 0.5 | Higher = cleaner gaps |
-| **Min RR Ratio** | 3.0 | 2.5 → 4.0 | 0.5 | Higher = better reward |
-
-**Test combinations:** 3 × 3 × 4 = **36 combinations**
-
----
-
-### Priority 2: Impulse Strength (Optimize Second)
-
-| Parameter | Start | Range | Step | Goal |
-|-----------|-------|-------|------|------|
-| **ATR Multiplier** | 1.5 | 1.25 → 2.0 | 0.25 | Higher = stronger moves only |
-| **Min PRE-Zone Score** | 0.50 | 0.45 → 0.60 | 0.05 | Higher = better zones |
-
-**Test combinations:** 4 × 4 = **16 combinations**
+### Overfitting Red Flags
+- Profit Factor > 3.0
+- Win Rate > 60%
+- Less than 30 trades
+- 1-2 trades account for most profit
+- Perfect equity curve (no drawdowns)
 
 ---
 
-### Priority 3: Fine Tuning (Optimize Third)
+## Current Optimization Ranges (.optset)
 
-| Parameter | Start | Range | Step | Goal |
-|-----------|-------|-------|------|------|
-| **Max Distance to Arm** | 10 | 8 → 12 | 2 | Lower = tighter entry |
-| **Session Weight** | 0.25 | 0.20 → 0.35 | 0.05 | Higher = session more important |
-| **Max Dynamic RR** | 5.0 | 4.0 → 5.0 | 0.5 | Cap TP extension |
+Based on `Jcamp_1M_scalping, EURUSD m1.optset`:
 
----
+### Enabled for Optimization
 
-## 📊 Optimization Workflow
+| Parameter | Min | Max | Step |
+|-----------|-----|-----|------|
+| MTFSMAPeriod | 50 | 300 | 25 |
+| Timeframe2 | m2 | m5 | enum |
+| Timeframe3 | m6 | m30 | enum |
+| ATRPeriod | 10 | 20 | 2 |
+| SLATRMultiplier | 1.0 | 2.5 | 0.25 |
+| ADXPeriod | 7 | 28 | 1 |
+| ADXMinThreshold | 15 | 35 | 5 |
+| ADXMaxThreshold | 40 | 50 | 5 |
 
-### Phase 1: Baseline (1 test)
-```
-Load: entry_balanced.cbotset
-Period: Last 3 months
-Record: All metrics
-```
+### Fixed During Optimization
 
-### Phase 2: Preset Comparison (3 tests)
-```
-Test all 3 presets
-Compare: Win rate, trades, profit factor
-Choose: Best performer
-```
-
-### Phase 3: Priority 1 Optimization (36 tests)
-```
-Optimize: MinSwingScore, MinFVGSize, MinRRRatio
-Keep: Best 3 combinations
-```
-
-### Phase 4: Priority 2 Optimization (16 tests per winner)
-```
-For each top 3 from Phase 3:
-  Optimize: ATRMultiplier, MinPreZoneScore
-Keep: Best overall
-```
-
-### Phase 5: Priority 3 Fine-Tuning (Optional)
-```
-Take winner from Phase 4
-Fine-tune: MaxDistanceToArm, SessionWeight
-Final validation: Walk-forward test
-```
+| Parameter | Value | Reason |
+|-----------|-------|--------|
+| EnableTrading | true | Required for trades |
+| RiskPercent | 1.0 | Consistent position sizing |
+| MinimumRRRatio | 4.0 | Quality filter |
+| EnableSessionFilter | true | Time-based filtering |
+| EnableChandelierSL | true | Trailing SL system |
+| EnableDailyLossLimit | **false** | Disable for optimization |
+| EnableConsecutiveLossLimit | **false** | Disable for optimization |
+| EnableMonthlyDrawdownLimit | true | Keep for realistic DD |
 
 ---
 
-## ⚠️ Optimization Best Practices
+## Session Filter Combinations
 
-### 1. Avoid Over-Optimization
-- Don't chase 100% perfect backtest results
-- Test on different time periods (walk-forward)
-- Validate on out-of-sample data
+Test these session combinations separately:
 
-### 2. Track the Right Metrics
-**Primary:**
-- Profit Factor (target: > 1.5)
-- Win Rate % (target: > 60%)
-- Max Drawdown (target: < 15%)
-
-**Secondary:**
-- Average RR (target: > 3.0)
-- Total Trades (minimum: 30+ for statistical validity)
-- Recovery Factor (Net Profit / Max DD)
-
-### 3. Balance Trade-offs
-| If you want... | Adjust... | Direction |
-|----------------|-----------|-----------|
-| Fewer trades | Min Swing Score | ↑ Increase |
-| Better entries | Min FVG Size | ↑ Increase |
-| Higher win rate | Min RR Ratio | ↑ Increase |
-| More opportunities | ATR Multiplier | ↓ Decrease |
-| Time-based filter | Session Weight | ↑ Increase |
+| Preset | London | NY | Asian | Best For |
+|--------|--------|-----|-------|----------|
+| All Sessions | true | true | true | Maximum trades |
+| London+NY | true | true | false | High volatility |
+| NY Only | false | true | false | US session focus |
+| London Only | true | false | false | EU session focus |
 
 ---
 
-## 🎓 Understanding the Parameters
+## ADX Mode Strategy
 
-### Min Swing Score (0.60 - 0.75)
-- **What it does:** Filters swing point quality based on multiple factors
-- **Higher:** Only trades near best swing extremes
-- **Lower:** More swing points qualify
-- **Impact:** HIGH - directly affects entry frequency
+| Mode | When to Use |
+|------|-------------|
+| **FlipDirection** (1) | Current default - contrarian in ranging markets |
+| **BlockEntry** (0) | Conservative - skip trades when ADX < threshold |
 
-### Min FVG Size (1.0 - 2.0 pips)
-- **What it does:** Minimum gap size to consider valid
-- **Higher:** Only significant imbalance gaps
-- **Lower:** Accepts smaller gaps (more noise)
-- **Impact:** HIGH - affects entry quality
-
-### ATR Multiplier (1.25 - 2.0)
-- **What it does:** How strong displacement must be
-- **Higher:** Only enters on explosive moves
-- **Lower:** Accepts weaker impulses
-- **Impact:** MEDIUM - affects setup confirmation
-
-### Min PRE-Zone Score (0.45 - 0.60)
-- **What it does:** Quality threshold for PRE-zones
-- **Higher:** Stricter zone validation
-- **Lower:** More zones qualify
-- **Impact:** MEDIUM - affects zone quality
-
-### Session Weight (0.20 - 0.35)
-- **What it does:** How much session timing matters in scoring
-- **Higher:** London/NY sessions heavily favored
-- **Lower:** Time-of-day less important
-- **Impact:** LOW-MEDIUM - time-based filtering
+**FlipDirection Logic:**
+- ADX < Threshold → Reverse signal direction (contrarian)
+- ADX >= Threshold → Follow signal direction (trend)
 
 ---
 
-## 📈 Expected Results by Preset
+## Walk-Forward Optimization (WFO)
 
-### Conservative (Quality High)
-```
-Trades per month:     8-15
-Win rate:            65-75%
-Avg RR:              3.5-4.0
-Max Drawdown:        8-12%
-Profit Factor:       2.0-2.5+
-```
+### Recommended WFO Schedule
 
-### Balanced (Recommended)
-```
-Trades per month:    15-25
-Win rate:            60-70%
-Avg RR:              3.0-3.5
-Max Drawdown:        10-15%
-Profit Factor:       1.5-2.0
-```
+| Optimization Period | Validation Period | Purpose |
+|--------------------|-------------------|---------|
+| 3 months | 1 month | Standard WFO |
+| 6 months | 2 months | Stable parameters |
 
-### Aggressive (Frequency High)
-```
-Trades per month:    25-40
-Win rate:            55-65%
-Avg RR:              2.5-3.0
-Max Drawdown:        12-18%
-Profit Factor:       1.3-1.8
-```
+### WFO Process
+1. Optimize on Period 1 (e.g., Jan-Mar)
+2. Validate on Period 2 (e.g., Apr)
+3. If validation fails (DD > 15%), re-optimize
+4. If validation passes, use for next period
 
 ---
 
-## 🔄 Next Steps
+## Quick Reference: Parameter Impact
 
-1. **Test Presets:** Start with all 3 preset files
-2. **Compare Results:** Use metrics table above
-3. **Choose Direction:** Quality vs Frequency
-4. **Optimize:** Follow Priority 1 → 2 → 3 workflow
-5. **Validate:** Walk-forward test on new data
-6. **Deploy:** Use best parameters for live/forward testing
+### Increase for Fewer/Better Trades
+- ADX Min Threshold ↑
+- MTF SMA Period ↑
+- Minimum RR Ratio ↑
+- SL ATR Multiplier ↑
+
+### Decrease for More Trades
+- ADX Min Threshold ↓
+- Minimum RR Ratio ↓
+
+### Session Timing
+- Enable fewer sessions = fewer but higher-quality trades
+- NY Only typically has best volatility for scalping
 
 ---
 
-## 📝 Notes
+## Files Reference
 
-- All presets keep chandelier settings constant (5 pips increment, 0.5 retracement, 5 pips buffer)
-- Visualizations are disabled for faster backtesting
-- Risk per trade fixed at 1%
-- Max positions = 1 (one trade at a time)
+| File | Purpose | Location |
+|------|---------|----------|
+| `Jcamp_1M_scalping, EURUSD m1.optset` | Optimization ranges | Downloads or optimization_sets |
+| `*.cbotset` | Runtime settings | optimization_sets folder |
+| `TradeLog_*.csv` | Trade history for analysis | Documents/cAlgo/Trade_Logs |
 
-**Created:** 2025-03-15
-**For:** Entry optimization without code changes
-**Next Review:** After optimization results
+---
+
+## Troubleshooting
+
+### Import Issues (Cloud vs Local)
+If `.cbotset` won't import, check for missing parameters:
+- `ClosePositionsOnMonthlyDD` (added v4.4.0)
+- `EnableCSVExport` (added v4.4.0)
+
+Add missing parameters manually or update Cloud instance to latest version.
+
+### Optimization Takes Too Long
+1. Reduce parameter ranges
+2. Use genetic algorithm instead of grid search
+3. Reduce backtest period to 2 months
+4. Disable unused parameters from optimization
+
+---
+
+**Remember:** Re-optimization is about finding robust parameters, not perfect backtest results. Prioritize consistency over peak performance.

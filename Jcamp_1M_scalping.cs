@@ -8,19 +8,19 @@ using cAlgo.API.Internals;
 namespace cAlgo.Robots
 {
     /// <summary>
-    /// Jcamp 1M Scalping Strategy - MTF SMA Alignment v4.1
-    /// Entry: Trade when price > SMA on ALL configured timeframes (M1 + TF2 + TF3)
-    /// Trigger: M1 SMA crossover while higher TFs already aligned
+    /// Jcamp 1M Scalping Strategy - 4-Timeframe MTF SMA Alignment v4.6
+    /// Entry: Trade when price > SMA on ALL 4 timeframes (M1 + TF0 + TF1 + TF2)
+    /// Trigger: TF0 (M2-M6) SMA crossover while all TFs aligned (reduces M1 noise)
     /// Filter: ADX trend strength filter to avoid ranging markets
-    /// Exit: Exhaustion detection via swing pattern + RSI divergence
+    /// Exit: Chandelier trailing SL + Exhaustion detection
     /// </summary>
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class Jcamp_1M_scalping : Robot
     {
         #region Version Info
-        private const string BOT_VERSION = "4.5.0-WFO";
-        private const string VERSION_DATE = "2026-04-08";
-        private const string VERSION_NOTES = "NEW: Smart notification system - MTF changes, blocked signals, 3h updates, daily summary";
+        private const string BOT_VERSION = "4.6.0-WFO";
+        private const string VERSION_DATE = "2026-04-10";
+        private const string VERSION_NOTES = "NEW: 4-Timeframe MTF System - TF0 (M2-M6) entry trigger separates crossover from alignment, reduces M1 noise";
         #endregion
 
         #region Parameters - MTF SMA Alignment
@@ -34,11 +34,14 @@ namespace cAlgo.Robots
         [Parameter("MTF SMA Period", DefaultValue = 275, MinValue = 50, MaxValue = 350, Step = 25, Group = "MTF SMA Alignment")]
         public int MTFSMAPeriod { get; set; }
 
-        [Parameter("Timeframe 2", DefaultValue = "Minute4", Group = "MTF SMA Alignment")]
-        public TimeFrame Timeframe2 { get; set; }
+        [Parameter("TF0 - Entry Trigger (M2-M6)", DefaultValue = "Minute4", Group = "MTF SMA Alignment")]
+        public TimeFrame Timeframe0 { get; set; }
 
-        [Parameter("Timeframe 3", DefaultValue = "Minute15", Group = "MTF SMA Alignment")]
-        public TimeFrame Timeframe3 { get; set; }
+        [Parameter("TF1 - Medium Term (M7-M10)", DefaultValue = "Minute10", Group = "MTF SMA Alignment")]
+        public TimeFrame Timeframe1 { get; set; }
+
+        [Parameter("TF2 - Higher Term (M15/M20/M30)", DefaultValue = "Minute30", Group = "MTF SMA Alignment")]
+        public TimeFrame Timeframe2 { get; set; }
 
         [Parameter("Require All TFs Aligned", DefaultValue = true, Group = "MTF SMA Alignment")]
         public bool RequireAllTFsAligned { get; set; }
@@ -332,18 +335,19 @@ namespace cAlgo.Robots
 
         #region Private Fields
 
-        // MTF Bar Data
-        private Bars m1Bars;
-        private Bars tf2Bars;
-        private Bars tf3Bars;
+        // MTF Bar Data (4-Timeframe System)
+        private Bars m1Bars;    // M1 - Chart timeframe (alignment check)
+        private Bars tf0Bars;   // TF0 - Entry trigger (M2-M6, crossover detection)
+        private Bars tf1Bars;   // TF1 - Medium term (M7-M10, alignment check)
+        private Bars tf2Bars;   // TF2 - Higher term (M15/M20/M30, alignment check)
 
         // Indicators
         private AverageTrueRange atrM1;
         private DirectionalMovementSystem adxIndicator;
         private RelativeStrengthIndex exhaustionRSI;
 
-        // MTF SMA tracking
-        private string _previousM1Alignment = "";
+        // MTF SMA tracking (TF0 crossover detection)
+        private string _previousTF0Alignment = "";
 
         // Chandelier state tracking
         private Dictionary<int, ChandelierState> _chandelierStates;
@@ -461,13 +465,14 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Initialize MTF bar data
-            m1Bars = MarketData.GetBars(TimeFrame.Minute);
-            tf2Bars = MarketData.GetBars(Timeframe2);
-            tf3Bars = MarketData.GetBars(Timeframe3);
+            // Initialize MTF bar data (4-Timeframe System)
+            m1Bars = MarketData.GetBars(TimeFrame.Minute);      // M1 - Alignment check
+            tf0Bars = MarketData.GetBars(Timeframe0);           // TF0 - Entry trigger
+            tf1Bars = MarketData.GetBars(Timeframe1);           // TF1 - Medium term
+            tf2Bars = MarketData.GetBars(Timeframe2);           // TF2 - Higher term
 
-            Print("[MTF-SMA] Initialized | M1 + {0} + {1} | SMA Period: {2}",
-                Timeframe2, Timeframe3, MTFSMAPeriod);
+            Print("[MTF-SMA] 4-TF System | M1 (align) + TF0 {0} (trigger) + TF1 {1} + TF2 {2} | SMA: {3}",
+                Timeframe0, Timeframe1, Timeframe2, MTFSMAPeriod);
 
             // Initialize ATR indicator
             atrM1 = Indicators.AverageTrueRange(m1Bars, ATRPeriod, MovingAverageType.Simple);
@@ -538,7 +543,7 @@ namespace cAlgo.Robots
                     string.Format("JCAMP_cBot_SMA_Debug_{0}_{1}.csv", SymbolName, DateTime.Now.ToString("yyyyMMdd_HHmmss")));
 
                 _smaDebugWriter = new System.IO.StreamWriter(_smaDebugPath, false);
-                _smaDebugWriter.WriteLine("Timestamp,BarIndex,Price_M1,SMA_M1,Align_M1,SMA_TF2,Align_TF2,SMA_TF3,Align_TF3,MTF_Aligned,MTF_Direction,M1_Crossover");
+                _smaDebugWriter.WriteLine("Timestamp,BarIndex,Price_M1,SMA_M1,Align_M1,SMA_TF0,Align_TF0,SMA_TF1,Align_TF1,SMA_TF2,Align_TF2,MTF_Aligned,MTF_Direction,TF0_Crossover");
                 _smaDebugWriter.Flush();
 
                 Print("[SMA-DEBUG] CSV export enabled: {0}", _smaDebugPath);
@@ -610,7 +615,7 @@ namespace cAlgo.Robots
 
             // SMA Debug CSV Export (log confirmed bar values)
             // IMPORTANT: This runs AFTER ProcessMTFSMAEntry to avoid interfering with crossover detection
-            bool shouldLogSMA = EnableCSVExport && _smaDebugWriter != null && m1Bars != null && tf2Bars != null && tf3Bars != null;
+            bool shouldLogSMA = EnableCSVExport && _smaDebugWriter != null && m1Bars != null && tf0Bars != null && tf1Bars != null && tf2Bars != null;
 
             // Process MTF SMA entry
             if (EnableMTFSMAEntry)
@@ -618,40 +623,52 @@ namespace cAlgo.Robots
                 ProcessMTFSMAEntry();
             }
 
+            // Update TF0 alignment tracking EVERY bar (AFTER ProcessMTFSMAEntry)
+            // This prevents stale _previousTF0Alignment when MTF hasn't been aligned for multiple bars
+            // DetectTF0Crossover uses the OLD _previousTF0Alignment, then we update it here for next bar
+            if (tf0Bars != null && tf0Bars.Count >= MTFSMAPeriod)
+            {
+                _previousTF0Alignment = GetSMAAlignment(tf0Bars);
+            }
+
             // SMA Debug CSV Export - LOG AFTER ProcessMTFSMAEntry to avoid interfering
             if (shouldLogSMA)
             {
                 double priceM1 = m1Bars.ClosePrices.LastValue;
                 double smaM1 = CalculateSMAForBars(m1Bars, MTFSMAPeriod);
+                double smaTF0 = CalculateSMAForBars(tf0Bars, MTFSMAPeriod);
+                double smaTF1 = CalculateSMAForBars(tf1Bars, MTFSMAPeriod);
                 double smaTF2 = CalculateSMAForBars(tf2Bars, MTFSMAPeriod);
-                double smaTF3 = CalculateSMAForBars(tf3Bars, MTFSMAPeriod);
 
                 string alignM1 = GetSMAAlignment(m1Bars);
+                string alignTF0 = GetSMAAlignment(tf0Bars);
+                string alignTF1 = GetSMAAlignment(tf1Bars);
                 string alignTF2 = GetSMAAlignment(tf2Bars);
-                string alignTF3 = GetSMAAlignment(tf3Bars);
 
-                // Read-only check - don't call DetectM1Crossover (has side effects!)
-                string currentM1 = GetSMAAlignment(m1Bars);
-                bool m1Crossed = (!string.IsNullOrEmpty(_previousM1Alignment)
-                    && _previousM1Alignment != "NONE"
-                    && _previousM1Alignment != currentM1
-                    && currentM1 != "NONE");
+                // Read-only check - don't call DetectTF0Crossover (has side effects!)
+                string currentTF0 = GetSMAAlignment(tf0Bars);
+                bool tf0Crossed = (!string.IsNullOrEmpty(_previousTF0Alignment)
+                    && _previousTF0Alignment != "NONE"
+                    && _previousTF0Alignment != currentTF0
+                    && currentTF0 != "NONE");
 
                 bool mtfAligned = CheckMTFAlignment(out string mtfDirection);
 
-                _smaDebugWriter.WriteLine(string.Format("{0},{1},{2:F5},{3:F5},{4},{5:F5},{6},{7:F5},{8},{9},{10},{11}",
+                _smaDebugWriter.WriteLine(string.Format("{0},{1},{2:F5},{3:F5},{4},{5:F5},{6},{7:F5},{8},{9:F5},{10},{11},{12},{13}",
                     Server.Time.ToString("yyyy-MM-dd HH:mm:ss"),
                     Bars.Count,
                     priceM1,
                     smaM1,
                     alignM1,
+                    smaTF0,
+                    alignTF0,
+                    smaTF1,
+                    alignTF1,
                     smaTF2,
                     alignTF2,
-                    smaTF3,
-                    alignTF3,
                     mtfAligned ? "TRUE" : "FALSE",
                     mtfDirection,
-                    m1Crossed ? currentM1 : "NONE"));
+                    tf0Crossed ? currentTF0 : "NONE"));
                 _smaDebugWriter.Flush();
             }
 
@@ -696,48 +713,57 @@ namespace cAlgo.Robots
         {
             direction = "NONE";
 
-            if (m1Bars == null || tf2Bars == null || tf3Bars == null)
+            // Check all 4 timeframes are initialized
+            if (m1Bars == null || tf0Bars == null || tf1Bars == null || tf2Bars == null)
                 return false;
 
-            string m1 = GetSMAAlignment(m1Bars);
-            string tf2 = GetSMAAlignment(tf2Bars);
-            string tf3 = GetSMAAlignment(tf3Bars);
+            // Get alignment for each timeframe
+            string m1 = GetSMAAlignment(m1Bars);     // M1 chart
+            string tf0 = GetSMAAlignment(tf0Bars);   // TF0 entry trigger
+            string tf1 = GetSMAAlignment(tf1Bars);   // TF1 medium term
+            string tf2 = GetSMAAlignment(tf2Bars);   // TF2 higher term
 
-            bool allBuy = (m1 == "BUY" && tf2 == "BUY" && tf3 == "BUY");
-            bool allSell = (m1 == "SELL" && tf2 == "SELL" && tf3 == "SELL");
+            // Check if all 4 timeframes agree on direction
+            bool allBuy = (m1 == "BUY" && tf0 == "BUY" && tf1 == "BUY" && tf2 == "BUY");
+            bool allSell = (m1 == "SELL" && tf0 == "SELL" && tf1 == "SELL" && tf2 == "SELL");
 
             if (RequireAllTFsAligned)
             {
+                // Require all 4 TFs aligned
                 if (allBuy) { direction = "BUY"; return true; }
                 if (allSell) { direction = "SELL"; return true; }
                 return false;
             }
             else
             {
-                int buyCount = (m1 == "BUY" ? 1 : 0) + (tf2 == "BUY" ? 1 : 0) + (tf3 == "BUY" ? 1 : 0);
-                int sellCount = (m1 == "SELL" ? 1 : 0) + (tf2 == "SELL" ? 1 : 0) + (tf3 == "SELL" ? 1 : 0);
+                // Require 3 out of 4 TFs aligned
+                int buyCount = (m1 == "BUY" ? 1 : 0) + (tf0 == "BUY" ? 1 : 0) + (tf1 == "BUY" ? 1 : 0) + (tf2 == "BUY" ? 1 : 0);
+                int sellCount = (m1 == "SELL" ? 1 : 0) + (tf0 == "SELL" ? 1 : 0) + (tf1 == "SELL" ? 1 : 0) + (tf2 == "SELL" ? 1 : 0);
 
-                if (buyCount >= 2) { direction = "BUY"; return true; }
-                if (sellCount >= 2) { direction = "SELL"; return true; }
+                if (buyCount >= 3) { direction = "BUY"; return true; }
+                if (sellCount >= 3) { direction = "SELL"; return true; }
                 return false;
             }
         }
 
-        private bool DetectM1Crossover(out string direction)
+        private bool DetectTF0Crossover(out string direction)
         {
             direction = "NONE";
 
-            if (m1Bars == null) return false;
+            if (tf0Bars == null) return false;
 
-            string current = GetSMAAlignment(m1Bars);
+            string current = GetSMAAlignment(tf0Bars);
 
-            bool crossed = !string.IsNullOrEmpty(_previousM1Alignment)
-                           && _previousM1Alignment != "NONE"
-                           && _previousM1Alignment != current
+            bool crossed = !string.IsNullOrEmpty(_previousTF0Alignment)
+                           && _previousTF0Alignment != "NONE"
+                           && _previousTF0Alignment != current
                            && current != "NONE";
 
             direction = current;
-            _previousM1Alignment = current;
+
+            // NOTE: _previousTF0Alignment is now updated in OnBar() AFTER this function returns
+            // This ensures it's updated EVERY bar, not just when MTF is aligned
+            // TF0 (M2-M6) provides less noisy crossover signals than M1
 
             return crossed;
         }
@@ -876,20 +902,21 @@ namespace cAlgo.Robots
                 if (currentMTFAligned != _previousMTFAligned)
                 {
                     string m1 = GetSMAAlignment(m1Bars);
+                    string tf0 = GetSMAAlignment(tf0Bars);
+                    string tf1 = GetSMAAlignment(tf1Bars);
                     string tf2 = GetSMAAlignment(tf2Bars);
-                    string tf3 = GetSMAAlignment(tf3Bars);
 
                     if (currentMTFAligned)
                     {
-                        // MTF just became aligned
-                        SendNotification(string.Format("MTF Aligned {0} | M1:{1} TF2:{2} TF3:{3} | Waiting for M1 crossover",
-                            alignmentDirection, m1, tf2, tf3));
+                        // MTF just became aligned (all 4 TFs)
+                        SendNotification(string.Format("MTF Aligned {0} | M1:{1} TF0:{2} TF1:{3} TF2:{4} | Waiting for TF0 crossover",
+                            alignmentDirection, m1, tf0, tf1, tf2));
                     }
                     else
                     {
-                        // MTF lost alignment - "Waiting for M1 crossover CANCELLED"
-                        SendNotification(string.Format("MTF Lost Alignment (was waiting for M1 crossover) | M1:{0} TF2:{1} TF3:{2}",
-                            m1, tf2, tf3));
+                        // MTF lost alignment
+                        SendNotification(string.Format("MTF Lost Alignment (was waiting for TF0 crossover) | M1:{0} TF0:{1} TF1:{2} TF2:{3}",
+                            m1, tf0, tf1, tf2));
                     }
 
                     _previousMTFAligned = currentMTFAligned;
@@ -899,11 +926,12 @@ namespace cAlgo.Robots
                 else if (currentMTFAligned && alignmentDirection != _previousMTFDirection && _previousMTFDirection != "NONE")
                 {
                     string m1 = GetSMAAlignment(m1Bars);
+                    string tf0 = GetSMAAlignment(tf0Bars);
+                    string tf1 = GetSMAAlignment(tf1Bars);
                     string tf2 = GetSMAAlignment(tf2Bars);
-                    string tf3 = GetSMAAlignment(tf3Bars);
 
-                    SendNotification(string.Format("MTF Direction Changed: {0} → {1} | M1:{2} TF2:{3} TF3:{4}",
-                        _previousMTFDirection, alignmentDirection, m1, tf2, tf3));
+                    SendNotification(string.Format("MTF Direction Changed: {0} → {1} | M1:{2} TF0:{3} TF1:{4} TF2:{5}",
+                        _previousMTFDirection, alignmentDirection, m1, tf0, tf1, tf2));
 
                     _previousMTFDirection = alignmentDirection;
                 }
@@ -922,22 +950,22 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Check for M1 crossover
-            if (DetectM1Crossover(out string m1Direction))
+            // Check for TF0 crossover (entry trigger)
+            if (DetectTF0Crossover(out string tf0Direction))
             {
-                if (m1Direction == alignmentDirection)
+                if (tf0Direction == alignmentDirection)
                 {
                     // Apply flip if ADX is low and mode is FlipDirection
                     string tradeDirection = alignmentDirection;
                     if (flipDirection)
                     {
                         tradeDirection = (alignmentDirection == "BUY") ? "SELL" : "BUY";
-                        Print("[MTF-SMA] All TFs aligned {0} | ADX: {1:F1} (low) | FLIP → {2}",
+                        Print("[MTF-SMA] All 4 TFs aligned {0} | TF0 crossover | ADX: {1:F1} (low) | FLIP → {2}",
                             alignmentDirection, adxValue, tradeDirection);
                     }
                     else
                     {
-                        Print("[MTF-SMA] All TFs aligned {0} | M1 crossover | ADX: {1:F1} | ENTRY",
+                        Print("[MTF-SMA] All 4 TFs aligned {0} | TF0 crossover | ADX: {1:F1} | ENTRY",
                             tradeDirection, adxValue);
                     }
 
@@ -1865,8 +1893,9 @@ namespace cAlgo.Robots
             Print("========================================");
             Print("[RE-OPTIMIZE] Current Settings:");
             Print("[RE-OPTIMIZE]   MTF SMA Period: {0}", MTFSMAPeriod);
-            Print("[RE-OPTIMIZE]   Timeframe 2: {0}", Timeframe2);
-            Print("[RE-OPTIMIZE]   Timeframe 3: {0}", Timeframe3);
+            Print("[RE-OPTIMIZE]   TF0 (Entry Trigger): {0}", Timeframe0);
+            Print("[RE-OPTIMIZE]   TF1 (Medium Term): {0}", Timeframe1);
+            Print("[RE-OPTIMIZE]   TF2 (Higher Term): {0}", Timeframe2);
             Print("[RE-OPTIMIZE]   ADX Period: {0} | Threshold: {1}", ADXPeriod, ADXMinThreshold);
             Print("[RE-OPTIMIZE]   ATR Period: {0} | SL Multiplier: {1}", ATRPeriod, SLATRMultiplier);
             Print("[RE-OPTIMIZE]   Min RR: {0} | Risk: {1}%", MinimumRRRatio, RiskPercent);
@@ -1966,11 +1995,11 @@ namespace cAlgo.Robots
                 "ADXValue", "ADXPeriod", "ADXThreshold", "ADXMaxThreshold", "ADXMode",
                 "FlipDirectionUsed", "ADXTrending",
 
-                // MTF Alignment
-                "MTFAlignment", "M1Direction", "TF2Direction", "TF3Direction",
+                // MTF Alignment (4-TF System)
+                "MTFAlignment", "M1Direction", "TF0Direction", "TF1Direction", "TF2Direction",
 
                 // Parameters Snapshot
-                "SMAPeriod", "Timeframe2", "Timeframe3", "MinRR", "RiskPercent",
+                "SMAPeriod", "Timeframe0", "Timeframe1", "Timeframe2", "MinRR", "RiskPercent",
                 "ATRPeriod", "SLATRMultiplier", "SLBufferPips", "MinimumSLPips",
                 "ChandelierActivationRR", "TrailIncrementPips", "MinChandelierDistance", "TPModeSelection",
                 "EnableLondonSession", "EnableNYSession", "EnableAsianSession", "MaxPositions",
@@ -2053,12 +2082,12 @@ namespace cAlgo.Robots
                 Math.Round(ctx.ADXValue, 2), ADXPeriod, ADXMinThreshold, ADXMaxThreshold,
                 ctx.ADXMode, ctx.FlipDirectionUsed, adxTrending,
 
-                // MTF Alignment
+                // MTF Alignment (4-TF System)
                 ctx.MTFAlignment,
-                GetSMAAlignment(m1Bars), GetSMAAlignment(tf2Bars), GetSMAAlignment(tf3Bars),
+                GetSMAAlignment(m1Bars), GetSMAAlignment(tf0Bars), GetSMAAlignment(tf1Bars), GetSMAAlignment(tf2Bars),
 
                 // Parameters Snapshot
-                MTFSMAPeriod, Timeframe2, Timeframe3, MinimumRRRatio, RiskPercent,
+                MTFSMAPeriod, Timeframe0, Timeframe1, Timeframe2, MinimumRRRatio, RiskPercent,
                 ATRPeriod, SLATRMultiplier, SLBufferPips, MinimumSLPips,
                 ChandelierActivationRR, TrailIncrementPips, MinChandelierDistance, (int)TPModeSelection,
                 EnableLondonSession, EnableNYSession, EnableAsianSession, MaxPositions,
@@ -2344,19 +2373,20 @@ namespace cAlgo.Robots
             // Get current MTF alignment
             bool mtfAligned = CheckMTFAlignment(out string direction);
             string m1 = GetSMAAlignment(m1Bars);
+            string tf0 = GetSMAAlignment(tf0Bars);
+            string tf1 = GetSMAAlignment(tf1Bars);
             string tf2 = GetSMAAlignment(tf2Bars);
-            string tf3 = GetSMAAlignment(tf3Bars);
 
             string status;
             if (mtfAligned)
             {
-                status = string.Format("MTF Aligned {0} | Waiting for M1 crossover | M1:{1} TF2:{2} TF3:{3}",
-                    direction, m1, tf2, tf3);
+                status = string.Format("MTF Aligned {0} | Waiting for TF0 crossover | M1:{1} TF0:{2} TF1:{3} TF2:{4}",
+                    direction, m1, tf0, tf1, tf2);
             }
             else
             {
-                status = string.Format("MTF Not Aligned | M1:{0} TF2:{1} TF3:{2}",
-                    m1, tf2, tf3);
+                status = string.Format("MTF Not Aligned | M1:{0} TF0:{1} TF1:{2} TF2:{3}",
+                    m1, tf0, tf1, tf2);
             }
 
             // Add position info
