@@ -5,12 +5,14 @@ from typing import Dict, Any
 
 
 # Default cBot parameters (full structure matching cTrader format)
+# v4.6.0+ uses Timeframe0, Timeframe1, Timeframe2 (4TF system)
 DEFAULT_CBOT_PARAMS = {
     "MTFHeader": "",
     "EnableMTFSMAEntry": True,
-    "MTFSMAPeriod": 250,
-    "Timeframe2": "m4",
-    "Timeframe3": "m15",
+    "MTFSMAPeriod": 275,
+    "Timeframe0": "m4",  # v4.6.0+ Entry trigger
+    "Timeframe1": "m10", # v4.6.0+ Medium term
+    "Timeframe2": "m30", # v4.6.0+ Higher term
     "RequireAllTFsAligned": True,
     "ATRPeriod": 16,
     "SLATRMultiplier": 2.0,
@@ -82,7 +84,11 @@ PARAM_NAME_MAPPING = {
     "MonthlyDDLimit": "MaxMonthlyDrawdownPercent",
     # Direct mappings (same name, included for completeness)
     "MTFSMAPeriod": "MTFSMAPeriod",
+    # v4.6.0+ 4TF system
+    "Timeframe0": "Timeframe0",
+    "Timeframe1": "Timeframe1",
     "Timeframe2": "Timeframe2",
+    # v4.5.x backward compatibility (old 3TF system)
     "Timeframe3": "Timeframe3",
     "RequireAllTFsAligned": "RequireAllTFsAligned",
     "ATRPeriod": "ATRPeriod",
@@ -132,8 +138,8 @@ def _convert_value(param_name: str, value: Any) -> Any:
     if param_name == "ADXMode" and isinstance(value, str):
         return ADX_MODE_MAP.get(value, 1)
 
-    # Timeframes: uppercase to lowercase
-    if param_name in ["Timeframe2", "Timeframe3"] and isinstance(value, str):
+    # Timeframes: uppercase to lowercase (v4.6.0: TF0, TF1, TF2; v4.5.x: TF2, TF3)
+    if param_name in ["Timeframe0", "Timeframe1", "Timeframe2", "Timeframe3"] and isinstance(value, str):
         return value.lower()
 
     # Ensure floats for threshold values
@@ -269,26 +275,48 @@ def export_optimization_set(output_path: str, focus_params: list = None) -> Dict
         {"success": bool, "message": str} or {"success": bool, "error": str}
     """
     # Default parameters to optimize with their ranges
+    # v4.6.0 4TF System - Updated ranges based on WFO findings
     OPTIMIZATION_PARAMS = {
         # ADX Settings - Primary optimization targets
         "ADXPeriod": {
-            "min": 14,
+            "min": 9,
             "max": 21,
-            "step": 1,
+            "step": 2,
             "default": 16
         },
         "ADXMinThreshold": {
-            "min": 15,
-            "max": 40,
+            "min": 10,  # v4.6.0 CONSTRAINED to 10-18 max (NOT 15-40!)
+            "max": 18,  # Prevents FlipDirection disasters
+            "step": 2,
+            "default": 12
+        },
+        "ADXMaxThreshold": {
+            "min": 35,
+            "max": 50,
             "step": 5,
-            "default": 35
+            "default": 40
         },
         # MTF Settings - Secondary optimization
         "MTFSMAPeriod": {
             "min": 200,
             "max": 300,
             "step": 25,
-            "default": 250
+            "default": 275
+        },
+        # v4.6.0 4TF System - Entry trigger timeframe
+        "Timeframe0": {
+            "values": ["m2", "m3", "m4", "m5", "m6"],
+            "default": "m4"
+        },
+        # v4.6.0 4TF System - Medium term timeframe
+        "Timeframe1": {
+            "values": ["m7", "m8", "m9", "m10"],
+            "default": "m10"
+        },
+        # v4.6.0 4TF System - Higher term timeframe
+        "Timeframe2": {
+            "values": ["m15", "m20", "m30"],
+            "default": "m30"
         },
         # Session toggles - Discrete optimization
         "EnableLondonSession": {
