@@ -1,8 +1,27 @@
-# JCAMP FxScalper v4.6.0-WFO
+# JCAMP FxScalper - Multi-Version Branch Strategy
 
-**4-Timeframe MTF System** with TF0 Entry Trigger, ADX FlipDirection mode, Chandelier Trailing SL, and Advanced Risk Protection.
+> **⚠️ IMPORTANT**: v4.6.0 showing **negative R on validations**. Use v4.5.x for production until further testing.
 
-> **Latest Update**: v4.6.0 (2026-04-10) - Separates entry trigger (TF0) from alignment confirmation to eliminate M1 noise
+## Version Branches
+
+| Branch | Status | Architecture | Performance |
+|--------|--------|--------------|-------------|
+| **v4.5.x** | ✅ **Production** | 3TF (M1, TF2, TF3) | Positive R on validations |
+| **master (v4.6.0)** | 🧪 Experimental | 4TF (M1, TF0, TF1, TF2) | Negative R on validations |
+
+### Switching Versions
+
+```bash
+# Use v4.5.x (RECOMMENDED for trading)
+git checkout v4.5.x
+
+# Use v4.6.0 (experimental testing only)
+git checkout master
+```
+
+**See**: `debug/v4.5_vs_v4.6_PERFORMANCE_COMPARISON.md` for detailed analysis
+
+---
 
 ## Quick Start
 
@@ -201,13 +220,16 @@ If monthly DD limit (10%) hit → re-optimize immediately.
 
 ## Version History
 
-### v4.6.0-WFO (Current - 2026-04-10)
+### v4.6.0-WFO (master branch - 2026-04-10) 🧪 EXPERIMENTAL
 - **🎯 NEW: 4-Timeframe MTF System** - Separates entry trigger from alignment confirmation
   - **TF0 (M2-M6)**: Entry trigger - crossover detection (replaces noisy M1)
   - **TF1 (M7-M10)**: Medium-term alignment (renamed from TF2)
   - **TF2 (M15/M20/M30)**: Higher-term alignment (renamed from TF3)
   - **M1**: Chart timeframe - still part of alignment check
   - **Rationale**: M1 too noisy for crossover signals → TF0 provides cleaner entry triggers
+  - **⚠️ PERFORMANCE**: Showing **negative R on validations** (Jan-Mar 2026, Apr-Jun 2025)
+  - **Status**: Experimental - v4.5.x outperforming on same periods
+  - **Branch**: Use `git checkout v4.5.x` for production trading
   - **Impact**: Reduces false signals from M1 whipsaws while maintaining responsive entries
   - **Parameters**: Added `Timeframe0` (default: M4), renamed `Timeframe2→Timeframe1`, `Timeframe3→Timeframe2`
   - **CSV Logging**: Updated to track all 4 TFs with TF0_Crossover column
