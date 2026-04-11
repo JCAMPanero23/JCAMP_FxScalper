@@ -1,6 +1,8 @@
-# JCAMP FxScalper v4.4.0-WFO
+# JCAMP FxScalper v4.6.0-WFO
 
-MTF SMA Alignment Strategy with ADX FlipDirection mode, Chandelier Trailing SL, and Advanced Risk Protection.
+**4-Timeframe MTF System** with TF0 Entry Trigger, ADX FlipDirection mode, Chandelier Trailing SL, and Advanced Risk Protection.
+
+> **Latest Update**: v4.6.0 (2026-04-10) - Separates entry trigger (TF0) from alignment confirmation to eliminate M1 noise
 
 ## Quick Start
 
@@ -54,23 +56,50 @@ Visual indicator that shows the same entry signals as the cBot. Use on M1 chart 
 
 ---
 
-## Current Parameters (v4.4.0-WFO)
+## 🎯 4-Timeframe System (v4.6.0)
+
+### Architecture Overview
+
+| Timeframe | Default | Range | Purpose |
+|-----------|---------|-------|---------|
+| **M1** | M1 | M1 (chart) | Alignment check |
+| **TF0** ✨ | **M4** | **M2-M6** | **Entry trigger** (crossover detection) |
+| **TF1** | M10 | M7-M10 | Medium-term alignment |
+| **TF2** | M30 | M15/M20/M30 | Higher-term alignment |
+
+### Entry Logic
+1. ✅ Check all 4 TFs aligned (M1 + TF0 + TF1 + TF2)
+2. ⏳ Wait for **TF0 crossover** (TF0 price crosses TF0 SMA)
+3. 🚀 Enter trade (apply ADX flip if needed)
+
+**Key Insight**: TF0 (M2-M6) provides cleaner crossover signals than noisy M1!
+
+---
+
+## Current Parameters (v4.6.0-WFO)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| MTF SMA Period | 250 | Core trend detection |
-| Timeframe 2 | M4 | Medium-term alignment |
-| Timeframe 3 | M15 | Higher TF confirmation |
-| ADX Mode | FlipDirection | Contrarian in ranging |
-| ADX Period | 16 | |
-| ADX Threshold | 23 | Below = flip direction (optimize: 15-25) |
+| **MTF SMA Period** | 275 | Same SMA period across all TFs |
+| **TF0 (Entry Trigger)** | **M4** | **Crossover detection** (optimize M2-M6) |
+| **TF1 (Medium Term)** | M10 | Trend filter (optimize M7-M10) |
+| **TF2 (Higher Term)** | M30 | Higher TF bias (optimize M15/M20/M30) |
+| ADX Mode | FlipDirection | Contrarian in ranging markets |
+| ADX Period | 9 | ADX calculation period |
+| ADX Threshold | 23 | Below = flip direction (optimize: 15-30) |
+| ADX Max Threshold | 40 | Above = block entry (optimize: 35-50) |
 | Minimum RR | 4.0 | High-quality setups only |
 | Daily Loss Limit | -3R | Stops trading for the day |
 | Consecutive Loss Limit | 9 losses | Strategy degradation warning |
 | Monthly DD Limit | 10% | Stop and re-optimize |
 | **Close on DD Limit** | **true** | **Closes all positions when DD hit** |
 
-**Optimization File:** `Jcamp_1M_scalping, EURUSD m1_v4.1.2.optset`
+**Optimization File**: `Jcamp_1M_scalping_v4.6.0_4TF_System.optset`
+
+**Documentation**:
+- Quick Start: `debug/READY_TO_OPTIMIZE_v4.6.0.md`
+- Full Guide: `optimization_sets/v4.6.0_OPTIMIZATION_GUIDE.md`
+- Architecture: `debug/4TF_SYSTEM_v4.6.0.md`
 
 ## Risk Management (3 Layers)
 
@@ -106,17 +135,39 @@ Visual indicator that shows the same entry signals as the cBot. Use on M1 chart 
 | Feb | -10% | Capped (was -15%) |
 | **Net** | **+26%** | |
 
-## Optimization Guide
+## Optimization Guide (v4.6.0)
 
-### Schedule
+### Recommended Approach: 3-Phase Optimization
 
-| Parameter | Frequency | Range |
-|-----------|-----------|-------|
-| ADX Threshold | Monthly | 15-25 |
-| ADX Period | Monthly | 14-21 |
-| SMA Period | Quarterly | 200-300 |
-| Timeframe 2 | Quarterly | M2-M5 |
-| Timeframe 3 | Quarterly | M10-M30 |
+**Phase 1** (Most Important!): Find Optimal **TF0** (Entry Trigger)
+- **Optimize**: TF0 (M2, M3, M4, M5, M6)
+- **Fix all others**: TF1=M10, TF2=M30, SMA=275, ADX defaults
+- **Goal**: Find which TF0 gives **positive R-multiple**
+- **Time**: ~5-10 minutes (only 5 combinations!)
+
+**Phase 2**: Optimize SMA + ADX with Best TF0
+- **Use**: Best TF0 from Phase 1
+- **Optimize**: SMA Period (200-300), ADX Period (7-21), ADX Threshold (15-30)
+- **Goal**: Fine-tune for best Profit Factor
+- **Time**: ~30-60 minutes
+
+**Phase 3**: Fine-tune TF1 + TF2 (Optional)
+- **Optimize**: TF1 (M7-M10), TF2 (M15/M20/M30)
+- **Goal**: Minor improvements
+- **Time**: ~10 minutes
+
+### Parameter Ranges (v4.6.0)
+
+| Parameter | Range | Step | Priority |
+|-----------|-------|------|----------|
+| **TF0 (Entry)** | M2-M6 | - | **Highest** ⭐ |
+| TF1 (Medium) | M7-M10 | - | Low |
+| TF2 (Higher) | M15, M20, M30 | - | Low |
+| SMA Period | 200-300 | 25 | High |
+| ADX Period | 7-21 | 1-2 | Medium |
+| ADX Threshold | 15-30 | 1-2 | High |
+| ADX Max | 35-50 | 5 | Medium |
+| Min RR | 3.0-6.0 | 0.5 | Medium |
 
 ### Target Priority
 
