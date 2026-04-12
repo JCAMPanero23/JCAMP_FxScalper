@@ -54,6 +54,12 @@ namespace cAlgo.Indicators
         [Parameter("ADX Period", DefaultValue = 14, MinValue = 7, MaxValue = 28, Group = "Global Settings")]
         public int ADXPeriod { get; set; }
 
+        [Parameter("ADX Min Threshold", DefaultValue = 20, MinValue = 10, MaxValue = 35, Group = "Global Settings")]
+        public double ADXMinThreshold { get; set; }
+
+        [Parameter("ADX Max Threshold", DefaultValue = 40, MinValue = 35, MaxValue = 50, Group = "Global Settings")]
+        public double ADXMaxThreshold { get; set; }
+
         [Parameter("Show Session Info", DefaultValue = true, Group = "Global Settings")]
         public bool ShowSessionInfo { get; set; }
 
@@ -637,7 +643,25 @@ namespace cAlgo.Indicators
             if (ShowADXStatus && _adx != null)
             {
                 double adxValue = _adx.ADX.LastValue;
-                string adxTrend = adxValue >= 25 ? "TRENDING" : (adxValue < 20 ? "RANGING" : "WEAK");
+                string adxTrend;
+
+                if (adxValue > ADXMaxThreshold)
+                {
+                    adxTrend = "TOO HIGH - NO TRADES";
+                }
+                else if (adxValue < ADXMinThreshold)
+                {
+                    adxTrend = "TOO LOW - RANGING";
+                }
+                else if (adxValue >= 25)
+                {
+                    adxTrend = "TRENDING";
+                }
+                else
+                {
+                    adxTrend = "WEAK TREND";
+                }
+
                 adxInfo = string.Format("ADX: {0:F1} ({1})\n", adxValue, adxTrend);
             }
 
