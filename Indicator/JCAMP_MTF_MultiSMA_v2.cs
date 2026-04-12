@@ -100,7 +100,26 @@ namespace cAlgo.Indicators
         public LineStyle Sma2Style { get; set; }
 
         // =====================================================================
-        // SIGNAL / ENTRY CROSS (M1 Price Crossover)
+        // SMA 3 - TF0 (entry trigger) - v4.6.0 4TF System
+        // =====================================================================
+
+        [Parameter("Enable SMA 3 (TF0)", DefaultValue = true, Group = "SMA 3 - TF0")]
+        public bool EnableSma3 { get; set; }
+
+        [Parameter("TF0 Timeframe", DefaultValue = "Minute3", Group = "SMA 3 - TF0")]
+        public TimeFrame Tf0 { get; set; }
+
+        [Parameter("SMA 3 Color", DefaultValue = "Cyan", Group = "SMA 3 - TF0")]
+        public string Sma3Color { get; set; }
+
+        [Parameter("SMA 3 Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 5, Group = "SMA 3 - TF0")]
+        public int Sma3Thickness { get; set; }
+
+        [Parameter("SMA 3 Style", DefaultValue = LineStyle.Dots, Group = "SMA 3 - TF0")]
+        public LineStyle Sma3Style { get; set; }
+
+        // =====================================================================
+        // SIGNAL / ENTRY CROSS (TF0 Crossover) - v4.6.0
         // =====================================================================
 
         [Parameter("Enable Signal Layer", DefaultValue = true, Group = "Signal - M1 Crossover")]
@@ -134,6 +153,9 @@ namespace cAlgo.Indicators
         [Output("SMA 2 (TF2)", LineColor = "OrangeRed", PlotType = PlotType.Line, Thickness = 2)]
         public IndicatorDataSeries Sma2Result { get; set; }
 
+        [Output("SMA 3 (TF0)", LineColor = "Cyan", PlotType = PlotType.Line, Thickness = 1)]
+        public IndicatorDataSeries Sma3Result { get; set; }
+
         // =====================================================================
         // PRIVATE FIELDS
         // =====================================================================
@@ -144,9 +166,11 @@ namespace cAlgo.Indicators
         private SimpleMovingAverage _sma1;
         private Bars                _tf2Bars;
         private SimpleMovingAverage _sma2;
+        private Bars                _tf0Bars;  // v4.6.0 4TF system
+        private SimpleMovingAverage _sma3;     // TF0 SMA
 
         // Colors
-        private Color _color0, _color1, _color2;
+        private Color _color0, _color1, _color2, _color3;
         private Color _colorBuy, _colorSell;
 
         // M1 crossover tracking (like cBot's DetectM1Crossover)
@@ -190,10 +214,18 @@ namespace cAlgo.Indicators
                 _sma2 = Indicators.SimpleMovingAverage(_tf2Bars.ClosePrices, SmaPeriod);
             }
 
+            // SMA 3 - TF0 (v4.6.0 4TF system - entry trigger)
+            if (EnableSma3)
+            {
+                _tf0Bars = MarketData.GetBars(Tf0);
+                _sma3 = Indicators.SimpleMovingAverage(_tf0Bars.ClosePrices, SmaPeriod);
+            }
+
             // Parse colors
             _color0    = ParseColor(Sma0Color,     Color.DodgerBlue);
             _color1    = ParseColor(Sma1Color,     Color.Gold);
             _color2    = ParseColor(Sma2Color,     Color.OrangeRed);
+            _color3    = ParseColor(Sma3Color,     Color.Cyan);  // TF0
             _colorBuy  = ParseColor(BuyArrowColor, Color.LimeGreen);
             _colorSell = ParseColor(SellArrowColor, Color.Red);
 
@@ -208,7 +240,7 @@ namespace cAlgo.Indicators
                     string.Format("JCAMP_Indicator_SMA_Debug_{0}_{1}.csv", Symbol.Name, timestamp));
 
                 _csvWriter = new StreamWriter(_csvFilePath, false);
-                _csvWriter.WriteLine("Timestamp,BarIndex,Price,SMA0_M1,SMA1_TF1,SMA2_TF2,M1_Alignment,HTF_Aligned,HTF_Direction,Signal");
+                _csvWriter.WriteLine("Timestamp,BarIndex,Price,SMA0_M1,SMA1_TF1,SMA2_TF2,SMA3_TF0,M1_Alignment,HTF_Aligned,HTF_Direction,Signal");
                 _csvWriter.Flush();
 
                 Print(string.Format("[CSV] Debug export enabled: {0}", _csvFilePath));
@@ -217,8 +249,8 @@ namespace cAlgo.Indicators
             DrawStaticLabel();
 
             Print(string.Format(
-                "JCAMP MTF MultiSMA v3 (cBot-aligned) | Period:{0} | ChartTF:{1} | TF1:{2} | TF2:{3} | Entry: M1 Price Crossover",
-                SmaPeriod, TimeFrame, Tf1, Tf2));
+                "JCAMP MTF MultiSMA v4 (4TF System v4.6.0) | Period:{0} | M1:{1} | TF0:{2} | TF1:{3} | TF2:{4} | Entry: TF0 Crossover",
+                SmaPeriod, TimeFrame, Tf0, Tf1, Tf2));
         }
 
         // =====================================================================
@@ -283,6 +315,25 @@ namespace cAlgo.Indicators
             }
 
             // ------------------------------------------------------------------
+            // SMA 3 - TF0 (mapped) - v4.6.0 4TF system entry trigger
+            // ------------------------------------------------------------------
+            double s3 = double.NaN;
+            if (EnableSma3 && _sma3 != null)
+            {
+                int htfIdx = GetHTFIndex(_tf0Bars, barTime);
+                if (htfIdx >= SmaPeriod - 1)
+                {
+                    double v = _sma3.Result[htfIdx];
+                    s3 = double.IsNaN(v) ? double.NaN : v;
+                }
+                Sma3Result[index] = s3;
+            }
+            else
+            {
+                Sma3Result[index] = double.NaN;
+            }
+
+            // ------------------------------------------------------------------
             // CSV DEBUG EXPORT (log ALL bars for historical comparison)
             // ------------------------------------------------------------------
             if (EnableCSVExport && _csvWriter != null)
@@ -292,19 +343,21 @@ namespace cAlgo.Indicators
                 double s0Log = s0;
                 double s1Log = s1;
                 double s2Log = s2;
+                double s3Log = s3;  // TF0
 
                 string m1Align = GetSMAAlignment(price, s0Log);
                 bool htfAlign = CheckHigherTFAlignment(price, s1Log, s2Log, out string htfDir);
                 string signal = (_lastSignalIndex == index) ?
                     (m1Align == "BUY" ? "BUY_ARROW" : "SELL_ARROW") : "NONE";
 
-                _csvWriter.WriteLine(string.Format("{0},{1},{2:F5},{3},{4},{5},{6},{7},{8},{9}",
+                _csvWriter.WriteLine(string.Format("{0},{1},{2:F5},{3},{4},{5},{6},{7},{8},{9},{10}",
                     Bars.OpenTimes[index].ToString("yyyy-MM-dd HH:mm:ss"),
                     index,
                     price,
                     double.IsNaN(s0Log) ? "NaN" : s0Log.ToString("F5"),
                     double.IsNaN(s1Log) ? "NaN" : s1Log.ToString("F5"),
                     double.IsNaN(s2Log) ? "NaN" : s2Log.ToString("F5"),
+                    double.IsNaN(s3Log) ? "NaN" : s3Log.ToString("F5"),  // TF0
                     m1Align,
                     htfAlign ? "TRUE" : "FALSE",
                     htfDir,
