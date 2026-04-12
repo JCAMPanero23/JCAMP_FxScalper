@@ -1331,7 +1331,7 @@ namespace cAlgo.Robots
             for (int attempt = 1; attempt <= MAX_RETRIES; attempt++)
             {
                 // Try to set SL/TP
-                var modifyResult = ModifyPosition(position, currentSL, originalTP);
+                var modifyResult = ModifyPosition(position, currentSL, originalTP, ProtectionType.Absolute);
 
                 if (modifyResult.IsSuccessful)
                 {
@@ -1557,7 +1557,7 @@ namespace cAlgo.Robots
                         // Remove TP if configured - use saved SL from state, not position.StopLoss (may be null!)
                         if (TPModeSelection == ChandelierTPMode.RemoveTP)
                         {
-                            ModifyPosition(position, state.CurrentTrailingSL, null);
+                            ModifyPosition(position, state.CurrentTrailingSL, null, ProtectionType.Absolute);
                         }
                     }
                 }
@@ -1598,7 +1598,7 @@ namespace cAlgo.Robots
                         double distanceFromPrice = Math.Abs(currentPrice - newSL) / Symbol.PipSize;
                         if (distanceFromPrice >= MinChandelierDistance)
                         {
-                            ModifyPosition(position, newSL, position.TakeProfit);
+                            ModifyPosition(position, newSL, position.TakeProfit, ProtectionType.Absolute);
                             state.CurrentTrailingSL = newSL;
                             state.LastIncrementCount = currentIncrements;
                             state.ChandelierMoveCount++;
