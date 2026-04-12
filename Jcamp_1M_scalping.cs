@@ -284,10 +284,10 @@ namespace cAlgo.Robots
         [Parameter("=== VISUAL DISPLAY ===", DefaultValue = "")]
         public string VisualHeader { get; set; }
 
-        [Parameter("Draw SMA Lines", DefaultValue = true, Group = "Visual Display")]
+        [Parameter("Draw SMA Lines", DefaultValue = false, Group = "Visual Display")]
         public bool DrawSMALines { get; set; }
 
-        [Parameter("Draw Info Panel", DefaultValue = true, Group = "Visual Display")]
+        [Parameter("Draw Info Panel", DefaultValue = false, Group = "Visual Display")]
         public bool DrawInfoPanel { get; set; }
 
         [Parameter("Info Panel Corner", DefaultValue = 1, MinValue = 1, MaxValue = 4, Group = "Visual Display")]
@@ -1331,7 +1331,7 @@ namespace cAlgo.Robots
             for (int attempt = 1; attempt <= MAX_RETRIES; attempt++)
             {
                 // Try to set SL/TP
-                var modifyResult = ModifyPosition(position, currentSL, originalTP, false);
+                var modifyResult = ModifyPosition(position, currentSL, originalTP);
 
                 if (modifyResult.IsSuccessful)
                 {
@@ -1389,40 +1389,35 @@ namespace cAlgo.Robots
 
         private void DrawSMALinesOnChart()
         {
-            int lookback = Math.Min(100, Bars.Count);  // Draw last 100 bars
-
             // Calculate current SMA values
             double smaM1 = CalculateSMAForBars(m1Bars, MTFSMAPeriod);
             double smaTF0 = CalculateSMAForBars(tf0Bars, MTFSMAPeriod);
             double smaTF1 = CalculateSMAForBars(tf1Bars, MTFSMAPeriod);
             double smaTF2 = CalculateSMAForBars(tf2Bars, MTFSMAPeriod);
 
-            // Get current bar time
-            DateTime currentTime = Bars.LastBar.OpenTime;
-
             // Draw horizontal lines for each SMA at current value
             if (smaM1 > 0)
             {
-                ChartObjects.RemoveObject("SMA_M1");
-                ChartObjects.DrawHorizontalLine("SMA_M1", smaM1, Color.FromName(SmaM1Color), 1, LineStyle.Solid);
+                Chart.RemoveObject("SMA_M1");
+                Chart.DrawHorizontalLine("SMA_M1", smaM1, Color.DodgerBlue, 1, LineStyle.Solid);
             }
 
             if (smaTF0 > 0)
             {
-                ChartObjects.RemoveObject("SMA_TF0");
-                ChartObjects.DrawHorizontalLine("SMA_TF0", smaTF0, Color.FromName(SmaTF0Color), 1, LineStyle.Dots);
+                Chart.RemoveObject("SMA_TF0");
+                Chart.DrawHorizontalLine("SMA_TF0", smaTF0, Color.Cyan, 1, LineStyle.Dots);
             }
 
             if (smaTF1 > 0)
             {
-                ChartObjects.RemoveObject("SMA_TF1");
-                ChartObjects.DrawHorizontalLine("SMA_TF1", smaTF1, Color.FromName(SmaTF1Color), 2, LineStyle.Solid);
+                Chart.RemoveObject("SMA_TF1");
+                Chart.DrawHorizontalLine("SMA_TF1", smaTF1, Color.Gold, 2, LineStyle.Solid);
             }
 
             if (smaTF2 > 0)
             {
-                ChartObjects.RemoveObject("SMA_TF2");
-                ChartObjects.DrawHorizontalLine("SMA_TF2", smaTF2, Color.FromName(SmaTF2Color), 2, LineStyle.Solid);
+                Chart.RemoveObject("SMA_TF2");
+                Chart.DrawHorizontalLine("SMA_TF2", smaTF2, Color.OrangeRed, 2, LineStyle.Solid);
             }
         }
 
@@ -1435,7 +1430,7 @@ namespace cAlgo.Robots
             if (EnableSMAStacking && mtfAligned)
             {
                 bool isStacked = CheckSMAStacking(alignmentDirection, out string stackingInfo);
-                stackingStatus = isStacked ? "✓ STACKED" : "✗ NOT STACKED";
+                stackingStatus = isStacked ? "STACKED" : "NOT STACKED";
             }
 
             // Get individual TF alignments
@@ -1453,10 +1448,7 @@ namespace cAlgo.Robots
 
             // Build info text
             string info = string.Format(
-                "MTF Alignment: {0}/{1} {2}\n" +
-                "M1: {3} | TF0: {4} | TF1: {5} | TF2: {6}\n" +
-                "SMA Stacking: {7}\n" +
-                "Entry Ready: {8}",
+                "MTF: {0}/{1} {2} | M1:{3} TF0:{4} TF1:{5} TF2:{6} | Stack:{7}",
                 mtfAligned ? alignedCount.ToString() : "0",
                 RequireAllTFsAligned ? "4" : "3",
                 mtfAligned ? alignmentDirection : "NONE",
@@ -1464,23 +1456,16 @@ namespace cAlgo.Robots
                 tf0Align,
                 tf1Align,
                 tf2Align,
-                stackingStatus,
-                mtfAligned ? "YES" : "NO"
+                stackingStatus
             );
 
-            // Determine corner position
-            StaticPosition corner = StaticPosition.TopLeft;
-            switch (InfoPanelCorner)
-            {
-                case 1: corner = StaticPosition.TopLeft; break;
-                case 2: corner = StaticPosition.TopRight; break;
-                case 3: corner = StaticPosition.BottomLeft; break;
-                case 4: corner = StaticPosition.BottomRight; break;
-            }
+            // Determine vertical position based on corner parameter
+            VerticalAlignment vAlign = InfoPanelCorner <= 2 ? VerticalAlignment.Top : VerticalAlignment.Bottom;
+            HorizontalAlignment hAlign = (InfoPanelCorner == 1 || InfoPanelCorner == 3) ? HorizontalAlignment.Left : HorizontalAlignment.Right;
 
-            // Draw text
-            ChartObjects.RemoveObject("InfoPanel");
-            ChartObjects.DrawText("InfoPanel", info, corner, Color.White);
+            // Draw text using Chart API
+            Chart.RemoveObject("InfoPanel");
+            Chart.DrawStaticText("InfoPanel", info, vAlign, hAlign, Color.White);
         }
 
         #endregion
@@ -1572,7 +1557,7 @@ namespace cAlgo.Robots
                         // Remove TP if configured - use saved SL from state, not position.StopLoss (may be null!)
                         if (TPModeSelection == ChandelierTPMode.RemoveTP)
                         {
-                            ModifyPosition(position, state.CurrentTrailingSL, null, false);
+                            ModifyPosition(position, state.CurrentTrailingSL, null);
                         }
                     }
                 }
@@ -1613,7 +1598,7 @@ namespace cAlgo.Robots
                         double distanceFromPrice = Math.Abs(currentPrice - newSL) / Symbol.PipSize;
                         if (distanceFromPrice >= MinChandelierDistance)
                         {
-                            ModifyPosition(position, newSL, position.TakeProfit, false);
+                            ModifyPosition(position, newSL, position.TakeProfit);
                             state.CurrentTrailingSL = newSL;
                             state.LastIncrementCount = currentIncrements;
                             state.ChandelierMoveCount++;
