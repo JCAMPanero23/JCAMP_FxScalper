@@ -30,7 +30,7 @@ namespace cAlgo.Indicators
         // GLOBAL SETTINGS
         // =====================================================================
 
-        [Parameter("SMA Period (all MTF lines)", DefaultValue = 200, MinValue = 2, MaxValue = 1000, Group = "Global Settings")]
+        [Parameter("SMA Period (all MTF lines)", DefaultValue = 275, MinValue = 2, MaxValue = 1000, Group = "Global Settings")]
         public int SmaPeriod { get; set; }
 
         [Parameter("Show Info Panel", DefaultValue = true, Group = "Global Settings")]
@@ -68,7 +68,7 @@ namespace cAlgo.Indicators
         [Parameter("Enable SMA 1 (TF1)", DefaultValue = true, Group = "SMA 1 - TF1")]
         public bool EnableSma1 { get; set; }
 
-        [Parameter("TF1 Timeframe", DefaultValue = "Minute3", Group = "SMA 1 - TF1")]
+        [Parameter("TF1 Timeframe", DefaultValue = "Minute5", Group = "SMA 1 - TF1")]
         public TimeFrame Tf1 { get; set; }
 
         [Parameter("SMA 1 Color", DefaultValue = "Gold", Group = "SMA 1 - TF1")]
@@ -87,7 +87,7 @@ namespace cAlgo.Indicators
         [Parameter("Enable SMA 2 (TF2)", DefaultValue = true, Group = "SMA 2 - TF2")]
         public bool EnableSma2 { get; set; }
 
-        [Parameter("TF2 Timeframe", DefaultValue = "Minute15", Group = "SMA 2 - TF2")]
+        [Parameter("TF2 Timeframe", DefaultValue = "Minute10", Group = "SMA 2 - TF2")]
         public TimeFrame Tf2 { get; set; }
 
         [Parameter("SMA 2 Color", DefaultValue = "OrangeRed", Group = "SMA 2 - TF2")]
