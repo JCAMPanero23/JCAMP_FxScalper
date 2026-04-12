@@ -34,17 +34,20 @@ namespace cAlgo.Robots
         [Parameter("MTF SMA Period", DefaultValue = 275, MinValue = 50, MaxValue = 350, Step = 25, Group = "MTF SMA Alignment")]
         public int MTFSMAPeriod { get; set; }
 
-        [Parameter("TF0 - Entry Trigger (M2-M6)", DefaultValue = "Minute4", Group = "MTF SMA Alignment")]
+        [Parameter("TF0 - Entry Trigger (M2-M6)", DefaultValue = "Minute3", Group = "MTF SMA Alignment")]
         public TimeFrame Timeframe0 { get; set; }
 
-        [Parameter("TF1 - Medium Term (M7-M10)", DefaultValue = "Minute10", Group = "MTF SMA Alignment")]
+        [Parameter("TF1 - Medium Term (M5-M10)", DefaultValue = "Minute5", Group = "MTF SMA Alignment")]
         public TimeFrame Timeframe1 { get; set; }
 
-        [Parameter("TF2 - Higher Term (M15/M20/M30)", DefaultValue = "Minute30", Group = "MTF SMA Alignment")]
+        [Parameter("TF2 - Higher Term (M10-M30)", DefaultValue = "Minute10", Group = "MTF SMA Alignment")]
         public TimeFrame Timeframe2 { get; set; }
 
-        [Parameter("Require All TFs Aligned", DefaultValue = true, Group = "MTF SMA Alignment")]
+        [Parameter("Require All TFs Aligned", DefaultValue = false, Group = "MTF SMA Alignment")]
         public bool RequireAllTFsAligned { get; set; }
+
+        [Parameter("Enable SMA Stacking", DefaultValue = false, Group = "MTF SMA Alignment")]
+        public bool EnableSMAStacking { get; set; }
 
         [Parameter("ATR Period", DefaultValue = 14, MinValue = 10, MaxValue = 20, Step = 2, Group = "MTF SMA Alignment")]
         public int ATRPeriod { get; set; }
@@ -543,7 +546,7 @@ namespace cAlgo.Robots
                     string.Format("JCAMP_cBot_SMA_Debug_{0}_{1}.csv", SymbolName, DateTime.Now.ToString("yyyyMMdd_HHmmss")));
 
                 _smaDebugWriter = new System.IO.StreamWriter(_smaDebugPath, false);
-                _smaDebugWriter.WriteLine("Timestamp,BarIndex,Price_M1,SMA_M1,Align_M1,SMA_TF0,Align_TF0,SMA_TF1,Align_TF1,SMA_TF2,Align_TF2,MTF_Aligned,MTF_Direction,TF0_Crossover");
+                _smaDebugWriter.WriteLine("Timestamp,BarIndex,Price_M1,SMA_M1,Align_M1,SMA_TF0,Align_TF0,SMA_TF1,Align_TF1,SMA_TF2,Align_TF2,MTF_Aligned,MTF_Direction,TF0_Crossover,SMA_Stacked");
                 _smaDebugWriter.Flush();
 
                 Print("[SMA-DEBUG] CSV export enabled: {0}", _smaDebugPath);
@@ -654,7 +657,15 @@ namespace cAlgo.Robots
 
                 bool mtfAligned = CheckMTFAlignment(out string mtfDirection);
 
-                _smaDebugWriter.WriteLine(string.Format("{0},{1},{2:F5},{3:F5},{4},{5:F5},{6},{7:F5},{8},{9:F5},{10},{11},{12},{13}",
+                // Check SMA stacking (if enabled and aligned)
+                string smaStacked = "N/A";
+                if (EnableSMAStacking && mtfAligned)
+                {
+                    bool isStacked = CheckSMAStacking(mtfDirection, out string stackingInfo);
+                    smaStacked = isStacked ? "TRUE" : "FALSE";
+                }
+
+                _smaDebugWriter.WriteLine(string.Format("{0},{1},{2:F5},{3:F5},{4},{5:F5},{6},{7:F5},{8},{9:F5},{10},{11},{12},{13},{14}",
                     Server.Time.ToString("yyyy-MM-dd HH:mm:ss"),
                     Bars.Count,
                     priceM1,
@@ -668,7 +679,8 @@ namespace cAlgo.Robots
                     alignTF2,
                     mtfAligned ? "TRUE" : "FALSE",
                     mtfDirection,
-                    tf0Crossed ? currentTF0 : "NONE"));
+                    tf0Crossed ? currentTF0 : "NONE",
+                    smaStacked));
                 _smaDebugWriter.Flush();
             }
 
@@ -744,6 +756,45 @@ namespace cAlgo.Robots
                 if (sellCount >= 3) { direction = "SELL"; return true; }
                 return false;
             }
+        }
+
+        private bool CheckSMAStacking(string expectedDirection, out string stackingInfo)
+        {
+            stackingInfo = "N/A";
+
+            // Check all timeframes are initialized
+            if (m1Bars == null || tf0Bars == null || tf1Bars == null || tf2Bars == null)
+                return false;
+
+            // Calculate SMA values for each timeframe
+            double m1Sma = CalculateSMAForBars(m1Bars, MTFSMAPeriod);
+            double tf0Sma = CalculateSMAForBars(tf0Bars, MTFSMAPeriod);
+            double tf1Sma = CalculateSMAForBars(tf1Bars, MTFSMAPeriod);
+            double tf2Sma = CalculateSMAForBars(tf2Bars, MTFSMAPeriod);
+
+            if (m1Sma <= 0 || tf0Sma <= 0 || tf1Sma <= 0 || tf2Sma <= 0)
+                return false;
+
+            // Build stacking info string for debugging
+            stackingInfo = string.Format("M1:{0:F5} TF0:{1:F5} TF1:{2:F5} TF2:{3:F5}",
+                m1Sma, tf0Sma, tf1Sma, tf2Sma);
+
+            bool isStacked = false;
+
+            if (expectedDirection == "BUY")
+            {
+                // For uptrend: Faster SMAs should be ABOVE slower SMAs
+                // M1 > TF0 > TF1 > TF2
+                isStacked = (m1Sma > tf0Sma && tf0Sma > tf1Sma && tf1Sma > tf2Sma);
+            }
+            else if (expectedDirection == "SELL")
+            {
+                // For downtrend: Faster SMAs should be BELOW slower SMAs
+                // M1 < TF0 < TF1 < TF2
+                isStacked = (m1Sma < tf0Sma && tf0Sma < tf1Sma && tf1Sma < tf2Sma);
+            }
+
+            return isStacked;
         }
 
         private bool DetectTF0Crossover(out string direction)
@@ -948,6 +999,18 @@ namespace cAlgo.Robots
             if (!currentMTFAligned)
             {
                 return;
+            }
+
+            // Check SMA stacking (if enabled)
+            if (EnableSMAStacking)
+            {
+                bool isStacked = CheckSMAStacking(alignmentDirection, out string stackingInfo);
+                if (!isStacked)
+                {
+                    TrackBlockedSignal("SMA Stacking", string.Format("SMAs not stacked for {0} | {1}",
+                        alignmentDirection, stackingInfo));
+                    return;
+                }
             }
 
             // Check for TF0 crossover (entry trigger)
