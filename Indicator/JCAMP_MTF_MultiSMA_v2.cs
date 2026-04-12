@@ -45,6 +45,18 @@ namespace cAlgo.Indicators
         [Parameter("Enable CSV Debug Export", DefaultValue = false, Group = "Global Settings")]
         public bool EnableCSVExport { get; set; }
 
+        [Parameter("Show SMA Stacking Status", DefaultValue = true, Group = "Global Settings")]
+        public bool ShowStackingStatus { get; set; }
+
+        [Parameter("Show ADX Status", DefaultValue = true, Group = "Global Settings")]
+        public bool ShowADXStatus { get; set; }
+
+        [Parameter("ADX Period", DefaultValue = 14, MinValue = 7, MaxValue = 28, Group = "Global Settings")]
+        public int ADXPeriod { get; set; }
+
+        [Parameter("Show Session Info", DefaultValue = true, Group = "Global Settings")]
+        public bool ShowSessionInfo { get; set; }
+
         // =====================================================================
         // SMA 0 - CHART EXECUTION TF
         // =====================================================================
@@ -52,7 +64,7 @@ namespace cAlgo.Indicators
         [Parameter("Enable SMA 0 (Chart TF)", DefaultValue = true, Group = "SMA 0 - Chart TF")]
         public bool EnableSma0 { get; set; }
 
-        [Parameter("SMA 0 Color", DefaultValue = "DodgerBlue", Group = "SMA 0 - Chart TF")]
+        [Parameter("SMA 0 Color", DefaultValue = "Red", Group = "SMA 0 - Chart TF")]
         public string Sma0Color { get; set; }
 
         [Parameter("SMA 0 Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 5, Group = "SMA 0 - Chart TF")]
@@ -71,7 +83,7 @@ namespace cAlgo.Indicators
         [Parameter("TF1 Timeframe", DefaultValue = "Minute5", Group = "SMA 1 - TF1")]
         public TimeFrame Tf1 { get; set; }
 
-        [Parameter("SMA 1 Color", DefaultValue = "Gold", Group = "SMA 1 - TF1")]
+        [Parameter("SMA 1 Color", DefaultValue = "LimeGreen", Group = "SMA 1 - TF1")]
         public string Sma1Color { get; set; }
 
         [Parameter("SMA 1 Thickness", DefaultValue = 2, MinValue = 1, MaxValue = 5, Group = "SMA 1 - TF1")]
@@ -90,7 +102,7 @@ namespace cAlgo.Indicators
         [Parameter("TF2 Timeframe", DefaultValue = "Minute10", Group = "SMA 2 - TF2")]
         public TimeFrame Tf2 { get; set; }
 
-        [Parameter("SMA 2 Color", DefaultValue = "OrangeRed", Group = "SMA 2 - TF2")]
+        [Parameter("SMA 2 Color", DefaultValue = "Blue", Group = "SMA 2 - TF2")]
         public string Sma2Color { get; set; }
 
         [Parameter("SMA 2 Thickness", DefaultValue = 2, MinValue = 1, MaxValue = 5, Group = "SMA 2 - TF2")]
@@ -109,7 +121,7 @@ namespace cAlgo.Indicators
         [Parameter("TF0 Timeframe", DefaultValue = "Minute3", Group = "SMA 3 - TF0")]
         public TimeFrame Tf0 { get; set; }
 
-        [Parameter("SMA 3 Color", DefaultValue = "Cyan", Group = "SMA 3 - TF0")]
+        [Parameter("SMA 3 Color", DefaultValue = "Gold", Group = "SMA 3 - TF0")]
         public string Sma3Color { get; set; }
 
         [Parameter("SMA 3 Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 5, Group = "SMA 3 - TF0")]
@@ -169,6 +181,9 @@ namespace cAlgo.Indicators
         private Bars                _tf0Bars;  // v4.6.0 4TF system
         private SimpleMovingAverage _sma3;     // TF0 SMA
 
+        // ADX
+        private DirectionalMovementSystem _adx;
+
         // Colors
         private Color _color0, _color1, _color2, _color3;
         private Color _colorBuy, _colorSell;
@@ -221,11 +236,17 @@ namespace cAlgo.Indicators
                 _sma3 = Indicators.SimpleMovingAverage(_tf0Bars.ClosePrices, SmaPeriod);
             }
 
+            // ADX indicator
+            if (ShowADXStatus)
+            {
+                _adx = Indicators.DirectionalMovementSystem(ADXPeriod);
+            }
+
             // Parse colors
-            _color0    = ParseColor(Sma0Color,     Color.DodgerBlue);
-            _color1    = ParseColor(Sma1Color,     Color.Gold);
-            _color2    = ParseColor(Sma2Color,     Color.OrangeRed);
-            _color3    = ParseColor(Sma3Color,     Color.Cyan);  // TF0
+            _color0    = ParseColor(Sma0Color,     Color.Red);
+            _color1    = ParseColor(Sma1Color,     Color.LimeGreen);
+            _color2    = ParseColor(Sma2Color,     Color.Blue);
+            _color3    = ParseColor(Sma3Color,     Color.Gold);  // TF0
             _colorBuy  = ParseColor(BuyArrowColor, Color.LimeGreen);
             _colorSell = ParseColor(SellArrowColor, Color.Red);
 
@@ -562,13 +583,10 @@ namespace cAlgo.Indicators
 
         private void DrawInfoPanel(double price, double s0, double s1, double s2)
         {
-            string ValStr(double v) => double.IsNaN(v) ? "  ---   " : v.ToString("F5");
+            // Get s3 (TF0) from the result series
+            double s3 = Sma3Result[Sma3Result.Count - 1];
 
-            string BiasStr(double v)
-            {
-                if (double.IsNaN(v)) return "  N/A";
-                return price > v ? " ^ above" : " v below";
-            }
+            string ValStr(double v) => double.IsNaN(v) ? "  ---   " : v.ToString("F5");
 
             string alignStatus;
             Color  panelColor;
@@ -590,24 +608,55 @@ namespace cAlgo.Indicators
             }
             else
             {
-                alignStatus = "--- NOT ALIGNED - waiting...";
+                alignStatus = "--- NOT ALIGNED";
                 panelColor  = Color.Gray;
             }
 
+            // Session info
+            string sessionInfo = "";
+            if (ShowSessionInfo)
+            {
+                DateTime currentTime = Server.Time;
+                string currentSession = GetCurrentSession(currentTime);
+                string countdown = GetSessionCountdown(currentTime);
+                sessionInfo = string.Format("Session: {0} | Next: {1}\n", currentSession, countdown);
+            }
+
+            // SMA Stacking info
+            string stackingInfo = "";
+            if (ShowStackingStatus)
+            {
+                string direction = _htfAligned ? _htfDirection : "NONE";
+                bool isStacked = CheckSMAStacking(s0, s1, s2, s3, direction, out string stackDetails);
+                string stackStatus = isStacked ? "✓ STACKED" : (direction != "NONE" ? "✗ NOT STACKED" : "N/A");
+                stackingInfo = string.Format("SMA Stacking: {0}\n", stackStatus);
+            }
+
+            // ADX info
+            string adxInfo = "";
+            if (ShowADXStatus && _adx != null)
+            {
+                double adxValue = _adx.ADX.LastValue;
+                string adxTrend = adxValue >= 25 ? "TRENDING" : (adxValue < 20 ? "RANGING" : "WEAK");
+                adxInfo = string.Format("ADX: {0:F1} ({1})\n", adxValue, adxTrend);
+            }
+
             string m1Status = GetSMAAlignment(price, s0);
-            string m1Cross = (m1Status == "BUY") ? "Price ABOVE M1 SMA" :
-                            (m1Status == "SELL") ? "Price BELOW M1 SMA" : "At SMA";
+            string m1Cross = (m1Status == "BUY") ? "ABOVE M1" : (m1Status == "SELL") ? "BELOW M1" : "AT M1";
 
             string panel =
-                "== JCAMP MTF MultiSMA v3 (cBot) ==\n" +
-                "Price      : " + price.ToString("F5") + "\n" +
+                "=== JCAMP MTF v4 (4TF) ===\n" +
+                sessionInfo +
                 "\n" +
-                "SMA0 [" + PadTF(TimeFrame.ToString()) + "] : " + ValStr(s0) + BiasStr(s0) + "\n" +
-                "SMA1 [" + PadTF(Tf1.ToString())       + "] : " + ValStr(s1) + BiasStr(s1) + "\n" +
-                "SMA2 [" + PadTF(Tf2.ToString())       + "] : " + ValStr(s2) + BiasStr(s2) + "\n" +
+                "Price: " + price.ToString("F5") + " (" + m1Cross + ")\n" +
                 "\n" +
-                "M1 Status  : " + m1Cross + "\n" +
-                "HTF Status : " + (_htfAligned ? ("Aligned " + _htfDirection) : "Not aligned") + "\n" +
+                "M1  [Red]:   " + ValStr(s0) + "\n" +
+                "TF0 [Gold]:  " + ValStr(s3) + "\n" +
+                "TF1 [Lime]:  " + ValStr(s1) + "\n" +
+                "TF2 [Blue]:  " + ValStr(s2) + "\n" +
+                "\n" +
+                stackingInfo +
+                adxInfo +
                 "\n" +
                 alignStatus;
 
@@ -649,6 +698,99 @@ namespace cAlgo.Indicators
                 { hi = mid - 1; }
             }
             return result;
+        }
+
+        // =====================================================================
+        // SMA STACKING CHECK
+        // =====================================================================
+
+        private bool CheckSMAStacking(double s0, double s1, double s2, double s3, string direction, out string stackInfo)
+        {
+            stackInfo = string.Format("M1:{0:F5} TF0:{1:F5} TF1:{2:F5} TF2:{3:F5}",
+                double.IsNaN(s0) ? 0 : s0,
+                double.IsNaN(s3) ? 0 : s3,
+                double.IsNaN(s1) ? 0 : s1,
+                double.IsNaN(s2) ? 0 : s2);
+
+            if (double.IsNaN(s0) || double.IsNaN(s1) || double.IsNaN(s2) || double.IsNaN(s3))
+                return false;
+
+            if (direction == "BUY")
+            {
+                // For BUY: M1 > TF0 > TF1 > TF2 (faster SMAs above slower ones)
+                return (s0 > s3 && s3 > s1 && s1 > s2);
+            }
+            else if (direction == "SELL")
+            {
+                // For SELL: M1 < TF0 < TF1 < TF2 (faster SMAs below slower ones)
+                return (s0 < s3 && s3 < s1 && s1 < s2);
+            }
+
+            return false;
+        }
+
+        // =====================================================================
+        // SESSION HELPERS
+        // =====================================================================
+
+        private string GetCurrentSession(DateTime time)
+        {
+            int hour = time.Hour;
+
+            // Asian session: 00:00-09:00 UTC
+            if (hour >= 0 && hour < 9)
+                return "Asian";
+
+            // London session: 08:00-17:00 UTC
+            if (hour >= 8 && hour < 17)
+                return "London";
+
+            // New York session: 13:00-22:00 UTC
+            if (hour >= 13 && hour < 22)
+                return "NY";
+
+            // Overlap: London + NY (13:00-17:00 UTC)
+            if (hour >= 13 && hour < 17)
+                return "London+NY";
+
+            return "Off-Hours";
+        }
+
+        private string GetSessionCountdown(DateTime time)
+        {
+            int hour = time.Hour;
+            int minute = time.Minute;
+
+            DateTime nextSession;
+            string sessionName;
+
+            if (hour < 8)
+            {
+                // Next: London at 08:00
+                nextSession = new DateTime(time.Year, time.Month, time.Day, 8, 0, 0);
+                sessionName = "London";
+            }
+            else if (hour < 13)
+            {
+                // Next: NY at 13:00
+                nextSession = new DateTime(time.Year, time.Month, time.Day, 13, 0, 0);
+                sessionName = "NY";
+            }
+            else if (hour < 22)
+            {
+                // Next: Asian at 00:00 (next day)
+                nextSession = new DateTime(time.Year, time.Month, time.Day, 0, 0, 0).AddDays(1);
+                sessionName = "Asian";
+            }
+            else
+            {
+                // Next: Asian at 00:00 (next day)
+                nextSession = new DateTime(time.Year, time.Month, time.Day, 0, 0, 0).AddDays(1);
+                sessionName = "Asian";
+            }
+
+            TimeSpan remaining = nextSession - time;
+            return string.Format("{0} in {1:D2}h {2:D2}m", sessionName, (int)remaining.TotalHours, remaining.Minutes);
         }
 
         // =====================================================================
