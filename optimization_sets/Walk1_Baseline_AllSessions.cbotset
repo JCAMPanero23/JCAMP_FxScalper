@@ -1,0 +1,195 @@
+{
+  "parameters": [
+    {
+      "name": "MTFHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableMTFSMAEntry",
+      "value": "True"
+    },
+    {
+      "name": "MTFSMAPeriod",
+      "value": "175"
+    },
+    {
+      "name": "Timeframe0",
+      "value": "m3"
+    },
+    {
+      "name": "Timeframe1",
+      "value": "m8"
+    },
+    {
+      "name": "Timeframe2",
+      "value": "m15"
+    },
+    {
+      "name": "RequireAllTFsAligned",
+      "value": "True"
+    },
+    {
+      "name": "ATRPeriod",
+      "value": "10"
+    },
+    {
+      "name": "SLATRMultiplier",
+      "value": "2.25"
+    },
+    {
+      "name": "MinimumSLPips",
+      "value": "5"
+    },
+    {
+      "name": "ADXHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableADXFilter",
+      "value": "True"
+    },
+    {
+      "name": "ADXMode",
+      "value": "FlipDirection"
+    },
+    {
+      "name": "ADXPeriod",
+      "value": "16"
+    },
+    {
+      "name": "ADXMinThreshold",
+      "value": "12"
+    },
+    {
+      "name": "ADXMaxThreshold",
+      "value": "40"
+    },
+    {
+      "name": "TradeHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableTrading",
+      "value": "True"
+    },
+    {
+      "name": "RiskPercent",
+      "value": "1"
+    },
+    {
+      "name": "SLBufferPips",
+      "value": "2"
+    },
+    {
+      "name": "MinimumRRRatio",
+      "value": "4"
+    },
+    {
+      "name": "MaxPositions",
+      "value": "1"
+    },
+    {
+      "name": "MagicNumber",
+      "value": "100001"
+    },
+    {
+      "name": "ChandelierHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableChandelierTrail",
+      "value": "True"
+    },
+    {
+      "name": "ChandelierActivationRR",
+      "value": "0.75"
+    },
+    {
+      "name": "TrailIncrementPips",
+      "value": "5"
+    },
+    {
+      "name": "MinChandelierDistance",
+      "value": "6"
+    },
+    {
+      "name": "TPModeSelection",
+      "value": "1"
+    },
+    {
+      "name": "SessionHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableSessionFilter",
+      "value": "True"
+    },
+    {
+      "name": "EnableLondonSession",
+      "value": "True",
+      "comment": "BASELINE: All sessions enabled for comparison"
+    },
+    {
+      "name": "EnableNYSession",
+      "value": "True"
+    },
+    {
+      "name": "EnableAsianSession",
+      "value": "True"
+    },
+    {
+      "name": "RiskHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableDailyLimit",
+      "value": "True"
+    },
+    {
+      "name": "DailyMaxRLoss",
+      "value": "-3"
+    },
+    {
+      "name": "DailyMaxLosingTrades",
+      "value": "5"
+    },
+    {
+      "name": "EnableConsecutiveLossLimit",
+      "value": "False"
+    },
+    {
+      "name": "MaxConsecutiveLosses",
+      "value": "9"
+    },
+    {
+      "name": "EnableMonthlyDDLimit",
+      "value": "True"
+    },
+    {
+      "name": "MaxMonthlyDDPercent",
+      "value": "10"
+    },
+    {
+      "name": "ClosePositionsOnDDLimit",
+      "value": "True"
+    },
+    {
+      "name": "WFOHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableCSVExport",
+      "value": "True"
+    },
+    {
+      "name": "EnableNotifications",
+      "value": "False"
+    }
+  ],
+  "description": "Walk 1 Baseline - All Sessions Enabled (for comparison)",
+  "walk": "Walk 1: Jan-Mar 2025 → Apr 2025",
+  "purpose": "Baseline comparison for WFO validation",
+  "key_difference": "EnableLondonSession = True (vs False in WFO recommended)",
+  "usage": "Run Apr 2025 backtest with this to compare against WFO recommendations",
+  "expected_outcome": "Should have MORE trades than WFO (includes London), but WORSE Total R"
+}

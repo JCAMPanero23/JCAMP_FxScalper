@@ -1,0 +1,214 @@
+{
+  "parameters": [
+    {
+      "name": "MTFHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableMTFSMAEntry",
+      "value": "True"
+    },
+    {
+      "name": "MTFSMAPeriod",
+      "value": "175"
+    },
+    {
+      "name": "Timeframe0",
+      "value": "m3"
+    },
+    {
+      "name": "Timeframe1",
+      "value": "m8"
+    },
+    {
+      "name": "Timeframe2",
+      "value": "m15"
+    },
+    {
+      "name": "RequireAllTFsAligned",
+      "value": "True"
+    },
+    {
+      "name": "ATRPeriod",
+      "value": "10"
+    },
+    {
+      "name": "SLATRMultiplier",
+      "value": "2.25"
+    },
+    {
+      "name": "MinimumSLPips",
+      "value": "5"
+    },
+    {
+      "name": "ADXHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableADXFilter",
+      "value": "True"
+    },
+    {
+      "name": "ADXMode",
+      "value": "FlipDirection"
+    },
+    {
+      "name": "ADXPeriod",
+      "value": "16"
+    },
+    {
+      "name": "ADXMinThreshold",
+      "value": "12"
+    },
+    {
+      "name": "ADXMaxThreshold",
+      "value": "40"
+    },
+    {
+      "name": "TradeHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableTrading",
+      "value": "True"
+    },
+    {
+      "name": "RiskPercent",
+      "value": "1"
+    },
+    {
+      "name": "SLBufferPips",
+      "value": "2"
+    },
+    {
+      "name": "MinimumRRRatio",
+      "value": "4"
+    },
+    {
+      "name": "MaxPositions",
+      "value": "1"
+    },
+    {
+      "name": "MagicNumber",
+      "value": "100001"
+    },
+    {
+      "name": "ChandelierHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableChandelierTrail",
+      "value": "True"
+    },
+    {
+      "name": "ChandelierActivationRR",
+      "value": "0.75"
+    },
+    {
+      "name": "TrailIncrementPips",
+      "value": "5"
+    },
+    {
+      "name": "MinChandelierDistance",
+      "value": "6"
+    },
+    {
+      "name": "TPModeSelection",
+      "value": "1"
+    },
+    {
+      "name": "SessionHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableSessionFilter",
+      "value": "True"
+    },
+    {
+      "name": "EnableLondonSession",
+      "value": "False",
+      "comment": "WFO RECOMMENDATION: London disabled (-14.91R in training)"
+    },
+    {
+      "name": "EnableNYSession",
+      "value": "True",
+      "comment": "WFO RECOMMENDATION: NY enabled (+10.49R in training)"
+    },
+    {
+      "name": "EnableAsianSession",
+      "value": "True",
+      "comment": "WFO RECOMMENDATION: Asian enabled (+26.22R in training)"
+    },
+    {
+      "name": "RiskHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableDailyLimit",
+      "value": "True"
+    },
+    {
+      "name": "DailyMaxRLoss",
+      "value": "-3"
+    },
+    {
+      "name": "DailyMaxLosingTrades",
+      "value": "5"
+    },
+    {
+      "name": "EnableConsecutiveLossLimit",
+      "value": "False"
+    },
+    {
+      "name": "MaxConsecutiveLosses",
+      "value": "9"
+    },
+    {
+      "name": "EnableMonthlyDDLimit",
+      "value": "True"
+    },
+    {
+      "name": "MaxMonthlyDDPercent",
+      "value": "10"
+    },
+    {
+      "name": "ClosePositionsOnDDLimit",
+      "value": "True"
+    },
+    {
+      "name": "WFOHeader",
+      "value": ""
+    },
+    {
+      "name": "EnableCSVExport",
+      "value": "True"
+    },
+    {
+      "name": "EnableNotifications",
+      "value": "False"
+    }
+  ],
+  "description": "Walk 1 WFO Recommended Settings (Jan-Mar 2025 Training)",
+  "walk": "Walk 1: Jan-Mar 2025 → Apr 2025",
+  "source": "WFO Analyzer recommendations from Jan-Mar 2025 training period",
+  "key_changes": {
+    "EnableLondonSession": "False (was True) - London had -14.91R in training",
+    "EnableNYSession": "True (unchanged) - NY had +10.49R in training",
+    "EnableAsianSession": "True (unchanged) - Asian had +26.22R in training",
+    "ADXMinThreshold": "12 (unchanged) - DO NOT raise to 23!",
+    "ADXPeriod": "16 (unchanged) - Optimal in training"
+  },
+  "expected_performance": {
+    "total_r": "+10.49R (filtered to NY sessions only in recommended config)",
+    "win_rate": "36.4%",
+    "profit_factor": "1.73",
+    "trades": "22 (down from 120 due to London filter)"
+  },
+  "validation_instructions": {
+    "period": "Apr 1-30, 2025",
+    "symbol": "EURUSD",
+    "timeframe": "M1",
+    "comparison": "Run same period with Baseline (London ON) to compare",
+    "success_criteria": "WFO Total R > Baseline Total R"
+  }
+}

@@ -343,11 +343,47 @@ class WFOAnalyzer:
             normal_trades = self.df[self.df['FlipDirectionUsed'] == False]
 
         if len(flip_trades) > 0:
+            flip_avg_r = flip_trades['RMultiple'].mean()
+            flip_total_r = flip_trades['RMultiple'].sum()
+            flip_wr = flip_trades['WinningTrade'].mean() * 100
+
             print(f"  Flip Direction Trades: {len(flip_trades)}")
-            print(f"    Win Rate: {flip_trades['WinningTrade'].mean()*100:.1f}%")
-            print(f"    Avg R: {flip_trades['RMultiple'].mean():.2f}R")
-            print(f"    Total R: {flip_trades['RMultiple'].sum():+.2f}R")
+            print(f"    Win Rate: {flip_wr:.1f}%")
+            print(f"    Avg R: {flip_avg_r:.2f}R")
+            print(f"    Total R: {flip_total_r:+.2f}R")
             print(f"    Profit Factor: {self._calc_profit_factor(flip_trades):.2f}")
+
+            # === NEW: FlipDirection Usage Warning ===
+            total_trades = len(self.df)
+            flip_pct = (len(flip_trades) / total_trades) * 100
+
+            print(f"\n  FlipDirection Usage: {len(flip_trades)}/{total_trades} trades ({flip_pct:.1f}%)")
+
+            # WARNING: FlipDirection used on >40% of trades
+            if flip_pct > 40:
+                print("\n" + "!"*70)
+                print("!  WARNING: FlipDirection used on >40% of trades                    !")
+                print("!"*70)
+                print(f"\n  FlipDirection should be RARE (extreme ranging conditions only)")
+                print(f"  Current usage: {flip_pct:.1f}% of trades")
+
+                if flip_avg_r < 0:
+                    print(f"\n  CRITICAL: FlipDirection has NEGATIVE avg R ({flip_avg_r:+.2f}R)")
+                    print(f"  This indicates ADX threshold is TOO HIGH")
+                    print(f"  FlipDirection is being applied to WEAK TRENDS, not ranging markets")
+                    print(f"\n  RECOMMENDATION:")
+                    print(f"    - Lower ADX threshold to 10-15 range (currently triggering at weak trends)")
+                    print(f"    - v4.6.0 4TF system: Use ADX < 12-15 max for FlipDirection")
+                    print(f"    - Consider disabling FlipDirection entirely if it continues to underperform")
+
+                print("!"*70 + "\n")
+
+                self.results['flip_direction_warning'] = {
+                    'usage_pct': round(flip_pct, 1),
+                    'avg_r': round(flip_avg_r, 2),
+                    'total_r': round(flip_total_r, 2),
+                    'recommendation': 'Lower ADX threshold - currently too aggressive'
+                }
 
         print()
 
@@ -541,20 +577,47 @@ class WFOAnalyzer:
         # Map CSV column names to cBot parameter names
         settings = {}
 
-        # MTF Settings
+        # MTF Settings - Handle both v4.6.0 (4TF) and v4.5.x (3TF)
         if 'SMAPeriod' in first_row:
             settings['MTFSMAPeriod'] = int(first_row['SMAPeriod'])
-        if 'Timeframe2' in first_row:
-            # Convert Minute2 -> m2 format
-            tf2 = str(first_row['Timeframe2'])
-            if tf2.startswith('Minute'):
-                tf2 = 'm' + tf2.replace('Minute', '')
-            settings['Timeframe2'] = tf2.lower()
-        if 'Timeframe3' in first_row:
-            tf3 = str(first_row['Timeframe3'])
-            if tf3.startswith('Minute'):
-                tf3 = 'm' + tf3.replace('Minute', '')
-            settings['Timeframe3'] = tf3.lower()
+
+        # Detect version based on timeframe columns
+        has_tf0 = 'Timeframe0' in first_row.index
+        has_tf1 = 'Timeframe1' in first_row.index
+
+        if has_tf0 and has_tf1:
+            # v4.6.0+ 4TF System (Timeframe0, Timeframe1, Timeframe2)
+            if 'Timeframe0' in first_row:
+                tf0 = str(first_row['Timeframe0'])
+                if tf0.startswith('Minute'):
+                    tf0 = 'm' + tf0.replace('Minute', '')
+                settings['Timeframe0'] = tf0.lower()
+
+            if 'Timeframe1' in first_row:
+                tf1 = str(first_row['Timeframe1'])
+                if tf1.startswith('Minute'):
+                    tf1 = 'm' + tf1.replace('Minute', '')
+                settings['Timeframe1'] = tf1.lower()
+
+            if 'Timeframe2' in first_row:
+                tf2 = str(first_row['Timeframe2'])
+                if tf2.startswith('Minute'):
+                    tf2 = 'm' + tf2.replace('Minute', '')
+                settings['Timeframe2'] = tf2.lower()
+
+        else:
+            # v4.5.x or earlier 3TF System (Timeframe2, Timeframe3)
+            if 'Timeframe2' in first_row:
+                tf2 = str(first_row['Timeframe2'])
+                if tf2.startswith('Minute'):
+                    tf2 = 'm' + tf2.replace('Minute', '')
+                settings['Timeframe2'] = tf2.lower()
+
+            if 'Timeframe3' in first_row:
+                tf3 = str(first_row['Timeframe3'])
+                if tf3.startswith('Minute'):
+                    tf3 = 'm' + tf3.replace('Minute', '')
+                settings['Timeframe3'] = tf3.lower()
 
         # ADX Settings (stored but will be overridden by recommendations)
         if 'ADXPeriod' in first_row:
@@ -622,6 +685,39 @@ class WFOAnalyzer:
                 'overall_performance': {},
                 'performance': {}
             }
+
+        # === NEW: Version Detection and Warnings ===
+        self._detect_system_version()
+
+    def _detect_system_version(self):
+        """Detect bot version and warn about system-specific constraints"""
+        # Check for v4.6.0 4TF system markers
+        has_tf0 = 'Timeframe0' in self.df.columns
+        has_tf1 = 'Timeframe1' in self.df.columns
+        has_4_timeframes = has_tf0 and has_tf1 and 'Timeframe2' in self.df.columns
+
+        if has_4_timeframes:
+            print("\n" + "="*70)
+            print("SYSTEM VERSION DETECTED: v4.6.0+ with 4-Timeframe System")
+            print("="*70)
+            print("\n  IMPORTANT CONSTRAINTS FOR v4.6.0:")
+            print("  - ADX Threshold: Recommend 10-18 max (NOT 19-27)")
+            print("  - FlipDirection: Use conservatively (ADX < 12-15 only)")
+            print("  - TF0 Entry Trigger: M2-M6 optimization is HIGHEST PRIORITY")
+            print("  - MTF Alignment: System relies on 4-TF trend alignment")
+            print("\n  OLD RECOMMENDATIONS (from v4.5.x) MAY NOT APPLY!")
+            print("  Always re-optimize when upgrading to v4.6.0")
+            print("="*70 + "\n")
+
+            self.results['system_version'] = 'v4.6.0_4TF'
+            self.results['version_constraints'] = {
+                'ADXMinThreshold_max': 18,
+                'ADXMinThreshold_recommended': [10, 12, 14, 16, 18],
+                'priority_optimization': 'TF0 (Minute2-Minute6)'
+            }
+        else:
+            self.results['system_version'] = 'v4.5.x_or_earlier'
+            self.results['version_constraints'] = {}
 
         # Safely get date range
         try:
@@ -769,22 +865,38 @@ class WFOAnalyzer:
         print(f"\n[OK] ADX MODE: {best_mode}")
         print(f"  Reason: {adx_modes[best_mode]:+.2f}R total return")
 
-        # ADX Threshold recommendation
+        # === UPDATED: ADX Threshold recommendation with v4.6.0 awareness ===
         if 'best_adx_range' in self.results:
             adx_range = self.results['best_adx_range']
-            # Convert range to threshold value (use midpoint)
-            threshold_map = {
-                '<15': 12,
-                '15-18': 16,
-                '18-20': 19,
-                '20-22': 21,
-                '22-25': 23,
-                '>25': 27
-            }
-            recommended_threshold = threshold_map.get(adx_range, 18)
-            recommendations['parameters']['ADXMinThreshold'] = recommended_threshold
-            print(f"\n[OK] ADX THRESHOLD: {recommended_threshold}")
-            print(f"  Reason: {adx_range} range performed best")
+
+            # Get current ADX threshold from backtest
+            current_threshold = self.df['ADXThreshold'].iloc[0] if 'ADXThreshold' in self.df.columns else 18
+
+            print(f"\n[INFO] BEST ADX RANGE: {adx_range}")
+            print(f"  This is the ADX range where trades performed best")
+            print(f"  Current ADX Threshold (from backtest): {current_threshold}")
+
+            # === WARNING: Do not blindly recommend threshold ===
+            print(f"\n  NOTE: ADX threshold recommendation is system-version specific")
+            print(f"  Best range '{adx_range}' does NOT mean 'set threshold to {adx_range}'!")
+            print(f"\n  ADX Threshold controls FlipDirection trigger (<threshold = flip)")
+            print(f"  Best trading range controls which ADX values produce wins")
+            print(f"  These are DIFFERENT concepts!")
+
+            # Check if FlipDirection warning exists
+            if 'flip_direction_warning' in self.results:
+                warning = self.results['flip_direction_warning']
+                print(f"\n  RECOMMENDATION: Keep current threshold or LOWER it")
+                print(f"  Reason: FlipDirection currently used on {warning['usage_pct']:.1f}% of trades")
+                print(f"          with {warning['avg_r']:+.2f}R avg (indicates threshold too high)")
+            else:
+                print(f"\n  RECOMMENDATION: Keep current ADX threshold: {current_threshold}")
+                print(f"  Reason: No FlipDirection issues detected, current setting appears stable")
+
+            # DO NOT set ADXMinThreshold in recommendations (too risky)
+            # recommendations['parameters']['ADXMinThreshold'] = current_threshold  # Keep current
+            print(f"\n  For v4.6.0 4TF system: Use ADX threshold 10-18 max")
+            print(f"  For re-optimization: Test ADX threshold 10, 12, 14, 16, 18 separately")
 
         # ADX Period (analyze if varied in backtest)
         adx_periods = self.df['ADXPeriod'].unique()
@@ -872,9 +984,43 @@ class WFOAnalyzer:
         print(f"[OK] Saved: {json_file.name}")
 
         # CSV export (simple format for cAlgo)
+        # Combine WFO recommendations with backtest settings (keep non-recommended params)
         csv_data = []
-        for param, value in self.recommendations['parameters'].items():
-            csv_data.append({'Parameter': param, 'Value': value})
+
+        # Start with backtest settings (baseline)
+        backtest_settings = self.recommendations.get('backtest_settings', {})
+
+        # Create merged settings (WFO recommendations override backtest settings)
+        merged_settings = backtest_settings.copy()
+        merged_settings.update(self.recommendations['parameters'])
+
+        # Export in order: Sessions, ADX, MTF, Risk, Other
+        param_order = [
+            # Session filters (WFO recommends)
+            'EnableLondonSession', 'EnableNYSession', 'EnableAsianSession',
+            # ADX settings (WFO recommends mode, keep others)
+            'ADXMode', 'ADXPeriod', 'ADXMinThreshold', 'ADXMaxThreshold',
+            # MTF settings (keep from backtest - v4.6.0 or v4.5.x)
+            'MTFSMAPeriod', 'Timeframe0', 'Timeframe1', 'Timeframe2', 'Timeframe3',
+            # Risk management (keep from backtest)
+            'MinimumRRRatio', 'RiskPercent',
+            # Stop loss / Chandelier (keep from backtest)
+            'ATRPeriod', 'SLATRMultiplier', 'SLBufferPips', 'MinimumSLPips',
+            'ChandelierActivationRR', 'TrailIncrementPips', 'MinChandelierDistance',
+            'TPModeSelection',
+            # Trade management (keep from backtest)
+            'MaxPositions'
+        ]
+
+        # Add parameters in order
+        for param in param_order:
+            if param in merged_settings:
+                csv_data.append({'Parameter': param, 'Value': merged_settings[param]})
+
+        # Add any remaining parameters not in order list
+        for param, value in merged_settings.items():
+            if param not in param_order:
+                csv_data.append({'Parameter': param, 'Value': value})
 
         csv_file = output_dir / f'recommended_settings_{timestamp}.csv'
         pd.DataFrame(csv_data).to_csv(csv_file, index=False)
@@ -882,28 +1028,207 @@ class WFOAnalyzer:
 
         # Human-readable text file
         txt_file = output_dir / f'recommended_settings_{timestamp}.txt'
-        with open(txt_file, 'w') as f:
+        with open(txt_file, 'w', encoding='utf-8') as f:
             f.write("OPTIMIZED PARAMETER SETTINGS\n")
             f.write("=" * 70 + "\n\n")
             f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Data Range: {self.recommendations['data_range']['start']} to {self.recommendations['data_range']['end']}\n")
-            f.write(f"Total Trades Analyzed: {self.recommendations['data_range']['total_trades']}\n\n")
+            f.write(f"Total Trades Analyzed: {self.recommendations['data_range']['total_trades']}\n")
 
-            f.write("RECOMMENDED PARAMETERS:\n")
+            # Add version info
+            if 'system_version' in self.results:
+                f.write(f"System Version: {self.results['system_version']}\n")
+
+            f.write("\n")
+
+            # Show what WFO changed vs baseline
+            f.write("WFO RECOMMENDATIONS (Changes from Baseline):\n")
             f.write("-" * 70 + "\n")
+            backtest_settings = self.recommendations.get('backtest_settings', {})
             for param, value in self.recommendations['parameters'].items():
-                f.write(f"  {param}: {value}\n")
+                baseline_value = backtest_settings.get(param, 'N/A')
+                if baseline_value != value:
+                    f.write(f"  {param}: {baseline_value} → {value} (CHANGED)\n")
+                else:
+                    f.write(f"  {param}: {value} (unchanged)\n")
 
-            f.write("\nEXPECTED PERFORMANCE:\n")
+            f.write("\n")
+
+            # Show complete merged settings
+            f.write("COMPLETE PARAMETER SET (WFO + Baseline):\n")
+            f.write("-" * 70 + "\n")
+            merged_settings = backtest_settings.copy()
+            merged_settings.update(self.recommendations['parameters'])
+
+            # Group by category
+            f.write("\nSESSION FILTERS:\n")
+            for param in ['EnableLondonSession', 'EnableNYSession', 'EnableAsianSession']:
+                if param in merged_settings:
+                    f.write(f"  {param}: {merged_settings[param]}\n")
+
+            f.write("\nADX SETTINGS:\n")
+            for param in ['ADXMode', 'ADXPeriod', 'ADXMinThreshold', 'ADXMaxThreshold']:
+                if param in merged_settings:
+                    f.write(f"  {param}: {merged_settings[param]}\n")
+
+            f.write("\nMTF SETTINGS:\n")
+            for param in ['MTFSMAPeriod', 'Timeframe0', 'Timeframe1', 'Timeframe2', 'Timeframe3']:
+                if param in merged_settings:
+                    f.write(f"  {param}: {merged_settings[param]}\n")
+
+            f.write("\nRISK MANAGEMENT:\n")
+            for param in ['MinimumRRRatio', 'RiskPercent', 'MaxPositions']:
+                if param in merged_settings:
+                    f.write(f"  {param}: {merged_settings[param]}\n")
+
+            f.write("\nSTOP LOSS / CHANDELIER:\n")
+            for param in ['ATRPeriod', 'SLATRMultiplier', 'SLBufferPips', 'MinimumSLPips',
+                         'ChandelierActivationRR', 'TrailIncrementPips', 'MinChandelierDistance']:
+                if param in merged_settings:
+                    f.write(f"  {param}: {merged_settings[param]}\n")
+
+            f.write("\n" + "=" * 70 + "\n")
+            f.write("\nEXPECTED PERFORMANCE (With Recommended Settings):\n")
             f.write("-" * 70 + "\n")
             for metric, value in self.recommendations['performance'].items():
                 f.write(f"  {metric}: {value}\n")
 
         print(f"[OK] Saved: {txt_file.name}")
+
+        # Export .cbotset file with WFO recommendations
+        self._export_cbotset(output_dir, timestamp, merged_settings)
+
+        # Export optimization recommendations
+        self._export_optimization_recommendations(output_dir, timestamp)
+
         print(f"\n>>> Output directory: {output_dir}")
         print()
 
         return self
+
+    def _export_cbotset(self, output_dir, timestamp, settings):
+        """Export .cbotset file with WFO recommended settings"""
+        cbotset_file = output_dir / f'wfo_recommended_{timestamp}.cbotset'
+
+        # Build cbotset structure
+        cbotset_data = {
+            "parameters": []
+        }
+
+        # Add parameters in order
+        param_order = [
+            'MTFHeader', 'EnableMTFSMAEntry', 'MTFSMAPeriod',
+            'Timeframe0', 'Timeframe1', 'Timeframe2', 'RequireAllTFsAligned',
+            'ATRPeriod', 'SLATRMultiplier', 'MinimumSLPips',
+            'ADXHeader', 'EnableADXFilter', 'ADXMode', 'ADXPeriod', 'ADXMinThreshold', 'ADXMaxThreshold',
+            'TradeHeader', 'EnableTrading', 'RiskPercent', 'SLBufferPips', 'MinimumRRRatio', 'MaxPositions', 'MagicNumber',
+            'ChandelierHeader', 'EnableChandelierTrail', 'ChandelierActivationRR', 'TrailIncrementPips', 'MinChandelierDistance', 'TPModeSelection',
+            'SessionHeader', 'EnableSessionFilter', 'EnableLondonSession', 'EnableNYSession', 'EnableAsianSession',
+            'RiskHeader', 'EnableDailyLimit', 'DailyMaxRLoss', 'DailyMaxLosingTrades',
+            'EnableConsecutiveLossLimit', 'MaxConsecutiveLosses',
+            'EnableMonthlyDDLimit', 'MaxMonthlyDDPercent', 'ClosePositionsOnDDLimit',
+            'WFOHeader', 'EnableCSVExport', 'EnableNotifications'
+        ]
+
+        for param in param_order:
+            if param in settings:
+                value = settings[param]
+                # Convert Python bool to string for cAlgo
+                if isinstance(value, bool):
+                    value = "True" if value else "False"
+                else:
+                    value = str(value)
+
+                cbotset_data["parameters"].append({
+                    "name": param,
+                    "value": value
+                })
+
+        # Add metadata
+        cbotset_data["description"] = "WFO Recommended Settings"
+        cbotset_data["source"] = "WFO Analyzer"
+        cbotset_data["generated"] = datetime.now().isoformat()
+        cbotset_data["system_version"] = self.results.get('system_version', 'unknown')
+
+        # Save cbotset
+        with open(cbotset_file, 'w', encoding='utf-8') as f:
+            json.dump(cbotset_data, f, indent=2)
+
+        print(f"[OK] Saved: {cbotset_file.name}")
+
+    def _export_optimization_recommendations(self, output_dir, timestamp):
+        """Export optimization strategy recommendations"""
+        optim_file = output_dir / f'optimization_strategy_{timestamp}.txt'
+
+        system_version = self.results.get('system_version', 'unknown')
+
+        with open(optim_file, 'w', encoding='utf-8') as f:
+            f.write("OPTIMIZATION STRATEGY RECOMMENDATIONS\n")
+            f.write("=" * 70 + "\n\n")
+            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"System Version: {system_version}\n\n")
+
+            if system_version == 'v4.6.0_4TF':
+                f.write("v4.6.0 4-TIMEFRAME SYSTEM OPTIMIZATION STRATEGY\n")
+                f.write("-" * 70 + "\n\n")
+
+                f.write("RECOMMENDED OPTIMIZATION SEQUENCE:\n\n")
+
+                f.write("Phase 1: TF0 Entry Trigger Optimization (HIGHEST PRIORITY)\n")
+                f.write("  File: optimization_sets/v4.6.0_Phase1_TF0_ONLY.optset\n")
+                f.write("  Optimize: Timeframe0 (M2, M3, M4, M5, M6)\n")
+                f.write("  Fix All Others: TF1=M10, TF2=M30, SMA=275, ADX=12, Sessions per WFO\n")
+                f.write("  Combinations: 5\n")
+                f.write("  Goal: Find which TF0 gives positive R-multiple\n")
+                f.write("  Time: 5-10 minutes per period\n\n")
+
+                f.write("Phase 2: SMA + ADX Optimization (After Phase 1)\n")
+                f.write("  File: optimization_sets/v4.6.0_Phase2_SMA_ADX.optset\n")
+                f.write("  Prerequisites: Update Timeframe0 to best from Phase 1\n")
+                f.write("  Optimize: SMA Period (200-300), ADX Period (9-21),\n")
+                f.write("           ADX MinThreshold (10-18), ADX MaxThreshold (35-50),\n")
+                f.write("           MinimumRR (3-6)\n")
+                f.write("  WARNING: ADX MinThreshold CONSTRAINED to 10-18 for v4.6.0!\n")
+                f.write("           DO NOT use 19-30 range (causes FlipDirection disasters)\n")
+                f.write("  Combinations: ~4,900 (use genetic algorithm)\n")
+                f.write("  Goal: Profit Factor > 1.3, Max DD < 20%\n")
+                f.write("  Time: 30-60 minutes per period\n\n")
+
+                f.write("Phase 3: TF1 + TF2 Fine-tuning (Optional)\n")
+                f.write("  Only if Phase 1+2 show promise\n")
+                f.write("  Optimize: Timeframe1 (M7-M10), Timeframe2 (M15/M20/M30)\n")
+                f.write("  Time: 10-20 minutes per period\n\n")
+
+                f.write("=" * 70 + "\n\n")
+
+                f.write("VALIDATION FILES FOR WALK-FORWARD TESTING:\n\n")
+
+                f.write("WFO Recommended Settings:\n")
+                f.write("  File: optimization_sets/Walk1_WFO_Recommended.cbotset\n")
+                f.write("  Use: Validation backtests with WFO recommendations applied\n")
+                f.write("  Key: EnableLondonSession = False (per WFO analysis)\n\n")
+
+                f.write("Baseline Settings (for comparison):\n")
+                f.write("  File: optimization_sets/Walk1_Baseline_AllSessions.cbotset\n")
+                f.write("  Use: Validation backtests with all sessions enabled\n")
+                f.write("  Key: EnableLondonSession = True (baseline)\n\n")
+
+                f.write("Comparison:\n")
+                f.write("  Run same validation period (e.g., Apr 2025) with BOTH files\n")
+                f.write("  Compare Total R: WFO should beat Baseline\n")
+                f.write("  Success = WFO recommendations generalized to out-of-sample period\n\n")
+
+            else:
+                f.write("v4.5.x OR EARLIER SYSTEM\n")
+                f.write("-" * 70 + "\n\n")
+                f.write("Consider upgrading to v4.6.0 4-Timeframe System for:\n")
+                f.write("  - Cleaner entry triggers (TF0 crossover vs noisy M1)\n")
+                f.write("  - Better trend alignment across 4 timeframes\n")
+                f.write("  - Reduced false signals\n\n")
+
+            f.write("=" * 70 + "\n")
+
+        print(f"[OK] Saved: {optim_file.name}")
 
     def create_visualizations(self):
         """Create visual analysis dashboard"""

@@ -1,0 +1,349 @@
+{
+  "parameters": [
+    {
+      "name": "MTFHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableMTFSMAEntry",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "MTFSMAPeriod",
+      "value": "250",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 50,
+        "maxValue": 350,
+        "step": 25,
+        "defaultValue": 275
+      },
+      "optimize": true,
+      "min": "200",
+      "max": "300",
+      "step": "25",
+      "comment": "OPTIMIZE - Find best SMA period"
+    },
+    {
+      "name": "Timeframe0",
+      "value": "m4",
+      "parameterType": "TimeFrame",
+      "optimize": false,
+      "comment": "FIXED - Use best TF0 from Phase 1! Update this value before running Phase 2."
+    },
+    {
+      "name": "Timeframe1",
+      "value": "m10",
+      "parameterType": "TimeFrame",
+      "optimize": false,
+      "comment": "FIXED - Phase 3 will optimize this"
+    },
+    {
+      "name": "Timeframe2",
+      "value": "m30",
+      "parameterType": "TimeFrame",
+      "optimize": false,
+      "comment": "FIXED - Phase 3 will optimize this"
+    },
+    {
+      "name": "RequireAllTFsAligned",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "ATRPeriod",
+      "value": "10",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "SLATRMultiplier",
+      "value": "2.25",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "MinimumSLPips",
+      "value": "5",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "ADXHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableADXFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "ADXMode",
+      "value": "FlipDirection",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "ADXPeriod",
+      "value": "9",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 7,
+        "maxValue": 21,
+        "step": 1,
+        "defaultValue": 14
+      },
+      "optimize": true,
+      "min": "9",
+      "max": "21",
+      "step": "2",
+      "comment": "OPTIMIZE - Find best ADX period (step 2 for speed)"
+    },
+    {
+      "name": "ADXMinThreshold",
+      "value": "12",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 10,
+        "maxValue": 18,
+        "step": 1,
+        "defaultValue": 12
+      },
+      "optimize": true,
+      "min": "10",
+      "max": "18",
+      "step": "2",
+      "comment": "OPTIMIZE - v4.6.0 CONSTRAINED to 10-18 max (NOT 19-30!)"
+    },
+    {
+      "name": "ADXMaxThreshold",
+      "value": "40",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 35,
+        "maxValue": 50,
+        "step": 5,
+        "defaultValue": 40
+      },
+      "optimize": true,
+      "min": "35",
+      "max": "50",
+      "step": "5",
+      "comment": "OPTIMIZE - Block entries when ADX too high"
+    },
+    {
+      "name": "TradeHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableTrading",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "RiskPercent",
+      "value": "1",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "SLBufferPips",
+      "value": "2",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "MinimumRRRatio",
+      "value": "4",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 3,
+        "maxValue": 6,
+        "step": 0.5,
+        "defaultValue": 4
+      },
+      "optimize": true,
+      "min": "3",
+      "max": "6",
+      "step": "0.5",
+      "comment": "OPTIMIZE - Find best RR ratio"
+    },
+    {
+      "name": "MaxPositions",
+      "value": "1",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "MagicNumber",
+      "value": "100001",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "ChandelierHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableChandelierTrail",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "ChandelierActivationRR",
+      "value": "0.75",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "TrailIncrementPips",
+      "value": "5",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "MinChandelierDistance",
+      "value": "6",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "TPModeSelection",
+      "value": "1",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "SessionHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableSessionFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "EnableLondonSession",
+      "value": "False",
+      "parameterType": "Boolean",
+      "optimize": false,
+      "comment": "WFO Recommendation: London disabled"
+    },
+    {
+      "name": "EnableNYSession",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "EnableAsianSession",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "RiskHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableDailyLimit",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "DailyMaxRLoss",
+      "value": "-3",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "DailyMaxLosingTrades",
+      "value": "5",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "EnableConsecutiveLossLimit",
+      "value": "False",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "MaxConsecutiveLosses",
+      "value": "9",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "EnableMonthlyDDLimit",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "MaxMonthlyDDPercent",
+      "value": "10",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "ClosePositionsOnDDLimit",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "WFOHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableCSVExport",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "EnableNotifications",
+      "value": "False",
+      "parameterType": "Boolean",
+      "optimize": false
+    }
+  ],
+  "description": "v4.6.0 Phase 2: SMA + ADX + RR Optimization",
+  "version": "v4.6.0",
+  "phase": "2 of 3",
+  "priority": "HIGH",
+  "purpose": "Optimize SMA period, ADX settings, and RR ratio with best TF0 from Phase 1",
+  "prerequisites": "Must complete Phase 1 first - update Timeframe0 value to best TF0",
+  "combinations": "5 (SMA) × 7 (ADX Period) × 5 (ADX Min) × 4 (ADX Max) × 7 (RR) = 4,900 combinations",
+  "optimization_strategy": "Use genetic algorithm, target 100-200 best combinations",
+  "estimated_time": "30-60 minutes per period",
+  "target_metrics": {
+    "primary": "Profit Factor > 1.3",
+    "secondary": "Max DD < 20%",
+    "tertiary": "Win Rate 25-45%"
+  },
+  "warning": "ADXMinThreshold CONSTRAINED to 10-18 for v4.6.0. DO NOT use 19-30 range!"
+}

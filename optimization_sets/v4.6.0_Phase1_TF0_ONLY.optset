@@ -1,0 +1,313 @@
+{
+  "parameters": [
+    {
+      "name": "MTFHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableMTFSMAEntry",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "MTFSMAPeriod",
+      "value": "275",
+      "parameterType": "Integer",
+      "optimize": false,
+      "comment": "FIXED - Phase 2 will optimize this"
+    },
+    {
+      "name": "Timeframe0",
+      "value": "m4",
+      "parameterType": "TimeFrame",
+      "metadata": {
+        "defaultValue": "m4",
+        "propertyName": "Timeframe0",
+        "friendlyName": "TF0 - Entry Trigger (M2-M6)"
+      },
+      "optimize": true,
+      "values": [
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6"
+      ],
+      "comment": "OPTIMIZE - Find best entry trigger timeframe"
+    },
+    {
+      "name": "Timeframe1",
+      "value": "m10",
+      "parameterType": "TimeFrame",
+      "optimize": false,
+      "comment": "FIXED - Phase 3 will optimize this"
+    },
+    {
+      "name": "Timeframe2",
+      "value": "m30",
+      "parameterType": "TimeFrame",
+      "optimize": false,
+      "comment": "FIXED - Phase 3 will optimize this"
+    },
+    {
+      "name": "RequireAllTFsAligned",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "ATRPeriod",
+      "value": "10",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "SLATRMultiplier",
+      "value": "2.25",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "MinimumSLPips",
+      "value": "5",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "ADXHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableADXFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "ADXMode",
+      "value": "FlipDirection",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "ADXPeriod",
+      "value": "16",
+      "parameterType": "Integer",
+      "optimize": false,
+      "comment": "FIXED - Phase 2 will optimize this"
+    },
+    {
+      "name": "ADXMinThreshold",
+      "value": "12",
+      "parameterType": "Double",
+      "optimize": false,
+      "comment": "FIXED at 12 - DO NOT raise to 23! Phase 2 will optimize 10-18 range"
+    },
+    {
+      "name": "ADXMaxThreshold",
+      "value": "40",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "TradeHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableTrading",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "RiskPercent",
+      "value": "1",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "SLBufferPips",
+      "value": "2",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "MinimumRRRatio",
+      "value": "4",
+      "parameterType": "Double",
+      "optimize": false,
+      "comment": "FIXED - Phase 2 may optimize this"
+    },
+    {
+      "name": "MaxPositions",
+      "value": "1",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "MagicNumber",
+      "value": "100001",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "ChandelierHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableChandelierTrail",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "ChandelierActivationRR",
+      "value": "0.75",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "TrailIncrementPips",
+      "value": "5",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "MinChandelierDistance",
+      "value": "6",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "TPModeSelection",
+      "value": "1",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "SessionHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableSessionFilter",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "EnableLondonSession",
+      "value": "False",
+      "parameterType": "Boolean",
+      "optimize": false,
+      "comment": "WFO Recommendation: London session disabled (was negative R)"
+    },
+    {
+      "name": "EnableNYSession",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "EnableAsianSession",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "RiskHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableDailyLimit",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "DailyMaxRLoss",
+      "value": "-3",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "DailyMaxLosingTrades",
+      "value": "5",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "EnableConsecutiveLossLimit",
+      "value": "False",
+      "parameterType": "Boolean",
+      "optimize": false,
+      "comment": "DISABLE for optimization - re-enable for live trading"
+    },
+    {
+      "name": "MaxConsecutiveLosses",
+      "value": "9",
+      "parameterType": "Integer",
+      "optimize": false
+    },
+    {
+      "name": "EnableMonthlyDDLimit",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "MaxMonthlyDDPercent",
+      "value": "10",
+      "parameterType": "Double",
+      "optimize": false
+    },
+    {
+      "name": "ClosePositionsOnDDLimit",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "WFOHeader",
+      "value": "",
+      "parameterType": "String",
+      "optimize": false
+    },
+    {
+      "name": "EnableCSVExport",
+      "value": "True",
+      "parameterType": "Boolean",
+      "optimize": false
+    },
+    {
+      "name": "EnableNotifications",
+      "value": "False",
+      "parameterType": "Boolean",
+      "optimize": false
+    }
+  ],
+  "description": "v4.6.0 Phase 1: TF0 Entry Trigger Optimization (M2-M6)",
+  "version": "v4.6.0",
+  "phase": "1 of 3",
+  "priority": "HIGHEST",
+  "purpose": "Find optimal entry trigger timeframe. All other parameters fixed at WFO-recommended values.",
+  "combinations": "5 (TF0: m2, m3, m4, m5, m6)",
+  "estimated_time": "5-10 minutes per period",
+  "target_metrics": {
+    "primary": "Positive R-multiple",
+    "secondary": "Profit Factor > 1.2",
+    "tertiary": "Max DD < 20%"
+  }
+}
