@@ -162,16 +162,16 @@ namespace cAlgo.Indicators
         // OUTPUTS
         // =====================================================================
 
-        [Output("SMA 0 (Chart TF)", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 1)]
+        [Output("SMA 0 (M1)", LineColor = "Red", PlotType = PlotType.Line, Thickness = 1)]
         public IndicatorDataSeries Sma0Result { get; set; }
 
-        [Output("SMA 1 (TF1)", LineColor = "Gold", PlotType = PlotType.Line, Thickness = 2)]
+        [Output("SMA 1 (TF1)", LineColor = "LimeGreen", PlotType = PlotType.Line, Thickness = 2)]
         public IndicatorDataSeries Sma1Result { get; set; }
 
-        [Output("SMA 2 (TF2)", LineColor = "OrangeRed", PlotType = PlotType.Line, Thickness = 2)]
+        [Output("SMA 2 (TF2)", LineColor = "Blue", PlotType = PlotType.Line, Thickness = 2)]
         public IndicatorDataSeries Sma2Result { get; set; }
 
-        [Output("SMA 3 (TF0)", LineColor = "Cyan", PlotType = PlotType.Line, Thickness = 1)]
+        [Output("SMA 3 (TF0)", LineColor = "Gold", PlotType = PlotType.Line, Thickness = 1)]
         public IndicatorDataSeries Sma3Result { get; set; }
 
         // =====================================================================
