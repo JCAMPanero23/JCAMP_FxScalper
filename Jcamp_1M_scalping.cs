@@ -281,6 +281,30 @@ namespace cAlgo.Robots
         [Parameter("Enable CSV Export", DefaultValue = true, Group = "Diagnostics")]
         public bool EnableCSVExport { get; set; }
 
+        [Parameter("=== VISUAL DISPLAY ===", DefaultValue = "")]
+        public string VisualHeader { get; set; }
+
+        [Parameter("Draw SMA Lines", DefaultValue = true, Group = "Visual Display")]
+        public bool DrawSMALines { get; set; }
+
+        [Parameter("Draw Info Panel", DefaultValue = true, Group = "Visual Display")]
+        public bool DrawInfoPanel { get; set; }
+
+        [Parameter("Info Panel Corner", DefaultValue = 1, MinValue = 1, MaxValue = 4, Group = "Visual Display")]
+        public int InfoPanelCorner { get; set; }  // 1=TopLeft, 2=TopRight, 3=BottomLeft, 4=BottomRight
+
+        [Parameter("SMA M1 Color", DefaultValue = "DodgerBlue", Group = "Visual Display")]
+        public string SmaM1Color { get; set; }
+
+        [Parameter("SMA TF0 Color", DefaultValue = "Cyan", Group = "Visual Display")]
+        public string SmaTF0Color { get; set; }
+
+        [Parameter("SMA TF1 Color", DefaultValue = "Gold", Group = "Visual Display")]
+        public string SmaTF1Color { get; set; }
+
+        [Parameter("SMA TF2 Color", DefaultValue = "OrangeRed", Group = "Visual Display")]
+        public string SmaTF2Color { get; set; }
+
         #endregion
 
         #region Enums
@@ -682,6 +706,12 @@ namespace cAlgo.Robots
                     tf0Crossed ? currentTF0 : "NONE",
                     smaStacked));
                 _smaDebugWriter.Flush();
+            }
+
+            // Update visual display (SMA lines + info panel)
+            if (DrawSMALines || DrawInfoPanel)
+            {
+                UpdateVisualDisplay();
             }
 
             // Process chandelier trailing stops
@@ -1336,6 +1366,121 @@ namespace cAlgo.Robots
 
             Print("[SL-RETRY] All {0} attempts failed! Position will be closed.", MAX_RETRIES);
             return false;
+        }
+
+        #endregion
+
+        #region Visual Display (SMA Lines + Info Panel)
+
+        private void UpdateVisualDisplay()
+        {
+            // Draw SMA lines on chart
+            if (DrawSMALines && m1Bars != null && tf0Bars != null && tf1Bars != null && tf2Bars != null)
+            {
+                DrawSMALinesOnChart();
+            }
+
+            // Draw info panel
+            if (DrawInfoPanel)
+            {
+                DrawInfoPanelOnChart();
+            }
+        }
+
+        private void DrawSMALinesOnChart()
+        {
+            int lookback = Math.Min(100, Bars.Count);  // Draw last 100 bars
+
+            // Calculate current SMA values
+            double smaM1 = CalculateSMAForBars(m1Bars, MTFSMAPeriod);
+            double smaTF0 = CalculateSMAForBars(tf0Bars, MTFSMAPeriod);
+            double smaTF1 = CalculateSMAForBars(tf1Bars, MTFSMAPeriod);
+            double smaTF2 = CalculateSMAForBars(tf2Bars, MTFSMAPeriod);
+
+            // Get current bar time
+            DateTime currentTime = Bars.LastBar.OpenTime;
+
+            // Draw horizontal lines for each SMA at current value
+            if (smaM1 > 0)
+            {
+                ChartObjects.RemoveObject("SMA_M1");
+                ChartObjects.DrawHorizontalLine("SMA_M1", smaM1, Color.FromName(SmaM1Color), 1, LineStyle.Solid);
+            }
+
+            if (smaTF0 > 0)
+            {
+                ChartObjects.RemoveObject("SMA_TF0");
+                ChartObjects.DrawHorizontalLine("SMA_TF0", smaTF0, Color.FromName(SmaTF0Color), 1, LineStyle.Dots);
+            }
+
+            if (smaTF1 > 0)
+            {
+                ChartObjects.RemoveObject("SMA_TF1");
+                ChartObjects.DrawHorizontalLine("SMA_TF1", smaTF1, Color.FromName(SmaTF1Color), 2, LineStyle.Solid);
+            }
+
+            if (smaTF2 > 0)
+            {
+                ChartObjects.RemoveObject("SMA_TF2");
+                ChartObjects.DrawHorizontalLine("SMA_TF2", smaTF2, Color.FromName(SmaTF2Color), 2, LineStyle.Solid);
+            }
+        }
+
+        private void DrawInfoPanelOnChart()
+        {
+            // Calculate current alignment and stacking status
+            bool mtfAligned = CheckMTFAlignment(out string alignmentDirection);
+
+            string stackingStatus = "N/A";
+            if (EnableSMAStacking && mtfAligned)
+            {
+                bool isStacked = CheckSMAStacking(alignmentDirection, out string stackingInfo);
+                stackingStatus = isStacked ? "✓ STACKED" : "✗ NOT STACKED";
+            }
+
+            // Get individual TF alignments
+            string m1Align = GetSMAAlignment(m1Bars);
+            string tf0Align = GetSMAAlignment(tf0Bars);
+            string tf1Align = GetSMAAlignment(tf1Bars);
+            string tf2Align = GetSMAAlignment(tf2Bars);
+
+            // Count aligned TFs
+            int alignedCount = 0;
+            if (m1Align == alignmentDirection) alignedCount++;
+            if (tf0Align == alignmentDirection) alignedCount++;
+            if (tf1Align == alignmentDirection) alignedCount++;
+            if (tf2Align == alignmentDirection) alignedCount++;
+
+            // Build info text
+            string info = string.Format(
+                "MTF Alignment: {0}/{1} {2}\n" +
+                "M1: {3} | TF0: {4} | TF1: {5} | TF2: {6}\n" +
+                "SMA Stacking: {7}\n" +
+                "Entry Ready: {8}",
+                mtfAligned ? alignedCount.ToString() : "0",
+                RequireAllTFsAligned ? "4" : "3",
+                mtfAligned ? alignmentDirection : "NONE",
+                m1Align,
+                tf0Align,
+                tf1Align,
+                tf2Align,
+                stackingStatus,
+                mtfAligned ? "YES" : "NO"
+            );
+
+            // Determine corner position
+            StaticPosition corner = StaticPosition.TopLeft;
+            switch (InfoPanelCorner)
+            {
+                case 1: corner = StaticPosition.TopLeft; break;
+                case 2: corner = StaticPosition.TopRight; break;
+                case 3: corner = StaticPosition.BottomLeft; break;
+                case 4: corner = StaticPosition.BottomRight; break;
+            }
+
+            // Draw text
+            ChartObjects.RemoveObject("InfoPanel");
+            ChartObjects.DrawText("InfoPanel", info, corner, Color.White);
         }
 
         #endregion
